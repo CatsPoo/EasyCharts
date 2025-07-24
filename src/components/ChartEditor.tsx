@@ -1,10 +1,10 @@
 import 'reactflow/dist/style.css';import { DevicesSidebar } from './DevicesSideBar';
-import ReactFlow, { applyEdgeChanges, applyNodeChanges, Background, Controls, useReactFlow } from 'reactflow';
+import ReactFlow, { addEdge, applyEdgeChanges, applyNodeChanges, Background, Controls, reconnectEdge, useReactFlow } from 'reactflow';
 import { useCallback, useRef, useState } from 'react';
-import type {Edge,EdgeChange,Node, NodeChange} from 'reactflow';
+import type {Connection, Edge,EdgeChange,Node, NodeChange} from 'reactflow';
 
 export function ChartEditor() {
-  
+  const [editMode, setEditMode] = useState(true);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
@@ -17,6 +17,17 @@ export function ChartEditor() {
     },
   ]);
   const [edges, setEdges] = useState<Edge[]>([]);
+
+    const onConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    []
+  );
+
+  const onReconnect = useCallback(
+  (oldEdge: Edge, connection: Connection) =>
+    setEdges((eds) => reconnectEdge(oldEdge, connection, eds)),
+  []
+);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
@@ -58,15 +69,25 @@ export function ChartEditor() {
 
   return (
     <div className="flex w-screen h-screen">
-      <DevicesSidebar />
+       {editMode && <DevicesSidebar />}
+       <button
+          className="absolute top-4 right-4 z-10 bg-white border rounded px-3 py-1 text-sm shadow"
+          onClick={() => setEditMode((m) => !m)}
+        >
+          {editMode ? 'Exit Edit Mode' : 'Enter Edit Mode'}
+        </button>
       <div ref={reactFlowWrapper} className="flex-1">
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
+          onNodesChange={editMode? onNodesChange: undefined}
+          onEdgesChange={editMode ? onEdgesChange : undefined}
+          onConnect={editMode ? onConnect : undefined}
+          onEdgeUpdate={editMode ? onReconnect : undefined}
+          onDragOver={editMode ?  onDragOver : undefined}
+          onDrop={editMode ? onDrop : undefined}
+          nodesDraggable={editMode}           // allow node drag
+          nodesConnectable={editMode}         // allow new connections
           fitView
         >
           <Background />
