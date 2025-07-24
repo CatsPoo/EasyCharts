@@ -2,6 +2,6 @@ export interface BaseTopologyEntity{
     id:string
 }
 
-export interface NamedTopologyEntity{
+export interface NamedTopologyEntity extends BaseTopologyEntity{
     name:string
 }

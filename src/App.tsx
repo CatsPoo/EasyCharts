@@ -1,11 +1,11 @@
 import { ReactFlowProvider } from "reactflow";
-import { ChartEditor } from "./components/ChartEditor";
+import { ChartsPage } from "./pages/ChartsPage";
 
 function App() {
   return (
     <div className="w-screen h-screen">
       <ReactFlowProvider>
-        <ChartEditor/>
+        <ChartsPage/>
       </ReactFlowProvider>
     </div>
   );
