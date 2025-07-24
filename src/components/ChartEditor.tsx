@@ -1,4 +1,4 @@
-import 'reactflow/dist/style.css';import { DevicesSidebar } from '../DevicesSideBar/DevicesSideBar';
+import 'reactflow/dist/style.css';import { DevicesSidebar } from './DevicesSideBar';
 import ReactFlow, { Background, Controls } from 'reactflow';
 export function ChartEditor() {
   

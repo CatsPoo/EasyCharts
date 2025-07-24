@@ -1,5 +1,5 @@
 import { ReactFlowProvider } from "reactflow";
-import { ChartEditor } from "./components/ChartEditor/ChartEditor";
+import { ChartEditor } from "./components/ChartEditor";
 
 function App() {
   return (
