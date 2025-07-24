@@ -5,17 +5,18 @@ import { ChartListSidebar } from '../components/ChartListSideBar';
 import { ChartEditor } from '../components/ChartEditor';
 import type { Chart } from '../types/topology/Chart';
 import { useState, useEffect } from 'react';
-import { AppBar, Dialog, IconButton, Toolbar } from '@mui/material';
+import { AppBar, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
 export function ChartsPage() {
-  const [tab, setTab] = React.useState(0);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
+    const [tab, setTab] = React.useState(0);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [editMode, setEditMode] = useState(false);
     // dialog state:
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editChart, setEditChart] = useState<Chart | null>(null);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [editChart, setEditChart] = useState<Chart | null>(null);
 
+    const readonly = false
   // Your hard‑coded (or later: fetched) data
  const myCharts: Chart[] = [
     {
@@ -91,7 +92,7 @@ export function ChartsPage() {
         <Box sx={{ flex: 1, position: 'relative' }}>
           {selectedChart ? (
             // render in read‑only mode
-            <ChartEditor chart={selectedChart} readonly />
+            <ChartEditor chart={selectedChart} editMode={false} readonly={true}  />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
               Select a chart to preview
@@ -109,11 +110,23 @@ export function ChartsPage() {
             <IconButton edge="start" color="inherit" onClick={() => handleDialogClose()} aria-label="close">
               <CloseIcon/>
             </IconButton>
+            <div style={{ position: 'absolute', top: 14, right: 16, zIndex: 10, background: '#7676c4', padding: 6, borderRadius: 4, height: 41 }}>
+            {! readonly ? <FormControlLabel
+            control={
+              <Switch
+                checked={editMode}
+                onChange={(e) => setEditMode(e.target.checked)}
+                color="primary"
+              /> 
+            }
+            label={editMode ? 'Edit Mode' : 'View Mode'}
+          /> : null}
+        </div>
           </Toolbar>
         </AppBar>
 
         {editChart && (
-          <ChartEditor chart={editChart} readonly={false} />
+          <ChartEditor chart={editChart} editMode={editMode} readonly={false} />
         )}
       </Dialog>
     </Box>

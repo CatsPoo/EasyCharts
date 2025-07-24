@@ -2,7 +2,6 @@ import 'reactflow/dist/style.css';import { DevicesSidebar } from './DevicesSideB
 import ReactFlow, { addEdge, applyEdgeChanges, applyNodeChanges, Background, Controls, reconnectEdge, useReactFlow } from 'reactflow';
 import { useCallback, useRef, useState, useEffect } from 'react';
 import type {Connection, Edge,EdgeChange,Node, NodeChange} from 'reactflow';
-import { FormControlLabel, Switch } from '@mui/material';
 import { AnimatePresence,motion } from 'framer-motion';
 import type { Chart } from '../types/topology/Chart';
 import type { Device } from '../types/topology/Device';
@@ -11,9 +10,10 @@ import type { Device } from '../types/topology/Device';
 interface ChardEditorProps  {
   chart : Chart
   readonly : boolean
+  editMode:boolean
 }
-export function ChartEditor({chart,readonly} : ChardEditorProps) {
-  const [editMode, setEditMode] = useState(! readonly);
+export function ChartEditor({chart,editMode} : ChardEditorProps) {
+  
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
@@ -112,19 +112,6 @@ export function ChartEditor({chart,readonly} : ChardEditorProps) {
           </motion.div>
         )}
       </AnimatePresence>
-
-       <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 10, background: 'white', padding: 8, borderRadius: 4 }}>
-          {! readonly ? <FormControlLabel
-            control={
-              <Switch
-                checked={editMode}
-                onChange={(e) => setEditMode(e.target.checked)}
-                color="primary"
-              /> 
-            }
-            label={editMode ? 'Edit Mode' : 'View Mode'}
-          /> : null}
-        </div>
       <div ref={reactFlowWrapper} className="flex-1">
         <ReactFlow
           style={{ width: '100%', height: '100%' }}
