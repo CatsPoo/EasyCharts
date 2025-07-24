@@ -1,6 +1,7 @@
 export function DevicesSidebar() {
   const deviceTypes = ['router', 'switch', 'server', 'firewall'];
 
+  
   return (
     <aside className="w-48 shrink-0 bg-gray-100 p-3 border-r">
       <h2 className="text-sm font-semibold mb-3">Devices</h2>
@@ -10,6 +11,11 @@ export function DevicesSidebar() {
           <li
             key={type}
             className="px-3 py-2 rounded bg-white shadow text-center text-sm capitalize"
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData('application/reactflow', type);
+              event.dataTransfer.effectAllowed = 'move';
+            }}
           >
             {type}
           </li>
