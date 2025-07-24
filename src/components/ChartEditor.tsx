@@ -49,6 +49,7 @@ export function ChartEditor({chart,readonly} : ChardEditorProps) {
     useEffect(() => {
     setNodes(convertDevicesToNodes(chart.devices));
     setEdges([]);
+    
   }, [chart]);
 
   const onReconnect = useCallback(
@@ -96,7 +97,7 @@ export function ChartEditor({chart,readonly} : ChardEditorProps) {
   );
 
   return (
-    <div className="flex w-screen h-screen">
+    <div className="flex flex-1 h-full">
       <AnimatePresence initial={false}>
         {editMode && (
           <motion.div
@@ -126,6 +127,8 @@ export function ChartEditor({chart,readonly} : ChardEditorProps) {
         </div>
       <div ref={reactFlowWrapper} className="flex-1">
         <ReactFlow
+          style={{ width: '100%', height: '100%' }}
+          key={chart.id}
           nodes={nodes}
           edges={edges}
           onNodesChange={editMode? onNodesChange: undefined}

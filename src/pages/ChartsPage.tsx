@@ -4,10 +4,17 @@ import { NavBar } from '../components/NavBar';
 import { ChartListSidebar } from '../components/ChartListSideBar';
 import { ChartEditor } from '../components/ChartEditor';
 import type { Chart } from '../types/topology/Chart';
+import { useState, useEffect } from 'react';
+import { AppBar, Dialog, IconButton, Toolbar } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
 export function ChartsPage() {
   const [tab, setTab] = React.useState(0);
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+    // dialog state:
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editChart, setEditChart] = useState<Chart | null>(null);
 
   // Your hard‑coded (or later: fetched) data
  const myCharts: Chart[] = [
@@ -46,16 +53,27 @@ export function ChartsPage() {
     },
   ];
   // Derive the list based on the active tab
-  const chartsList = tab === 0 ? myCharts : sharedCharts;
+    const chartsList = tab === 0 ? myCharts : sharedCharts;
 
-  // Whenever the tab changes, clear the selection
-  React.useEffect(() => {
+    // Whenever the tab changes, clear the selection
+    useEffect(() => {
     setSelectedId(null);
-  }, [tab]);
+    }, [tab]);
 
   // Find the chart object for the currently selected ID (or undefined)
-  const selectedChart = chartsList.find(c => c.id === selectedId);
+    const selectedChart = chartsList.find(c => c.id === selectedId);
 
+
+    const handleEdit = (chart: Chart) => {
+        setSelectedId(chart.id);
+        setEditChart(chart);
+        setDialogOpen(true);
+    };
+
+    const handleDialogClose = ()=>{
+        setDialogOpen(false)
+        setSelectedId(null)
+    }
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Top tabs */}
@@ -65,7 +83,8 @@ export function ChartsPage() {
         {/* Sidebar of chart names */}
         <ChartListSidebar
           charts={chartsList}
-          onSelect={setSelectedId}// if you want it wider
+          onSelect={setSelectedId}
+          onEdit={handleEdit}
         />
 
         {/* Preview area */}
@@ -80,6 +99,23 @@ export function ChartsPage() {
           )}
         </Box>
       </Box>
+      <Dialog
+        fullScreen
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+      >
+        <AppBar position="relative">
+          <Toolbar>
+            <IconButton edge="start" color="inherit" onClick={() => handleDialogClose()} aria-label="close">
+              <CloseIcon/>
+            </IconButton>
+          </Toolbar>
+        </AppBar>
+
+        {editChart && (
+          <ChartEditor chart={editChart} readonly={false} />
+        )}
+      </Dialog>
     </Box>
   );
 }
