@@ -12,9 +12,11 @@ export function ChartsPage() {
     const [tab, setTab] = React.useState(0);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [editMode, setEditMode] = useState(false);
+    
     // dialog state:
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editChart, setEditChart] = useState<Chart | null>(null);
+    const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false)
 
     const readonly = false
   // Your hard‑coded (or later: fetched) data
@@ -68,12 +70,23 @@ export function ChartsPage() {
     const handleEdit = (chart: Chart) => {
         setSelectedId(chart.id);
         setEditChart(chart);
+        setEditorMadeChanges(false)
         setDialogOpen(true);
     };
 
     const handleDialogClose = ()=>{
+        if(editorMageChanges){
+            const leave = window.confirm(
+                'You have unsaved changes. Are you sure you want to close without saving?'
+                );
+            if (!leave) {
+                return;
+             }
+        }
         setDialogOpen(false)
         setSelectedId(null)
+        setEditMode(false)
+        setEditorMadeChanges(false)
     }
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -92,7 +105,7 @@ export function ChartsPage() {
         <Box sx={{ flex: 1, position: 'relative' }}>
           {selectedChart ? (
             // render in read‑only mode
-            <ChartEditor chart={selectedChart} editMode={false} readonly={true}  />
+            <ChartEditor chart={selectedChart} editMode={false} onEditorChanged={setEditorMadeChanges}  />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
               Select a chart to preview
@@ -126,7 +139,7 @@ export function ChartsPage() {
         </AppBar>
 
         {editChart && (
-          <ChartEditor chart={editChart} editMode={editMode} readonly={false} />
+          <ChartEditor chart={editChart} editMode={editMode} onEditorChanged = {setEditorMadeChanges} />
         )}
       </Dialog>
     </Box>

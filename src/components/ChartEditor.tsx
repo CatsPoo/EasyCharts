@@ -9,10 +9,10 @@ import type { Device } from '../types/topology/Device';
 
 interface ChardEditorProps  {
   chart : Chart
-  readonly : boolean
   editMode:boolean
+  onEditorChanged : (editorMadeChanges: boolean) => void
 }
-export function ChartEditor({chart,editMode} : ChardEditorProps) {
+export function ChartEditor({chart,editMode,onEditorChanged} : ChardEditorProps) {
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
@@ -52,23 +52,37 @@ export function ChartEditor({chart,editMode} : ChardEditorProps) {
     
   }, [chart]);
 
+
+  const markChangesMade = useCallback(() => {
+    if (onEditorChanged) onEditorChanged(true);
+  }, [onEditorChanged]);
+
   const onReconnect = useCallback(
-  (oldEdge: Edge, connection: Connection) =>
-    setEdges((eds) => reconnectEdge(oldEdge, connection, eds)),
-  []
+  (oldEdge: Edge, connection: Connection) =>{
+    markChangesMade()
+    setEdges((eds) => reconnectEdge(oldEdge, connection, eds))
+  },
+  [markChangesMade]
 );
 
-  const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setNodes((nds) => applyNodeChanges(changes, nds));
-  }, []);
-  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      markChangesMade()
+      setNodes((nds) => applyNodeChanges(changes, nds));
+  }, [markChangesMade]);
+  
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      markChangesMade()
     setEdges((eds) => applyEdgeChanges(changes, eds));
-  }, []);
+  }, [markChangesMade]);
 
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
+  const onDragOver = useCallback(
+    (event: React.DragEvent) => {
+      markChangesMade()
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+  }, [markChangesMade]);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
@@ -91,9 +105,10 @@ export function ChartEditor({chart,editMode} : ChardEditorProps) {
         data: { label: `${type}` },
       };
 
+      markChangesMade()
       setNodes((nds) => nds.concat(newNode));
     },
-    [project]
+    [markChangesMade,project]
   );
 
   return (
