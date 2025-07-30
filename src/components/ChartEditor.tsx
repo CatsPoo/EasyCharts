@@ -5,6 +5,7 @@ import type {Connection, Edge,EdgeChange,Node, NodeChange} from 'reactflow';
 import { AnimatePresence,motion } from 'framer-motion';
 import type { Chart } from '../types/topology/Chart';
 import type { Device } from '../types/topology/Device';
+import type { Line } from '../types/topology/Line';
 
 
 interface ChardEditorProps  {
@@ -25,7 +26,7 @@ export function ChartEditor({chart,editMode,onEditorChanged} : ChardEditorProps)
     []
   );
 
-  function convertDevicesToNodes(devices: Device[]) : Node[]{
+  const convertDevicesToNodes =(devices: Device[]) : Node[] =>{
     const nodes : Node[] = devices.map(device =>{
       return {
         id: device.id,
@@ -37,18 +38,20 @@ export function ChartEditor({chart,editMode,onEditorChanged} : ChardEditorProps)
     return nodes
   }
 
-  // function convertLineToEdge(lines: Line[]) : Edge[]{
-  //   const edges : Edge[] = lines.map(line =>{
-  //     return {
-  //       id:line.id,
-  //     }
-  //   })
-  //   return edges
-  // }
+  const convertLinesToEdges = (lines: Line[]): Edge[] =>
+    lines.map((l) => ({
+      id: l.id,
+      source: l.sourceDeviceId,
+      target: l.targeDevicetId,
+      label: l.label,
+      type: /* you can choose a style, e.g. */ 'default',
+      animated: false,      // optional: makes the edge animate
+      //style: { strokeDasharray: l.type === 'rj45' ? '5 5' : undefined },
+    }));
 
     useEffect(() => {
     setNodes(convertDevicesToNodes(chart.devices));
-    setEdges([]);
+    setEdges(convertLinesToEdges(chart.lines));
     
   }, [chart]);
 

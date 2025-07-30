@@ -13,7 +13,7 @@ const chartsMock : Chart[] =
         { id: '1', type: 'switch', position: { x: 0, y: 0 },name:'sw1'},
         { id: '2', type: 'router', position: { x: 200, y: 0 },name:'r2'}
       ],
-      lines: [{ id: '1', label: '1Gbps', type:'rj45'}],
+      lines: [{ id: '1', label: '1Gbps', type:'rj45',sourceDeviceId:'1',targeDevicetId:'2'}],
     },
     {
       id: '2',
@@ -23,7 +23,7 @@ const chartsMock : Chart[] =
         { id: '3', type: 'switch', position: { x: 300, y: 300 },name:'sw1'},
         { id: '4', type: 'router', position: { x: 200, y: 200 },name:'r2'}
       ],
-      lines: [{ id: '2', label: '1Gbps', type:'rj45'}],
+      lines: [{ id: '2', label: '1Gbps', type:'rj45',sourceDeviceId:'4',targeDevicetId:'3'}],
     },
     {
       id: '3',
@@ -33,7 +33,7 @@ const chartsMock : Chart[] =
         { id: '5', type: 'switch', position: { x: 0, y: 0 },name:'sw1'},
         { id: '6', type: 'router', position: { x: 200, y: 0 },name:'r2'}
       ],
-      lines: [{ id: '3', label: '1Gbps', type:'rj45'}],
+      lines: [{ id: '3', label: '1Gbps', type:'rj45',sourceDeviceId:'5',targeDevicetId:'6'}],
     },
 ]
 
