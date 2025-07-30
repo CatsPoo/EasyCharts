@@ -3,14 +3,14 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
-import type { Chart } from '../types/topology/Chart';
 import { IconButton } from '@mui/material';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import type { chartMetadata } from '../types/visualization/ChartsMetsdata';
 
 interface SidebarProps {
-  charts: Chart[];
-  onSelect: (id: string) => void;
-  onEdit: (chart: Chart) => void; 
+  charts: chartMetadata[];
+  onSelect: (Chartid: string) => void;
+  onEdit: (chartId: string) => void; 
 }
 
 export function ChartListSidebar({ charts, onSelect,onEdit }: SidebarProps) {
@@ -20,7 +20,7 @@ export function ChartListSidebar({ charts, onSelect,onEdit }: SidebarProps) {
         {charts.map((chart) => (
           <ListItem key={chart.id} disablePadding
           secondaryAction={
-              <IconButton edge="end" onClick={() => onEdit(chart)}>
+              <IconButton edge="end" onClick={() => onEdit(chart.id)}>
                 <ArrowForwardIosIcon/>
               </IconButton>
             }>

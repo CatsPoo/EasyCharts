@@ -7,3 +7,4 @@ export interface Chart extends NamedTopologyEntity{
     devices:Device[]
     lines:Line[]
 }
+

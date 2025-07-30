@@ -4,13 +4,14 @@ import { NavBar } from '../components/NavBar';
 import { ChartListSidebar } from '../components/ChartListSideBar';
 import { ChartEditor } from '../components/ChartEditor';
 import type { Chart } from '../types/topology/Chart';
-import { useState, useEffect } from 'react';
+import { useState, useEffect} from 'react';
 import { AppBar, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import {useCharts } from '../contexts/ChartsContext';
 
 export function ChartsPage() {
     const [tab, setTab] = React.useState(0);
-    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [selectedId, setSelectedId] = useState<string>('-1');
     const [editMode, setEditMode] = useState(false);
     
     // dialog state:
@@ -18,60 +19,32 @@ export function ChartsPage() {
     const [editChart, setEditChart] = useState<Chart | null>(null);
     const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false)
 
+    const {getChart,getChartsInformation} = useCharts()
     const readonly = false
   // Your hard‑coded (or later: fetched) data
- const myCharts: Chart[] = [
-    {
-      id: '1',
-      name: 'Core Network',
-      description:'test-chart-1',
-      devices: [
-        { id: '1', type: 'switch', position: { x: 0, y: 0 },name:'sw1'},
-        { id: '2', type: 'router', position: { x: 200, y: 0 },name:'r2'}
-      ],
-      lines: [{ id: '1', label: '1Gbps', type:'rj45'}],
-    },
-    {
-      id: '2',
-      name: 'site Network',
-      description:'test-chart-2',
-      devices: [
-        { id: '3', type: 'switch', position: { x: 300, y: 300 },name:'sw1'},
-        { id: '4', type: 'router', position: { x: 200, y: 200 },name:'r2'}
-      ],
-      lines: [{ id: '2', label: '1Gbps', type:'rj45'}],
-    },
-  ];
-
-  const sharedCharts: Chart[] =[
-    {
-      id: '3',
-      name: 'Core Network',
-      description:'test-chart-1',
-      devices: [
-        { id: '5', type: 'switch', position: { x: 0, y: 0 },name:'sw1'},
-        { id: '6', type: 'router', position: { x: 200, y: 0 },name:'r2'}
-      ],
-      lines: [{ id: '3', label: '1Gbps', type:'rj45'}],
-    },
-  ];
+ 
   // Derive the list based on the active tab
-    const chartsList = tab === 0 ? myCharts : sharedCharts;
+    const chartsLists = getChartsInformation()
+    const chartsList = tab === 0 ? chartsLists.myCharts : chartsLists.sharedCharts;
 
     // Whenever the tab changes, clear the selection
     useEffect(() => {
-    setSelectedId(null);
+    setSelectedId('-1');
     }, [tab]);
 
   // Find the chart object for the currently selected ID (or undefined)
-    const selectedChart = chartsList.find(c => c.id === selectedId);
+    const selectedChart: Chart | undefined = getChart(selectedId)
 
 
-    const handleEdit = (chart: Chart) => {
-        setSelectedId(chart.id);
-        setEditChart(chart);
-        setEditorMadeChanges(false)
-        setDialogOpen(true);
+    const handleEdit = (chartId: string) => {
+        const chart = getChart(chartId)
+        if(chart){  
+          setSelectedId(chartId);
+          setEditChart(chart);
+          setEditorMadeChanges(false)
+          setDialogOpen(true);
+        }
+        //TODO Handle chart loading error
     };
 
     const handleDialogClose = ()=>{
@@ -84,7 +57,7 @@ export function ChartsPage() {
              }
         }
         setDialogOpen(false)
-        setSelectedId(null)
+        setSelectedId('-1')
         setEditMode(false)
         setEditorMadeChanges(false)
     }
