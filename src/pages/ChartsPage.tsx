@@ -105,6 +105,7 @@ export function ChartsPage() {
                 color="primary"
               /> 
             }
+            
             label={editMode ? 'Edit Mode' : 'View Mode'}
           /> : null}
         </div>

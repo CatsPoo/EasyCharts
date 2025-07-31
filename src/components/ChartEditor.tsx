@@ -1,5 +1,5 @@
 import 'reactflow/dist/style.css';import { DevicesSidebar } from './DevicesSideBar';
-import ReactFlow, { addEdge, Background, Controls, reconnectEdge, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
+import ReactFlow, { addEdge, applyNodeChanges, Background, Controls, reconnectEdge, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
 import { useCallback, useRef, useEffect } from 'react';
 import type {Connection, Edge,EdgeChange,Node, NodeChange} from 'reactflow';
 import { AnimatePresence,motion } from 'framer-motion';
@@ -13,7 +13,7 @@ interface ChardEditorProps  {
   onEditorChanged : (editorMadeChanges: boolean) => void
 }
 export function ChartEditor({chart,editMode,onEditorChanged} : ChardEditorProps) {
-  
+
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
@@ -22,7 +22,7 @@ export function ChartEditor({chart,editMode,onEditorChanged} : ChardEditorProps)
         id: device.id,
         type: 'default',
         position: device.position,
-        data: { label: device.name }
+        data: { label: device.name}
     }
     return node
   }
@@ -45,6 +45,15 @@ export function ChartEditor({chart,editMode,onEditorChanged} : ChardEditorProps)
     }
   }
 
+  const convertNodeToDevice = (node:Node) :Device =>{
+    return {
+      id: node.id,
+      position:node.position,
+      name: node.data.lable,
+      type:'default'
+    }
+  }
+
   const convertLinesToEdges = (lines: Line[]): Edge[] => {
     return lines.map((l) => convertLineToEdge(l));
   }
@@ -56,6 +65,7 @@ export function ChartEditor({chart,editMode,onEditorChanged} : ChardEditorProps)
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState(
     convertLinesToEdges(chart.lines)
   );
+
 
   const markChangesMade = useCallback(() => {
     if (onEditorChanged) onEditorChanged(true);
@@ -89,13 +99,6 @@ const onConnect = useCallback(
     },
     [markChangesMade, setEdges]
   );
-  // const onReconnect = useCallback(
-  //   (oldE: Edge, conn: Connection) => {
-  //     markChangesMade();
-  //     setEdges((eds) => reconnectEdge(oldE, conn, eds));
-  //   },
-  //   [markChangesMade, setEdges]
-  // );
 
   const onDragOver = useCallback(
     (e: React.DragEvent) => {
