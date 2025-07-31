@@ -66,54 +66,48 @@ export function ChartEditor({chart,editMode,onEditorChanged} : ChardEditorProps)
     convertLinesToEdges(chart.lines)
   );
 
-
-  const markChangesMade = useCallback(() => {
-    if (onEditorChanged) onEditorChanged(true);
-}, [onEditorChanged]);
-
  useEffect(() => {
     setNodes(convertDevicesToNodes(chart.devices));
     setEdges(convertLinesToEdges(chart.lines));
-    markChangesMade();
   }, [chart, setNodes, setEdges]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      markChangesMade();
+      onEditorChanged(true);
       onNodesChangeRF(changes);
     },
-    [markChangesMade, onNodesChangeRF]
+    [onEditorChanged, onNodesChangeRF]
   );
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      markChangesMade();
+      onEditorChanged(true);
       onEdgesChangeRF(changes);
     },
-    [markChangesMade, onEdgesChangeRF]
+    [onEditorChanged, onEdgesChangeRF]
   );
 
 const onConnect = useCallback(
     (c: Connection) => {
-      markChangesMade();
+      onEditorChanged(true);
       setEdges((eds) => addEdge(c, eds));
     },
-    [markChangesMade, setEdges]
+    [onEditorChanged, setEdges]
   );
 
   const onDragOver = useCallback(
     (e: React.DragEvent) => {
       if (!editMode) return;
-      markChangesMade();
+      onEditorChanged(true);
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
     },
-    [editMode, markChangesMade]
+    [editMode, onEditorChanged]
   );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       if (!editMode || !reactFlowWrapper.current) return;
-      markChangesMade();
+      onEditorChanged(true);
       e.preventDefault();
       const type = e.dataTransfer.getData('application/reactflow');
       if (!type) return;
@@ -127,14 +121,14 @@ const onConnect = useCallback(
         { id: `${type}-${Date.now()}`, type: 'default', position, data: { label: type } },
       ]);
     },
-    [editMode, markChangesMade, project, setNodes]
+    [editMode, onEditorChanged, project, setNodes]
   );
   const onEdgeUpdate = useCallback(
     (oldE: Edge, conn: Connection) => {
-      markChangesMade();
+      onEditorChanged(true);
       setEdges((eds) => reconnectEdge(oldE, conn, eds));
     },
-    [markChangesMade, setEdges]
+    [onEditorChanged, setEdges]
   );
 
   return (

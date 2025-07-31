@@ -4,8 +4,8 @@ import { NavBar } from '../components/NavBar';
 import { ChartListSidebar } from '../components/ChartListSideBar';
 import { ChartEditor } from '../components/ChartEditor';
 import type { Chart } from '../types/topology/Chart';
-import { useState, useEffect} from 'react';
-import { AppBar, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
+import { useState, useEffect, useCallback } from 'react';
+import { AppBar, Button, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {useCharts } from '../contexts/ChartsContext';
 
@@ -18,6 +18,8 @@ export function ChartsPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editChart, setEditChart] = useState<Chart | null>(null);
     const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false)
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const {getChart,getChartsInformation} = useCharts()
     const readonly = false
@@ -61,6 +63,22 @@ export function ChartsPage() {
         setEditMode(false)
         setEditorMadeChanges(false)
     }
+
+    const onSave = useCallback(async () => {
+    //if (!draft) return;
+    setSaving(true); setError(null);
+    try {
+      // const saved = await saveChartToDB(draft); // your API
+      // updateLiveChart(saved);                   // update global store AFTER save
+      // setIsEditing(false);
+      setEditorMadeChanges(false)
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to save chart");
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Top tabs */}
@@ -109,6 +127,13 @@ export function ChartsPage() {
             label={editMode ? 'Edit Mode' : 'View Mode'}
           /> : null}
         </div>
+        {editMode && (
+        <>
+          <Button color="success"  variant="contained"  onClick={onSave} disabled={saving || !editorMageChanges} >
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </>
+        )}
           </Toolbar>
         </AppBar>
 
