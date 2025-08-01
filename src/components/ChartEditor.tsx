@@ -1,5 +1,5 @@
 import 'reactflow/dist/style.css';import { DevicesSidebar } from './DevicesSideBar';
-import ReactFlow, { addEdge, applyNodeChanges, Background, Controls, reconnectEdge, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
+import ReactFlow, { addEdge,Background, ConnectionLineType, Controls, reconnectEdge, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
 import { useCallback, useRef, useEffect } from 'react';
 import type {Connection, Edge,EdgeChange,Node, NodeChange} from 'reactflow';
 import { AnimatePresence,motion } from 'framer-motion';
@@ -10,9 +10,9 @@ import type { Line } from '../types/topology/Line';
 interface ChardEditorProps  {
   chart : Chart
   editMode:boolean
-  onEditorChanged : (editorMadeChanges: boolean) => void
+  onDraftchange : (nextDraft: Chart) => void
 }
-export function ChartEditor({chart,editMode,onEditorChanged} : ChardEditorProps) {
+export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
@@ -69,45 +69,43 @@ export function ChartEditor({chart,editMode,onEditorChanged} : ChardEditorProps)
  useEffect(() => {
     setNodes(convertDevicesToNodes(chart.devices));
     setEdges(convertLinesToEdges(chart.lines));
-  }, [chart, setNodes, setEdges]);
+  }, [setNodes, setEdges]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      onEditorChanged(true);
       onNodesChangeRF(changes);
+      const updatedDevices :Device[] = nodes.map(nds => convertNodeToDevice(nds))
+      onDraftchange({...chart,devices:updatedDevices})
     },
-    [onEditorChanged, onNodesChangeRF]
+    [onNodesChangeRF]
   );
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      onEditorChanged(true);
       onEdgesChangeRF(changes);
     },
-    [onEditorChanged, onEdgesChangeRF]
+    [onEdgesChangeRF,setEdges]
   );
 
 const onConnect = useCallback(
     (c: Connection) => {
-      onEditorChanged(true);
       setEdges((eds) => addEdge(c, eds));
+      onDraftchange({...chart});
     },
-    [onEditorChanged, setEdges]
+    [onDraftchange, setEdges]
   );
 
   const onDragOver = useCallback(
     (e: React.DragEvent) => {
       if (!editMode) return;
-      onEditorChanged(true);
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
     },
-    [editMode, onEditorChanged]
+    [editMode, onDraftchange]
   );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       if (!editMode || !reactFlowWrapper.current) return;
-      onEditorChanged(true);
       e.preventDefault();
       const type = e.dataTransfer.getData('application/reactflow');
       if (!type) return;
@@ -116,19 +114,23 @@ const onConnect = useCallback(
         x: e.clientX - bounds.left,
         y: e.clientY - bounds.top,
       });
+      const newNode = { id: `${type}-${Date.now()}`, type: 'default', position, data: { label: type } }
       setNodes((nds) => [
         ...nds,
-        { id: `${type}-${Date.now()}`, type: 'default', position, data: { label: type } },
+        newNode
       ]);
+
+      const newDevice : Device = convertNodeToDevice(newNode)
+      onDraftchange({...chart,devices: [...chart.devices,newDevice]});
     },
-    [editMode, onEditorChanged, project, setNodes]
+    [editMode, onDraftchange, project, setNodes]
   );
   const onEdgeUpdate = useCallback(
     (oldE: Edge, conn: Connection) => {
-      onEditorChanged(true);
+      onDraftchange({...chart});
       setEdges((eds) => reconnectEdge(oldE, conn, eds));
     },
-    [onEditorChanged, setEdges]
+    [onDraftchange, setEdges]
   );
 
   return (
@@ -160,6 +162,8 @@ const onConnect = useCallback(
         onEdgeUpdate={editMode ? onEdgeUpdate : undefined}
         nodesDraggable={editMode}
         nodesConnectable={editMode}
+        defaultEdgeOptions={{type:ConnectionLineType.Step}}
+         connectionLineType={ConnectionLineType.Step}
         fitView
         style={{ width: '100%', height: '100%' }}
       >

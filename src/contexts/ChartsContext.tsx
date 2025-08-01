@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 import type { Chart } from "../types/topology/Chart";
 import type { Chartsinformation } from "../types/visualization/ChartsMetsdata";
 
-const chartsMock : Chart[] =
+let chartsMock : Chart[] =
 [
     {
       id: '1',
@@ -63,7 +63,7 @@ interface ChartsContextValue {
   getChart: (id: string) => Chart | undefined;
   getChartsInformation: () => Chartsinformation;
   //addChart: (chart:Chart) => void
-  //updateChart: (updated: Chart) => void;
+  updateChart: (chartId:string,updated: Chart) => void;
   // you can also add createChart, deleteChart, etc.
 }
 
@@ -91,11 +91,10 @@ const getChart = useCallback(
 //   ,[charts]
 // )
 
-//   const updateMyChart = (updated: Chart) => {
-//     setMyCharts((prev) =>
-//       prev.map((c) => (c.id === updated.id ? updated : c))
-//     );
-//   };
+  const updateChart = (chartId:string,updated: Chart) => {
+    chartsMock = chartsMock.filter(chart => chart.id === chartId)
+    chartsMock.push(updated)
+  };
 
 //   const updateSharedChart = (updated: Chart) => {
 //     setSharedCharts((prev) =>
@@ -105,7 +104,7 @@ const getChart = useCallback(
 
   return (
     <ChartsContext.Provider
-      value={{getChartsInformation, getChart }}
+      value={{getChartsInformation, getChart,updateChart }}
     >
       {children}
     </ChartsContext.Provider>

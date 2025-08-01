@@ -21,7 +21,7 @@ export function ChartsPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const {getChart,getChartsInformation} = useCharts()
+    const {getChart,getChartsInformation,updateChart} = useCharts()
     const readonly = false
   // Your hard‑coded (or later: fetched) data
  
@@ -42,7 +42,7 @@ export function ChartsPage() {
         const chart = getChart(chartId)
         if(chart){  
           setSelectedId(chartId);
-          setEditChart(chart);
+          setEditChart(structuredClone(chart));
           setEditorMadeChanges(false)
           setDialogOpen(true);
         }
@@ -72,11 +72,18 @@ export function ChartsPage() {
       // updateLiveChart(saved);                   // update global store AFTER save
       // setIsEditing(false);
       setEditorMadeChanges(false)
+      if(editChart)
+        updateChart(editChart.id,editChart)
     } catch (e: any) {
       setError(e?.message ?? "Failed to save chart");
     } finally {
       setSaving(false);
     }
+  }, []);
+
+  const handleDraftChange = useCallback((next: Chart) => {
+    setEditChart(next);            // update draft only
+    setEditorMadeChanges(true);    // enable Save button
   }, []);
 
   return (
@@ -138,7 +145,7 @@ export function ChartsPage() {
         </AppBar>
 
         {editChart && (
-          <ChartEditor chart={editChart} editMode={editMode} onEditorChanged = {setEditorMadeChanges} />
+          <ChartEditor  chart={editChart} editMode={editMode} onDraftchange = {handleDraftChange} />
         )}
       </Dialog>
     </Box>
