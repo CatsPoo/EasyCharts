@@ -18,19 +18,22 @@ export class DevicesService {
         return this.devicesRepo.save(newDevice);
     }
 
-    async getDevice(id: string): Promise<Device> {
+    getAllDevices(): Promise<Device[]> {
+        return this.devicesRepo.find();
+    }
+    async getDeviceById(id: string): Promise<Device> {
         const device = await this.devicesRepo.findOne({ where: { id } });
         if (!device) throw new NotFoundException(`Device ${id} not found`);
         return device;
      }
 
-    async update(id: string, updateDevicePayload: UpdateDevicePayload): Promise<Device> {
+    async updateDevice(id: string, updateDevicePayload: UpdateDevicePayload): Promise<Device> {
         const {device} = updateDevicePayload
         await this.devicesRepo.update(id, device);
-        return this.getDevice(id);
+        return this.getDeviceById(id);
     }
 
-    async remove(id: string): Promise<void> {
+    async removeDevice(id: string): Promise<void> {
         const result = await this.devicesRepo.delete(id);
         if (result.affected === 0) {
             throw new NotFoundException(`Device ${id} not found`);
