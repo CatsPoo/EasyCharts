@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import { NavBar } from '../components/NavBar';
 import { ChartListSidebar } from '../components/ChartListSideBar';
 import { ChartEditor } from '../components/ChartEditor';
-import type { Chart } from '../types/topology/Chart';
+import type { Chart } from '@easy-charts/easycharts-types'
 import { useState, useEffect, useCallback } from 'react';
 import { AppBar, Button, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';

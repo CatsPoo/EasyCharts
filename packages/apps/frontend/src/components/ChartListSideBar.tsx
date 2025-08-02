@@ -5,7 +5,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import { IconButton } from '@mui/material';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-import type { chartMetadata } from '../types/visualization/ChartsMetsdata';
+import type { chartMetadata } from '@easy-charts/easycharts-types';
 
 interface SidebarProps {
   charts: chartMetadata[];

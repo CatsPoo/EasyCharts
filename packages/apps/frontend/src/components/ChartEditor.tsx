@@ -3,9 +3,9 @@ import ReactFlow, { addEdge,Background, ConnectionLineType, Controls, reconnectE
 import { useCallback, useRef, useEffect } from 'react';
 import type {Connection, Edge,EdgeChange,Node, NodeChange} from 'reactflow';
 import { AnimatePresence,motion } from 'framer-motion';
-import type { Chart } from '../types/topology/Chart';
-import type { Device } from '../types/topology/Device';
-import type { Line } from '../types/topology/Line';
+import type { Chart } from '@easy-charts/easycharts-types';
+import type { Device } from '@easy-charts/easycharts-types';
+import type { Line } from '@easy-charts/easycharts-types';
 
 interface ChardEditorProps  {
   chart : Chart
