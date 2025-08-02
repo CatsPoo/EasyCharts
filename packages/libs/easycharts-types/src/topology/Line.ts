@@ -1,4 +1,4 @@
-import type { BaseTopologyEntity } from "./glabalTopology";
+import type { BaseTopologyEntity } from "./glabalTopology.js";
 
 export interface Line extends BaseTopologyEntity{
     type: string //sm-fiber, mm fivre...

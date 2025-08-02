@@ -11,6 +11,9 @@
     },
     {
       "path": "./packages/apps/backend"
+    },
+    {
+      "path": "./packages/libs/easycharts-types"
     }
   ]
 }
