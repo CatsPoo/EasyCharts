@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AppBar, Button, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {useCharts } from '../contexts/ChartsContext';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export function ChartsPage() {
     const [tab, setTab] = React.useState(0);
@@ -92,24 +93,37 @@ export function ChartsPage() {
       <NavBar value={tab} onChange={setTab} />
 
       <Box sx={{ display: 'flex', flex: 1 }}>
-        {/* Sidebar of chart names */}
-        <ChartListSidebar
+        <AnimatePresence initial={false}>
+        {(tab !== 2) && (
+          <motion.div
+            key="sidebar"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 192, opacity: 1 }}   // 192px = 12rem
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="flex-none overflow-hidden border-r bg-gray-100"
+          >
+             <ChartListSidebar
           charts={chartsList}
           onSelect={setSelectedId}
           onEdit={handleEdit}
         />
+          </motion.div>
+        )}
+      </AnimatePresence>
+       
 
-        {/* Preview area */}
-        <Box sx={{ flex: 1, position: 'relative' }}>
+        {(tab!==2)&&(<Box sx={{ flex: 1, position: 'relative' }}>
           {selectedChart ? (
             // render in read‑only mode
-            <ChartEditor chart={selectedChart} editMode={false} onEditorChanged={setEditorMadeChanges}  />
+            <ChartEditor chart={selectedChart} editMode={false} onDraftchange={handleDraftChange}  />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
               Select a chart to preview
             </div>
           )}
         </Box>
+      )}
       </Box>
       <Dialog
         fullScreen
