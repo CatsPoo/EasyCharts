@@ -46,5 +46,11 @@
         }
       }
     }
+  },
+  "dependencies": {
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/typeorm": "^11.0.0",
+    "pg": "^8.16.3",
+    "typeorm": "^0.3.25"
   }
 }
