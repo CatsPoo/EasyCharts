@@ -1,4 +1,4 @@
-import type { Position } from "@easy-charts/easycharts-types";
+import type { Position } from "../visualization/Position.js";
 import type { NamedTopologyEntity } from "./glabalTopology.js";
 export interface Device extends NamedTopologyEntity{
     type : string;
