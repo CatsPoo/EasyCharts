@@ -5,6 +5,12 @@
   "references": [
     {
       "path": "./packages/apps/frontend"
+    },
+    {
+      "path": "./packages/apps/backend-e2e"
+    },
+    {
+      "path": "./packages/apps/backend"
     }
   ]
 }

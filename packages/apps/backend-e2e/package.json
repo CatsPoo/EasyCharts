@@ -1,0 +1,26 @@
+{
+  "name": "@easy-charts/backend-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "implicitDependencies": [
+      "@easy-charts/backend"
+    ],
+    "targets": {
+      "e2e": {
+        "executor": "@nx/jest:jest",
+        "outputs": [
+          "{projectRoot}/test-output/jest/coverage"
+        ],
+        "options": {
+          "jestConfig": "packages/apps/backend-e2e/jest.config.ts",
+          "passWithNoTests": true
+        },
+        "dependsOn": [
+          "@easy-charts/backend:build",
+          "@easy-charts/backend:serve"
+        ]
+      }
+    }
+  }
+}
