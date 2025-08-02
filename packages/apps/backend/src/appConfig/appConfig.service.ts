@@ -4,8 +4,9 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AppConfigService {
+    private readonly config:appConfigSchema;
     constructor(private readonly configService:ConfigService) {
-        const configa:appConfigSchema = {
+        this.config = {
             database:{
                 username: this.configService.get<string>('DB_USER',''),
                 password:this.configService.get<string>('DB_PASS',''),
@@ -15,5 +16,9 @@ export class AppConfigService {
             }
         }
         
+    }
+
+    public getConfig():appConfigSchema{
+        return this.config
     }
 }
