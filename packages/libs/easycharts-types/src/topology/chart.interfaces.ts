@@ -8,7 +8,7 @@ export interface Chart extends NamedTopologyEntity{
     lines:Line[]
 }
 
-export type chartMetadata = Omit<Chart,'devices' | 'lines'>
+export type chartMetadata = Omit<Chart,'devicesLocations' | 'lines'>
 
 export interface Chartsinformation{
     myCharts: chartMetadata[],
