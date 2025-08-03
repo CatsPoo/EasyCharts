@@ -1,15 +1,15 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import { NavBar } from '../components/NavBar';
-import { ChartListSidebar } from '../components/ChartListSideBar';
-import { ChartEditor } from '../components/ChartEditor';
+import { ChartListSidebar } from '../components/ChartsViewer/ChartListSideBar';
+import { ChartEditor } from '../components/ChartsViewer/ChartEditor';
 import type { Chart } from '@easy-charts/easycharts-types'
 import { useState, useEffect, useCallback } from 'react';
 import { AppBar, Button, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {useCharts } from '../contexts/ChartsContext';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AssetSidebar } from '../components/assetsSidebar';
+import { AssetSidebar } from '../components/AssetsList/AssetsSidebar';
 
 export function ChartsPage() {
       const assetsList = [
@@ -47,7 +47,7 @@ export function ChartsPage() {
 
 
     const handleEdit = (chartId: string) => {
-        const chart = getChart(chartId)
+        const chart:Chart = getChart(chartId)
         if(chart){  
           setSelectedId(chartId);
           setEditChart(structuredClone(chart));

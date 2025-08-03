@@ -1,5 +1,4 @@
 import { Box, List, ListItem, ListItemButton, ListItemText } from "@mui/material";
-import { assert } from "console";
 
 interface assetsSidebarProps {
   assets : string[]

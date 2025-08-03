@@ -7,13 +7,13 @@ import { IconButton } from '@mui/material';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import type { chartMetadata } from '@easy-charts/easycharts-types';
 
-interface SidebarProps {
+interface chartsSidebarProps {
   charts: chartMetadata[];
   onSelect: (Chartid: string) => void;
   onEdit: (chartId: string) => void; 
 }
 
-export function ChartListSidebar({ charts, onSelect,onEdit }: SidebarProps) {
+export function ChartListSidebar({ charts, onSelect,onEdit }: chartsSidebarProps) {
   return (
     <Box sx={{ width:250, flexShrink: 0, borderRight: '1px solid #ddd', height: '100%' }}>
       <List>
