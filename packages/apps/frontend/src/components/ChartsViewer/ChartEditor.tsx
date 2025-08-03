@@ -3,7 +3,7 @@ import ReactFlow, { addEdge,Background, ConnectionLineType, Controls, reconnectE
 import { useCallback, useRef, useEffect } from 'react';
 import type {Connection, Edge,EdgeChange,Node, NodeChange} from 'reactflow';
 import { AnimatePresence,motion } from 'framer-motion';
-import type { Chart, DeviceLocation, Position } from '@easy-charts/easycharts-types';
+import type { Chart, DeviceLocation } from '@easy-charts/easycharts-types';
 import type { Device } from '@easy-charts/easycharts-types';
 import type { Line } from '@easy-charts/easycharts-types';
 
