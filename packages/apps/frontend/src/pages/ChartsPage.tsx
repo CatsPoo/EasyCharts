@@ -9,8 +9,16 @@ import { AppBar, Button, Dialog, FormControlLabel, IconButton, Switch, Toolbar }
 import CloseIcon from '@mui/icons-material/Close';
 import {useCharts } from '../contexts/ChartsContext';
 import { AnimatePresence, motion } from 'framer-motion';
+import { AssetSidebar } from '../components/assetsSidebar';
 
 export function ChartsPage() {
+      const assetsList = [
+      'Devices',
+      'Models',
+      'Lines',
+      'Vendors',
+    ]
+
     const [tab, setTab] = React.useState(0);
     const [selectedId, setSelectedId] = useState<string>('-1');
     const [editMode, setEditMode] = useState(false);
@@ -22,11 +30,10 @@ export function ChartsPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const [selectedAsset,setSelectedAsset] = useState<string>(assetsList[0]);
     const {getChart,getChartsInformation,updateChart} = useCharts()
     const readonly = false
-  // Your hard‑coded (or later: fetched) data
- 
-  // Derive the list based on the active tab
+
     const chartsLists = getChartsInformation()
     const chartsList = tab === 0 ? chartsLists.myCharts : chartsLists.sharedCharts;
 
@@ -94,23 +101,38 @@ export function ChartsPage() {
 
       <Box sx={{ display: 'flex', flex: 1 }}>
         <AnimatePresence initial={false}>
-        {(tab !== 2) && (
-          <motion.div
-            key="sidebar"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 192, opacity: 1 }}   // 192px = 12rem
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="flex-none overflow-hidden border-r bg-gray-100"
-          >
-             <ChartListSidebar
+          {tab !== 2 ? (
+            <motion.div
+              key="chart-sidebar"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 192, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="flex-none overflow-hidden border-r bg-gray-100"
+            >
+              <ChartListSidebar
           charts={chartsList}
           onSelect={setSelectedId}
           onEdit={handleEdit}
         />
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="asset-sidebar"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 192, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex-none overflow-hidden border-r bg-gray-50"
+            >
+              <AssetSidebar
+                assets={assetsList}
+                selectedAsset={selectedAsset}
+                onSelect={setSelectedAsset}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
        
 
         {(tab!==2)&&(<Box sx={{ flex: 1, position: 'relative' }}>
@@ -149,11 +171,9 @@ export function ChartsPage() {
           /> : null}
         </div>
         {editMode && (
-        <>
           <Button color="success"  variant="contained"  onClick={onSave} disabled={saving || !editorMageChanges} >
             {saving ? "Saving…" : "Save"}
           </Button>
-        </>
         )}
           </Toolbar>
         </AppBar>
