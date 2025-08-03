@@ -1,10 +1,10 @@
-import type { Device } from './Device.js';
-import type {NamedTopologyEntity } from './glabalTopology.js';
-import type { Line } from './Line.js';
+import type {DeviceLocation, NamedTopologyEntity } from './genericTopology.interfaces.js';
+import type { Line } from './lines.interfaces.ts.js';
+
 
 export interface Chart extends NamedTopologyEntity{
     description:string
-    devices:Device[]
+    devicesLocations:DeviceLocation[]
     lines:Line[]
 }
 
