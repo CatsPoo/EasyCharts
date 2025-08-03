@@ -15,7 +15,7 @@ interface chartsSidebarProps {
 
 export function ChartListSidebar({ charts, onSelect,onEdit }: chartsSidebarProps) {
   return (
-    <Box sx={{ width:250, flexShrink: 0, borderRight: '1px solid #ddd', height: '100%' }}>
+    <Box sx={{ width:'100%', flexShrink: 0, borderRight: '1px solid #ddd', height: '100%' }}>
       <List>
         {charts.map((chart) => (
           <ListItem key={chart.id} disablePadding

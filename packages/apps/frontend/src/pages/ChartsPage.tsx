@@ -105,7 +105,7 @@ export function ChartsPage() {
             <motion.div
               key="chart-sidebar"
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 192, opacity: 1 }}
+              animate={{ width: 210, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="flex-none overflow-hidden border-r bg-gray-100"
@@ -120,7 +120,7 @@ export function ChartsPage() {
             <motion.div
               key="asset-sidebar"
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 192, opacity: 1 }}
+              animate={{ width: 210, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3 }}
               className="flex-none overflow-hidden border-r bg-gray-50"

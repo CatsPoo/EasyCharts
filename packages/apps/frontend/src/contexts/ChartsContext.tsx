@@ -59,7 +59,7 @@ const initialChartsInformation : Chartsinformation = {
 }
 
 interface ChartsContextValue {
-  getChart: (id: string) => Chart | undefined;
+  getChart: (id: string) => Chart;
   getChartsInformation: () => Chartsinformation;
   //addChart: (chart:Chart) => void
   updateChart: (chartId:string,updated: Chart) => void;
@@ -77,7 +77,13 @@ export function ChartsProvider({ children }: { children: ReactNode }) {
   [chartsInformation]
 );
 const getChart = useCallback(
-  (id: string) => charts.find(c => c.id === id),
+  (id: string) => {
+    const chart = charts.find(c => c.id === id)
+    if(chart)
+      return chart
+    return charts[0]
+
+  },
   [charts]
 );
 
