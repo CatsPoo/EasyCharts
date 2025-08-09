@@ -1,6 +1,4 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { Position } from './position.entity'
-
 @Entity({ name: 'devices' })
 export class DeviceEntity {
   @PrimaryGeneratedColumn('uuid')
