@@ -5,4 +5,3 @@ export * from './visualization/position.interface.js'
 export * from './topology/lines.interfaces.ts.js'
 export * from './generic.interface.js'
 export * from './assets/assets.interfaces.js'
-

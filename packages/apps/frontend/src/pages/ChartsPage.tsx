@@ -10,6 +10,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import {useCharts } from '../contexts/ChartsContext';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AssetSidebar } from '../components/AssetsList/AssetsSidebar';
+import AssetPage from '../components/AssetsList/AssetsPage';
 
 export function ChartsPage() {
       const assetsList = [
@@ -101,7 +102,7 @@ export function ChartsPage() {
 
       <Box sx={{ display: 'flex', flex: 1 }}>
         <AnimatePresence initial={false}>
-          {tab !== 2 ? (
+          {(tab !== 2) && (
             <motion.div
               key="chart-sidebar"
               initial={{ width: 0, opacity: 0 }}
@@ -116,26 +117,27 @@ export function ChartsPage() {
           onEdit={handleEdit}
         />
             </motion.div>
-          ) : (
-            <motion.div
-              key="asset-sidebar"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 210, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex-none overflow-hidden border-r bg-gray-50"
-            >
-              <AssetSidebar
-                assets={assetsList}
-                selectedAsset={selectedAsset}
-                onSelect={setSelectedAsset}
-              />
-            </motion.div>
-          )}
+          )
+          // : (<></>)
+          //   <motion.div
+          //     key="asset-sidebar"
+          //     initial={{ width: 0, opacity: 0 }}
+          //     animate={{ width: 210, opacity: 1 }}
+          //     exit={{ width: 0, opacity: 0 }}
+          //     transition={{ duration: 0.3 }}
+          //     className="flex-none overflow-hidden border-r bg-gray-50"
+          //   >
+          //     <AssetSidebar
+          //       assets={assetsList}
+          //       selectedAsset={selectedAsset}
+          //       onSelect={setSelectedAsset}
+          //     />
+          //   </motion.div>
+          }
         </AnimatePresence>
        
 
-        {(tab!==2)&&(<Box sx={{ flex: 1, position: 'relative' }}>
+        {(tab!==2)?(<Box sx={{ flex: 1, position: 'relative' }}>
           {selectedChart ? (
             // render in read‑only mode
             <ChartEditor chart={selectedChart} editMode={false} onDraftchange={handleDraftChange}  />
@@ -145,6 +147,8 @@ export function ChartsPage() {
             </div>
           )}
         </Box>
+      ) :(
+        <AssetPage/>
       )}
       </Box>
       <Dialog

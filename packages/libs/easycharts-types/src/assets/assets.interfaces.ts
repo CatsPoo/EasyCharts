@@ -1,4 +1,10 @@
-import { Line } from 'src/topology/lines.interfaces.ts.js';
-import { Device } from '../topology/devices.interfaces.js';
+import { Device } from "src/topology/devices.interfaces.js";
 
-export type assetsTypes= Device | Line
+export type AssetMap = {
+  devices: Device;
+//   models: Model;
+//   vendors: Vendor;
+};
+
+export type AssetKind = keyof AssetMap
+export type AnyAsset = AssetMap[AssetKind];

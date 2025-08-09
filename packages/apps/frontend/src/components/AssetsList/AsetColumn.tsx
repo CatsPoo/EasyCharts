@@ -1,0 +1,18 @@
+import type { GridColDef } from '@mui/x-data-grid';
+import type { AssetKind } from '@easy-charts/easycharts-types';
+
+export const columns: Record<AssetKind, GridColDef[]> = {
+  devices: [
+    { field: 'name', headerName: 'Name', flex: 1 },
+    { field: 'type', headerName: 'Type', width: 140 },
+    { field: 'model', headerName: 'Model', width: 160 },
+    { field: 'vendor', headerName: 'Vendor', width: 160 },
+  ],
+//   models: [
+//     { field: 'name', headerName: 'Name', flex: 1 },
+//     { field: 'vendor', headerName: 'Vendor', width: 160 },
+//   ],
+//   vendors: [
+//     { field: 'name', headerName: 'Name', flex: 1 },
+//   ],
+};

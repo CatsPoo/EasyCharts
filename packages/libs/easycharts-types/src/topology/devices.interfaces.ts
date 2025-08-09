@@ -5,3 +5,11 @@ export interface Device extends NamedTopologyEntity{
     vendor ?: string;
     ipAddress ?:string;
 }
+
+export interface CreateDeviceDto {
+  device : Device
+}
+
+export interface UpdateDeviceDto{
+  device:Device
+}
