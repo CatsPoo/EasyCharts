@@ -52,7 +52,12 @@ export class ModelsService {
     const take = q.pageSize ?? 25;
     const skip = (q.page ?? 0) * take;
 
-    const qb = this.modelsRepo.createQueryBuilder('v');
+    const qb = this.modelsRepo.createQueryBuilder('m')
+  .leftJoinAndSelect('m.vendor', 'v'); // ← include vendor
+
+    if (q.search?.trim()) {
+      qb.where('LOWER(m.name) LIKE :s', { s: `%${q.search.toLowerCase()}%` });
+    }
 
     if (q.search?.trim()) {
       qb.where('LOWER(v.name) LIKE :s', { s: `%${q.search.toLowerCase()}%` });
