@@ -48,15 +48,20 @@ export function useUpdateAsset<K extends keyof AssetMap>(kind: K) {
   return useMutation({
     mutationFn: async (data: AssetMap[K]) => {
       const id = (data as any).id as string;
+      // strip id from the payload
+      const { id: _omit, ...put } = data as any;
+
       const res = await fetch(`/api/${kind}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(put),
       });
       if (!res.ok) throw new Error('Update failed');
       return res.json() as Promise<AssetMap[K]>;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['assets', kind] }),
+    onSuccess: (_data, _vars, _ctx) => {
+      qc.invalidateQueries({ queryKey: ['assets', kind] });
+    },
   });
 }
 
