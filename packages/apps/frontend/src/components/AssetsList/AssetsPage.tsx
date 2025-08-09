@@ -15,9 +15,11 @@ export default function AssetPage() {
   const [editing, setEditing] = useState<AnyAsset | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
-  const sortBy = sortModel[0]?.field;
-  const sortDir = sortModel[0]?.sort;
-
+  const sort = sortModel[0];
+  const sortBy  = sort?.field;
+  const sortDir: 'asc' | 'desc' | undefined =
+  sort?.sort === 'asc' || sort?.sort === 'desc' ? sort.sort : undefined;
+  
   const { data, isLoading } = useListAssets(kind, {
     page: pagination.page,
     pageSize: pagination.pageSize,
@@ -50,8 +52,9 @@ export default function AssetPage() {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
       <Tabs value={kind} onChange={(_, v) => setKind(v)}>
         <Tab label="Devices" value="devices" />
+        <Tab label="Vendors" value="vendors" />
         {/* <Tab label="Models" value="models" />
-        <Tab label="Vendors" value="vendors" /> */}
+         */}
       </Tabs>
 
       <Toolbar sx={{ gap: 1 }}>

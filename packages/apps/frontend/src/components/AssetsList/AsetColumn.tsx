@@ -8,6 +8,9 @@ export const columns: Record<AssetKind, GridColDef[]> = {
     { field: 'model', headerName: 'Model', width: 160 },
     { field: 'vendor', headerName: 'Vendor', width: 160 },
   ],
+  vendors:[
+     { field: 'name', headerName: 'Name', flex: 1 },
+  ]
 //   models: [
 //     { field: 'name', headerName: 'Name', flex: 1 },
 //     { field: 'vendor', headerName: 'Vendor', width: 160 },
