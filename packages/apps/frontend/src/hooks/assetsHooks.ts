@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import type { AssetMap } from '@easy-charts/easycharts-types';
 
 // helpful alias
@@ -6,26 +6,22 @@ type ListResponse<K extends keyof AssetMap> = { rows: Array<AssetMap[K]>; total:
 
 export function useListAssets<K extends keyof AssetMap>(
   kind: K,
-  params?: { page?: number; pageSize?: number; search?: string; sortBy?: string; sortDir?: 'asc' | 'desc' }
+  params?: { page?: number; pageSize?: number; search?: string; sortBy?: string; sortDir?: 'asc' | 'desc' },
+  options?: UseQueryOptions<ListResponse<K>>
 ) {
-  return useQuery({
+  return useQuery<ListResponse<K>>({
     queryKey: ['assets', kind, params] as const,
-    queryFn: async (): Promise<ListResponse<K>> => {
-      const safeEntries = Object.entries(params ?? {}).filter(([key, val]) => {
-        if (val == null) return false;              // drop null/undefined
-        if (val === '') return false;               // drop empty strings (e.g., search="")
-        if (key === 'sortDir' && val !== 'asc' && val !== 'desc') return false;
-        return true;
-      });
-      const qs = new URLSearchParams(safeEntries as any).toString();
-
+    queryFn: async () => {
+      const qs = toQueryString(params);
       const res = await fetch(`/api/${kind}?${qs}`);
       if (!res.ok) throw new Error('Failed to fetch');
       return (await res.json()) as ListResponse<K>;
     },
     placeholderData: (prev) => prev,
+    ...options,
   });
 }
+
 
 export function useCreateAsset<K extends keyof AssetMap>(kind: K) {
   const qc = useQueryClient();
@@ -75,4 +71,14 @@ export function useDeleteAsset<K extends keyof AssetMap>(kind: K) {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['assets', kind] }),
   });
+}
+
+function toQueryString(params?: Record<string, unknown>) {
+  const sp = new URLSearchParams();
+  if (!params) return '';
+  for (const [key, val] of Object.entries(params)) {
+    if (val == null || val === '') continue;       // drop undefined/null/empty
+    sp.set(key, String(val));                      // <-- stringify numbers/booleans
+  }
+  return sp.toString();
 }

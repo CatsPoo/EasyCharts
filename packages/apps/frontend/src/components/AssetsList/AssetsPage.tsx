@@ -53,8 +53,7 @@ export default function AssetPage() {
       <Tabs value={kind} onChange={(_, v) => setKind(v)}>
         <Tab label="Devices" value="devices" />
         <Tab label="Vendors" value="vendors" />
-        {/* <Tab label="Models" value="models" />
-         */}
+        <Tab label="Models" value="models" />
       </Tabs>
 
       <Toolbar sx={{ gap: 1 }}>
@@ -100,7 +99,12 @@ export default function AssetPage() {
           open
           initial={editing as any}
           onClose={() => setEditing(null)}
-          onSubmit={(values) => { updateMut.mutate({ ...(editing as any), ...values }); setEditing(null); }}
+          onSubmit={(values) => {
+      
+      const payload = { id: (editing as any).id, ...values };
+      updateMut.mutate(payload);
+      setEditing(null);
+    }}
         />
       )}
     </Box>

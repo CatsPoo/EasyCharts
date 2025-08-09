@@ -7,12 +7,10 @@ import { ChartsModule } from '../charts/charts.module';
 import { AppConfigModule } from '../appConfig/appConfig.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppConfigService } from '../appConfig/appConfig.service';
-import { VendorsModule } from '../vendors/vendors.module';
 
 @Module({
   imports: [
     DevicesModule,
-    VendorsModule,
     LinesModule,
     ChartsModule,
     AppConfigModule,

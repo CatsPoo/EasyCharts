@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { VendorEntity } from './entities/vendor.entity';
+import { VendorEntity } from '../devices/entities/vendor.entity';
 import { CreateVendorDto, UpdateVendorDto } from './dto/vendors.dto';
 import { QueryDto } from './../query/dto/query.dto'
 import { InjectRepository } from '@nestjs/typeorm';
