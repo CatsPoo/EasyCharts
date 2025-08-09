@@ -27,26 +27,25 @@ type Props<K extends AssetKind> = {
 export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, onSubmit }: Props<K>) {
   const schema = schemas[kind] as any;
 
-  const defaults = useMemo(() => {
-    if (!initial) return {};
-    const d: any = { ...initial };
-    if (kind === 'models') {
-     
-      if (d.vendor?.id && !d.vendorId) d.vendorId = d.vendor.id; // ⭐
-      delete d.vendor; 
-    }
-    return d;
-  }, [initial, kind]);
+  function mapDefaults(kind: AssetKind, initial: any) {
+  if (!initial) return {};
+  const d: any = { ...initial };
+  if (kind === 'models') {
+    d.vendorId = d.vendorId ?? d.vendor?.id ?? ''; // prefill select
+    delete d.vendor;                                // avoid sending object back
+  }
+  return d;
+}
   
   const {control, register, handleSubmit, formState: {  errors, isSubmitting }, reset } = useForm<any>({
     resolver: zodResolver(schema),
-    defaultValues: defaults,     // initial load
+    defaultValues: mapDefaults(kind, initial),     // initial load
     mode: 'onSubmit',
   });
 
   useEffect(() => {
-    if (open) reset(initial ?? {});
-  }, [open, initial, reset]);
+    if (open) reset(mapDefaults(kind, initial));
+  }, [open, initial, kind, reset]);
 
   const { data: vendorsData, isLoading: vendorsLoading } = useListAssets(
   'vendors',

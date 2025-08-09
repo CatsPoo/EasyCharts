@@ -101,7 +101,7 @@ export default function AssetPage() {
           onClose={() => setEditing(null)}
           onSubmit={(values) => {
       
-      const payload = { id: (editing as any).id, ...values }; // ⭐
+      const payload = { id: (editing as any).id, ...values };
       updateMut.mutate(payload);
       setEditing(null);
     }}
