@@ -7,7 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
-  Patch,
+  Put,
   Post,
   Query,
 } from '@nestjs/common';
@@ -36,7 +36,7 @@ export class VendorsController {
     return this.vendorsService.getVendorById(id);
   }
 
-  @Patch(':id')
+  @Put(':id')
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() payload: UpdateVendorDto,

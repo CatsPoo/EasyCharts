@@ -87,16 +87,12 @@ export default function AssetPage() {
         />
       </Box>
 
-     <AssetForm
-    kind={kind}
-    open={createOpen}
-    initial={editing as any}
-    onClose={() => setEditing(null)}
-    onSubmit={(values) => {
-      const payload = { ...(editing as any), ...values };
-      updateMut.mutate(payload, { onSuccess: () => setEditing(null) });
-    }}
-  />
+      <AssetForm
+        kind={kind}
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSubmit={(values) => { createMut.mutate(values); setCreateOpen(false); }}
+      />
 
       {editing && (
         <AssetForm
