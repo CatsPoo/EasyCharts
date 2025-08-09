@@ -1,4 +1,3 @@
-
 import {
   Body,
   Controller,
@@ -13,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { DevicesService } from './devices.service';
-import type { CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';
+import { CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';
 import { QueryDto } from '@easy-charts/easycharts-types';
 
 @Controller('devices')
@@ -22,15 +21,13 @@ export class DevicesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createDevicePayload: CreateDeviceDto) {
-    return this.devicesService.createDevice(createDevicePayload);
+  create(@Body() payload: CreateDeviceDto) {
+    return this.devicesService.createDevice(payload);
   }
 
-  // GET /devices?page=0&pageSize=25&search=...&sortBy=name&sortDir=asc
+  // GET /devices?page=&pageSize=&search=&sortBy=&sortDir=
   @Get()
-  async list(@Query() q: QueryDto) {
-    // service should implement pagination, optional search and sorting
-    // and return: { rows: DeviceEntity[], total: number }
+  list(@Query() q: QueryDto) {
     return this.devicesService.listDevices(q);
   }
 
@@ -42,9 +39,9 @@ export class DevicesController {
   @Patch(':id')
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() updateDevicePayload: UpdateDeviceDto,
+    @Body() payload: UpdateDeviceDto,
   ) {
-    return this.devicesService.updateDevice(id, updateDevicePayload);
+    return this.devicesService.updateDevice(id, payload);
   }
 
   @Delete(':id')

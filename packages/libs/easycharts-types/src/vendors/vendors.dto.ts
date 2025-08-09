@@ -1,4 +1,6 @@
 import { IsOptional, IsString, MinLength } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
+
 export class CreateVendorDto {
   @IsString()
   @MinLength(1)
