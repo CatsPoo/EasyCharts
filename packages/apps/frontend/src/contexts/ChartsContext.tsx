@@ -1,7 +1,6 @@
-/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
-import type { Chart } from "../types/topology/Chart";
-import type { Chartsinformation } from "../types/visualization/ChartsMetsdata";
+import type { Chart } from "@easy-charts/easycharts-types";
+import type { Chartsinformation } from "@easy-charts/easycharts-types";
 
 let chartsMock : Chart[] =
 [
@@ -9,9 +8,9 @@ let chartsMock : Chart[] =
       id: '1',
       name: 'Core Network',
       description:'test-chart-1',
-      devices: [
-        { id: '1', type: 'switch', position: { x: 0, y: 0 },name:'sw1'},
-        { id: '2', type: 'router', position: { x: 200, y: 0 },name:'r2'}
+      devicesLocations: [
+        {device:{ id: '1', type: 'switch',name:'sw1'},position:{ x: 0, y: 0 }},
+        {device:{ id: '2', type: 'router',name:'r2'}, position: { x: 200, y: 0 }},
       ],
       lines: [{ id: '1', label: '1Gbps', type:'rj45',sourceDeviceId:'1',targeDevicetId:'2'}],
     },
@@ -19,9 +18,9 @@ let chartsMock : Chart[] =
       id: '2',
       name: 'site Network',
       description:'test-chart-2',
-      devices: [
-        { id: '3', type: 'switch', position: { x: 300, y: 300 },name:'sw1'},
-        { id: '4', type: 'router', position: { x: 200, y: 200 },name:'r2'}
+      devicesLocations: [
+        {device:{ id: '3', type: 'switch',name:'sw1'},position: { x: 50, y: 50 }},
+        {device:{ id: '4', type: 'router',name:'r2'},position: { x: 150, y: 150 }}
       ],
       lines: [{ id: '2', label: '1Gbps', type:'rj45',sourceDeviceId:'4',targeDevicetId:'3'}],
     },
@@ -29,9 +28,9 @@ let chartsMock : Chart[] =
       id: '3',
       name: 'Core Network',
       description:'test-chart-1',
-      devices: [
-        { id: '5', type: 'switch', position: { x: 0, y: 0 },name:'sw1'},
-        { id: '6', type: 'router', position: { x: 200, y: 0 },name:'r2'}
+      devicesLocations: [
+        {device:{ id: '5', type: 'switch',name:'sw1'},position: { x: 0, y: 0 }},
+        {device:{ id: '6', type: 'router',name:'r2'},position: { x: 200, y: 0 }}
       ],
       lines: [{ id: '3', label: '1Gbps', type:'rj45',sourceDeviceId:'5',targeDevicetId:'6'}],
     },
@@ -60,7 +59,7 @@ const initialChartsInformation : Chartsinformation = {
 }
 
 interface ChartsContextValue {
-  getChart: (id: string) => Chart | undefined;
+  getChart: (id: string) => Chart;
   getChartsInformation: () => Chartsinformation;
   //addChart: (chart:Chart) => void
   updateChart: (chartId:string,updated: Chart) => void;
@@ -78,7 +77,13 @@ export function ChartsProvider({ children }: { children: ReactNode }) {
   [chartsInformation]
 );
 const getChart = useCallback(
-  (id: string) => charts.find(c => c.id === id),
+  (id: string) => {
+    const chart = charts.find(c => c.id === id)
+    if(chart)
+      return chart
+    return charts[0]
+
+  },
   [charts]
 );
 

@@ -20,7 +20,4 @@ export class DeviceEntity {
 
   @Column({ name: 'ip_address', nullable: true })
   ipAddress?: string;
-
-  @Column(()=>Position)
-  position!: Position;
 }
