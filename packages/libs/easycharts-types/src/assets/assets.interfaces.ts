@@ -1,9 +1,10 @@
 import { Device } from "src/devices/devices.interfaces.js";
-import { Vendor } from "src/vendors/vendors.interfaces.js";
+import { Model } from "src/devices/models.interfaces.js";
+import { Vendor } from "src/devices/vendors.interfaces.js";
 
 export type AssetMap = {
   devices: Device;
-//   models: Model;
+  models: Model;
   vendors: Vendor;
 };
 

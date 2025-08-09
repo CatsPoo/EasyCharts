@@ -4,20 +4,51 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ModelEntity } from './entities/model.entity';
 import { CreateModelDto, UpdateModelDto } from './dto/model.dto';
+import { VendorEntity } from './entities/vendor.entity';
 
 @Injectable()
 export class ModelsService {
   constructor(
     @InjectRepository(ModelEntity)
     private readonly modelsRepo: Repository<ModelEntity>,
+    @InjectRepository(VendorEntity)
+    private readonly vendorRepo: Repository<VendorEntity>,
   ) {}
 
-  async createVendor(dto: CreateModelDto) {
-    const entity = this.modelsRepo.create(dto);
-    return this.modelsRepo.save(entity);
+  async createModel(dto: CreateModelDto) {
+    const model = this.modelsRepo.create({
+      name: dto.name,
+    });
+
+    if (dto.vendorId) {
+      const vendor = await this.vendorRepo.findOne({ where: { id: dto.vendorId } });
+      if (!vendor) throw new NotFoundException('Vendor not found');
+      model.vendor = vendor;
+    }
+
+    return this.modelsRepo.save(model);
   }
 
-  async listVendors(q: QueryDto) {
+  async updateModel(id: string, dto: UpdateModelDto) {
+    const model  = await this.modelsRepo.findOne({ where: { id }, relations: ['vendor'] });
+    if (!model) throw new NotFoundException('Model not found');
+
+    if (dto.name) model.name = dto.name;
+
+    if (dto.vendorId !== undefined) {
+      if (dto.vendorId === null) {
+        model.vendor = null;
+      } else {
+        const vendor = await this.vendorRepo.findOne({ where: { id: dto.vendorId } });
+        if (!vendor) throw new NotFoundException('Vendor not found');
+        model.vendor = vendor;
+      }
+    }
+
+    return this.modelsRepo.save(model);
+  }
+
+  async listModels(q: QueryDto) {
     const take = q.pageSize ?? 25;
     const skip = (q.page ?? 0) * take;
 
@@ -37,18 +68,13 @@ export class ModelsService {
     return { rows, total };
   }
 
-  async getVendorById(id: string) {
+  async getModelById(id: string) {
     const found = await this.modelsRepo.findOne({ where: { id } });
     if (!found) throw new NotFoundException('Vendor not found');
     return found;
   }
 
-  async updateVendor(id: string, dto: UpdateModelDto) {
-    await this.modelsRepo.update(id, dto);
-    return this.getVendorById(id);
-  }
-
-  async removeVendor(id: string) {
+  async removeModel(id: string) {
     await this.modelsRepo.delete(id);
   }
 }

@@ -53,8 +53,7 @@ export default function AssetPage() {
       <Tabs value={kind} onChange={(_, v) => setKind(v)}>
         <Tab label="Devices" value="devices" />
         <Tab label="Vendors" value="vendors" />
-        {/* <Tab label="Models" value="models" />
-         */}
+        <Tab label="Models" value="models" />
       </Tabs>
 
       <Toolbar sx={{ gap: 1 }}>
