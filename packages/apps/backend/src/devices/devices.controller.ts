@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { DevicesService } from './devices.service';
-import { CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';
+import { CreateDeviceDto, UpdateDeviceDto } from './dto/devices.dto';
 import { QueryDto } from '@easy-charts/easycharts-types';
 
 @Controller('devices')
