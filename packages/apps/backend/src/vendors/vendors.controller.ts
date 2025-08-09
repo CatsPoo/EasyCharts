@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { VendorsService } from './vendors.service';
 import { CreateVendorDto, UpdateVendorDto } from '@easy-charts/easycharts-types';
-import { QueryDto } from '../query/dto/query.dto';
+import { QueryDto } from '@easy-charts/easycharts-types';
 
 @Controller('vendors')
 export class VendorsController {

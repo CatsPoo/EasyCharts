@@ -4,7 +4,7 @@ import { DeviceEntity } from './entities/device.entity';
 import { Repository } from 'typeorm';
 import { CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';
 import { Device } from '@easy-charts/easycharts-types';
-import { QueryDto} from '../query/dto/query.dto';
+import { QueryDto} from '@easy-charts/easycharts-types';
 @Injectable()
 export class DevicesService {
     constructor(
