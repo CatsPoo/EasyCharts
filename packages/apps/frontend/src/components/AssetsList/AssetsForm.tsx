@@ -1,6 +1,6 @@
 // AssetForm.tsx (patch)
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Stack, FormControl, InputLabel, Select, MenuItem, FormHelperText } from '@mui/material';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,9 +27,20 @@ type Props<K extends AssetKind> = {
 export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, onSubmit }: Props<K>) {
   const schema = schemas[kind] as any;
 
+  const defaults = useMemo(() => {
+    if (!initial) return {};
+    const d: any = { ...initial };
+    if (kind === 'models') {
+     
+      if (d.vendor?.id && !d.vendorId) d.vendorId = d.vendor.id; // ⭐
+      delete d.vendor; 
+    }
+    return d;
+  }, [initial, kind]);
+  
   const {control, register, handleSubmit, formState: {  errors, isSubmitting }, reset } = useForm<any>({
     resolver: zodResolver(schema),
-    defaultValues: initial ?? {},     // initial load
+    defaultValues: defaults,     // initial load
     mode: 'onSubmit',
   });
 
@@ -51,6 +62,7 @@ const vendorOptions = vendorsData?.rows ?? [];
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
+             {initial?.id && <input type="hidden" {...register('id')} />}
             <TextField label="Name" {...register('name')} helperText={errors.name?.message as string} error={!!errors.name}/>
             {kind === 'devices' && (
               <>

@@ -99,7 +99,12 @@ export default function AssetPage() {
           open
           initial={editing as any}
           onClose={() => setEditing(null)}
-          onSubmit={(values) => { updateMut.mutate({ ...(editing as any), ...values }); setEditing(null); }}
+          onSubmit={(values) => {
+      
+      const payload = { id: (editing as any).id, ...values }; // ⭐
+      updateMut.mutate(payload);
+      setEditing(null);
+    }}
         />
       )}
     </Box>
