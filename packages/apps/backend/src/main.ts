@@ -1,6 +1,7 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
+import 'reflect-metadata';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule,
@@ -18,6 +19,25 @@ async function bootstrap() {
     });
     next();
   });
+
+  app.useGlobalPipes(new ValidationPipe({
+  transform: true,
+  whitelist: true,
+  forbidNonWhitelisted: true,
+  transformOptions: { enableImplicitConversion: true },
+  exceptionFactory: (errors) => {
+    Logger.error(
+      'Validation errors: ' +
+      JSON.stringify(errors.map(e => ({
+        property: e.property,
+        value: (e as any).value,
+        constraints: e.constraints,
+      })), null, 2)
+    );
+    return new BadRequestException(errors);
+  },
+}));
+
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalPipes(new ValidationPipe({

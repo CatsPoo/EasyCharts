@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DeviceEntity } from './entities/device.entity';
 import { CreateDeviceDto, UpdateDeviceDto } from './dto/devices.dto'; 
-import { QueryDto } from '@easy-charts/easycharts-types';                          
+import { QueryDto } from './../query/dto/query.dto';                          
 
 @Injectable()
 export class DevicesService {
