@@ -50,8 +50,9 @@ export default function AssetPage() {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
       <Tabs value={kind} onChange={(_, v) => setKind(v)}>
         <Tab label="Devices" value="devices" />
+        <Tab label="Vendors" value="vendors" />
         {/* <Tab label="Models" value="models" />
-        <Tab label="Vendors" value="vendors" /> */}
+         */}
       </Tabs>
 
       <Toolbar sx={{ gap: 1 }}>

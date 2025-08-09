@@ -7,7 +7,7 @@ import type { AssetKind, AssetMap } from '@easy-charts/easycharts-types';
 
 const schemas = {
   devices: z.object({ name: z.string().min(1), type: z.string().min(1), model: z.string().optional(), vendor: z.string().optional() }),
-  models:  z.object({ name: z.string().min(1), vendor: z.string().optional() }),
+  // models:  z.object({ name: z.string().min(1), vendor: z.string().optional() }),
   vendors: z.object({ name: z.string().min(1) }),
 } as const;
 
@@ -39,7 +39,14 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
               <TextField label="Vendor" {...register('vendor')} /> */}
             </>
           )}
-          {/* {kind === 'models' && <TextField label="Vendor" {...register('vendor')} />} */}
+          {
+            // kind==='vendors' &&(
+
+            // )
+          }
+          {
+          /* {kind === 'models' && <TextField label="Vendor" {...register('vendor')} />} */
+          }
         </Stack>
       </DialogContent>
       <DialogActions>
