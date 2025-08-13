@@ -66,12 +66,21 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
             {kind === 'devices' && (
               <>
                 <TextField label="Type" {...register('type')} helperText={errors.type?.message as string} error={!!errors.type}/>
-                <TextField label="Model" {...register('model')} />
                 
                 <AssetsSelectionList
                   fetchKind="vendors"
                   name="vendor"                     // ← matches your devices schema
                   label="Vendor"
+                  control={control}
+                  errors={errors}
+                  getOptionValue={(v:any) => v.name} // ← store the NAME string
+                  getOptionLabel={(v:any) => v.name}
+                />
+
+                <AssetsSelectionList
+                  fetchKind="models"
+                  name="model"                     // ← matches your devices schema
+                  label="Model"
                   control={control}
                   errors={errors}
                   getOptionValue={(v:any) => v.name} // ← store the NAME string
