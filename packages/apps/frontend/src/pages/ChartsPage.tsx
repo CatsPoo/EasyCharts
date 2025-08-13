@@ -1,16 +1,15 @@
-import * as React from 'react';
-import Box from '@mui/material/Box';
-import { NavBar } from '../components/NavBar';
-import { ChartListSidebar } from '../components/ChartsViewer/ChartListSideBar';
-import { ChartEditor } from '../components/ChartsViewer/ChartEditor';
-import type { Chart } from '@easy-charts/easycharts-types'
-import { useState, useEffect, useCallback } from 'react';
-import { AppBar, Button, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
+import type { Chart } from '@easy-charts/easycharts-types';
 import CloseIcon from '@mui/icons-material/Close';
-import {useCharts } from '../contexts/ChartsContext';
+import { AppBar, Button, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
+import Box from '@mui/material/Box';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AssetSidebar } from '../components/AssetsList/AssetsSidebar';
+import * as React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import AssetPage from '../components/AssetsList/AssetsPage';
+import { ChartEditor } from '../components/ChartsViewer/ChartEditor';
+import { ChartListSidebar } from '../components/ChartsViewer/ChartListSideBar';
+import { NavBar } from '../components/NavBar';
+import { useCharts } from '../contexts/ChartsContext';
 
 export function ChartsPage() {
       const assetsList = [

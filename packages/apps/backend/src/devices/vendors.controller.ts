@@ -12,8 +12,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { VendorsService } from './vendors.service';
-import { CreateVendorDto, UpdateVendorDto } from './dto/vendors.dto';
-import { QueryDto } from './../query/dto/query.dto';
+import type  { CreateVendorDto, UpdateVendorDto } from '@easy-charts/easycharts-types';
+import { QueryDto } from '../query/dto/query.dto';
 
 @Controller('vendors')
 export class VendorsController {

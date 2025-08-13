@@ -1,0 +1,23 @@
+{
+  "extends": ["plugin:@nx/react", "plugin:@typescript-eslint/recommended"],
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "@acme/server-dtos",
+            "message": "Frontend must not import runtime DTO classes. Import from '@acme/server-dtos/types' and use 'import type'."
+          }
+        ],
+        "patterns": [
+          {
+            "group": ["@acme/server-dtos/*", "!@acme/server-dtos/types"],
+            "message": "Frontend can only import '@acme/server-dtos/types'."
+          }
+        ]
+      }
+    ],
+    "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports" }]
+  }
+}

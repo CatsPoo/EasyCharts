@@ -1,19 +1,27 @@
 // AssetForm.tsx (patch)
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Stack, FormControl, InputLabel, Select, MenuItem, FormHelperText } from '@mui/material';
-import { useEffect, useMemo } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useEffect } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AssetKind, AssetMap } from '@easy-charts/easycharts-types';
-import { useListAssets } from '../../hooks/assetsHooks';
+import type { AssetKind, AssetMap } from '@easy-charts/easycharts-types';
+import {AssetsSelectionList} from './AsetsSelectionList.component';
 
 const schemas = {
-  devices: z.object({ name: z.string().min(1), type: z.string().min(1), model: z.string().optional(), vendor: z.string().optional(), ipAddress: z.string().optional() }),
+   devices: z.object({
+    name: z.string().min(1),
+    type: z.string().min(1),
+    vendorId: z.string().min(1),    // ← for filtering UI only (not required by backend, but we validate UX-wise)
+    modelId: z.string().min(1),     // ← REQUIRED by backend
+    ipAddress: z.string().optional(),
+  }),
   models:  z.object({
     name: z.string().min(1),
     vendorId: z.string().min(1)
    }),
-  vendors: z.object({ name: z.string().min(1)}),
+  vendors: z.object({
+     name: z.string().min(1)
+    }),
 } as const;
 
 type Props<K extends AssetKind> = {
@@ -28,14 +36,19 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
   const schema = schemas[kind] as any;
 
   function mapDefaults(kind: AssetKind, initial: any) {
-  if (!initial) return {};
-  const d: any = { ...initial };
-  if (kind === 'models') {
-    d.vendorId = d.vendorId ?? d.vendor?.id ?? ''; // prefill select
-    delete d.vendor;                                // avoid sending object back
+    if (!initial) return {};
+    const d: any = { ...initial };
+    if (kind === 'models') {
+      d.vendorId = d.vendorId ?? d.vendor?.id ?? '';
+      delete d.vendor;
+    }
+    if (kind === 'devices') {
+      d.modelId = d.modelId ?? d.model?.id ?? '';
+      d.vendorId = d.vendorId ?? d.model?.vendor?.id ?? '';
+      delete d.model; // avoid sending nested object back
+    }
+    return d;
   }
-  return d;
-}
   
   const {control, register, handleSubmit, formState: {  errors, isSubmitting }, reset } = useForm<any>({
     resolver: zodResolver(schema),
@@ -47,18 +60,12 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
     if (open) reset(mapDefaults(kind, initial));
   }, [open, initial, kind, reset]);
 
-  const { data: vendorsData, isLoading: vendorsLoading } = useListAssets(
-  'vendors',
-  { page: 0, pageSize: 1000, sortBy: 'name', sortDir: 'asc' },
-  { enabled: kind === 'models', staleTime: 5 * 60 * 1000 }
-);
-
-const vendorOptions = vendorsData?.rows ?? [];
+  const selectedVendorId = useWatch({ control, name: 'vendorId' });
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{initial?.id ? `Edit ${kind.slice(0, -1)}` : `Create ${kind.slice(0, -1)}`}</DialogTitle>
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form onSubmit={handleSubmit(onSubmit, (errs) => console.error('Form validation failed:', errs))} noValidate>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
              {initial?.id && <input type="hidden" {...register('id')} />}
@@ -66,35 +73,40 @@ const vendorOptions = vendorsData?.rows ?? [];
             {kind === 'devices' && (
               <>
                 <TextField label="Type" {...register('type')} helperText={errors.type?.message as string} error={!!errors.type}/>
-                <TextField label="Model" {...register('model')} />
-                <TextField label="Vendor" {...register('vendor')} />
+                
+                <AssetsSelectionList
+                  fetchKind="vendors"
+                  name="vendorId"
+                  label="Vendor"
+                  control={control}
+                  errors={errors}
+                  getOptionValue={(v:any) => v.id} 
+                  getOptionLabel={(v:any) => v.name}
+                />
+
+                <AssetsSelectionList
+                  fetchKind="models"
+                  name="modelId"
+                  label="Model"
+                  control={control}
+                  errors={errors}
+                  getOptionValue={(m:any) => m.id}
+                  getOptionLabel={(m:any) => m.name}
+                  vendorIdFilter={selectedVendorId}
+                />
+
                 <TextField label="IP Address" {...register('ipAddress')} />
               </>
             )}
             {kind === 'models' && (
-              <FormControl error={!!errors.vendorId}>
-                <InputLabel id="vendorId-label">Vendor</InputLabel>
-                  <Controller
-                      name="vendorId"
-                      control={control}
-                      render={({ field }) => (
-                        <Select
-                          labelId="vendorId-label"
-                          label="Vendor"
-                          value={field.value}
-                          onChange={(e) => field.onChange(e.target.value)}
-                          disabled={vendorsLoading}
-                        >
-                          <MenuItem value=""><em>None</em></MenuItem>
-                            {vendorOptions.map((v: any) => (
-                          <MenuItem key={v.id} value={v.id}>{v.name}</MenuItem>
-                          ))}
-                        </Select>
-                      )}
-                    />
-                    <FormHelperText>{errors.vendorId?.message as string}</FormHelperText>
-                  </FormControl>
-)}
+              <AssetsSelectionList
+                fetchKind="vendors"
+                name="vendorId"           // field name in your models schema/DTO
+                label="Vendor"
+                control={control}
+                errors={errors}
+              />
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

@@ -2,45 +2,57 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DeviceEntity } from './entities/device.entity';
-import { CreateDeviceDto, UpdateDeviceDto } from './dto/devices.dto'; 
-import { QueryDto } from './../query/dto/query.dto';                          
+import type  { CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';                          
+import { ModelEntity } from './entities/model.entity';
+import { QueryDto } from '../query/dto/query.dto';
 
 @Injectable()
 export class DevicesService {
   constructor(
     @InjectRepository(DeviceEntity)
     private readonly devicesRepo: Repository<DeviceEntity>,
+    @InjectRepository(ModelEntity)
+    private readonly modelsRepo: Repository<ModelEntity>,
   ) {}
 
   async createDevice(dto: CreateDeviceDto): Promise<DeviceEntity> {
-    const entity = this.devicesRepo.create(dto);
-    return this.devicesRepo.save(entity);
+    const model = await this.modelsRepo.findOne({ where: { id: dto.modelId }, relations: ['vendor'] });
+    if (!model) throw new NotFoundException('Model not found');
+
+    const device = this.devicesRepo.create({
+      ...dto,
+      model
+    });
+    return this.devicesRepo.save(device);
   }
 
-  async listDevices(q: QueryDto) {
+ async listDevices(q: QueryDto) {
     const take = q.pageSize ?? 25;
     const skip = (q.page ?? 0) * take;
 
-    const qb = this.devicesRepo.createQueryBuilder('d');
+    const qb = this.devicesRepo.createQueryBuilder('d')
+      .leftJoinAndSelect('d.model', 'm')
+      .leftJoinAndSelect('m.vendor', 'v');
 
     if (q.search?.trim()) {
-      qb.where('LOWER(d.name) LIKE :s', { s: `%${q.search.toLowerCase()}%` });
+      qb.andWhere('LOWER(d.name) LIKE :s', { s: `%${q.search.toLowerCase()}%` });
     }
 
-    // Allowlist columns that actually exist on DeviceEntity
-    const allowed = new Set<keyof DeviceEntity>([
-      'name',
-      'type',
-      'vendor',
-      'model',
-      'ipAddress',
-      'id',
-      // add 'createdAt', 'updatedAt' only if your entity has them
-    ]);
-    const sortBy = (q.sortBy && allowed.has(q.sortBy as any)) ? q.sortBy! : 'name';
-    const sortDir = (q.sortDir ?? 'asc').toUpperCase() as 'ASC' | 'DESC';
+    // allow client sort keys, map to real columns
+    const mapSort: Record<string, string> = {
+      id: 'd.id',
+      name: 'd.name',
+      type: 'd.type',
+      ipAddress: 'd.ipAddress',
+      model: 'm.name',
+      vendor: 'v.name',
+      //createdAt: 'd.createdAt',
+      //updatedAt: 'd.updatedAt',
+    };
 
-    qb.orderBy(`d.${sortBy}`, sortDir);
+    const sortKey = q.sortBy && mapSort[q.sortBy] ? mapSort[q.sortBy] : 'd.name';
+    const sortDir = (q.sortDir ?? 'asc').toUpperCase() as 'ASC' | 'DESC';
+    qb.orderBy(sortKey, sortDir);
 
     const [rows, total] = await qb.skip(skip).take(take).getManyAndCount();
     return { rows, total };
@@ -57,8 +69,20 @@ export class DevicesService {
   }
 
   async updateDevice(id: string, dto: UpdateDeviceDto): Promise<DeviceEntity> {
-    await this.devicesRepo.update(id, dto);
-    return this.getDeviceById(id);
+    const device = await this.devicesRepo.findOne({ where: { id }, relations: ['model', 'model.vendor'] });
+    if (!device) throw new NotFoundException('Device not found');
+
+    if (dto.name !== undefined) device.name = dto.name;
+    if (dto.type !== undefined) device.type = dto.type;
+    if (dto.ipAddress !== undefined) device.ipAddress = dto.ipAddress;
+
+    if (dto.modelId !== undefined) {
+      const model = await this.modelsRepo.findOne({ where: { id: dto.modelId }, relations: ['vendor'] });
+      if (!model) throw new NotFoundException('Model not found');
+      device.model = model;
+    }
+
+    return this.devicesRepo.save(device);
   }
 
   async removeDevice(id: string): Promise<void> {
