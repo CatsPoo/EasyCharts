@@ -1,11 +1,11 @@
 // AssetForm.tsx (patch)
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Stack, FormControl, InputLabel, Select, MenuItem, FormHelperText } from '@mui/material';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AssetKind, AssetMap } from '@easy-charts/easycharts-types';
-import { AssetsSelectionList } from './AsetsSelectionList.component';
+import {AssetsSelectionList} from './AsetsSelectionList.component';
 
 const schemas = {
   devices: z.object({ 
@@ -67,15 +67,28 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
               <>
                 <TextField label="Type" {...register('type')} helperText={errors.type?.message as string} error={!!errors.type}/>
                 <TextField label="Model" {...register('model')} />
-                <TextField label="Vendor" {...register('vendor')} />
+                
+                <AssetsSelectionList
+                  fetchKind="vendors"
+                  name="vendor"                     // ← matches your devices schema
+                  label="Vendor"
+                  control={control}
+                  errors={errors}
+                  getOptionValue={(v:any) => v.name} // ← store the NAME string
+                  getOptionLabel={(v:any) => v.name}
+                />
+
                 <TextField label="IP Address" {...register('ipAddress')} />
               </>
             )}
             {kind === 'models' && (
-              <AssetsSelectionList 
-              kind='vendors'
-              control={control}
-              errors={errors}/>
+              <AssetsSelectionList
+                fetchKind="vendors"
+                name="vendorId"           // field name in your models schema/DTO
+                label="Vendor"
+                control={control}
+                errors={errors}
+              />
             )}
           </Stack>
         </DialogContent>

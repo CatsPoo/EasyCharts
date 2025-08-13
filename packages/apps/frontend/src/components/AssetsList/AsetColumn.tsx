@@ -14,6 +14,6 @@ export const columns: Record<AssetKind, GridColDef[]> = {
   ],
   models: [
     { field: 'name', headerName: 'Name', flex: 1 },
-    { field: 'vendor', headerName: 'Vendor', width: 160,valueGetter: (_value, row: Model) => row.vendor.name}
+    { field: 'vendor', headerName: 'Vendor', width: 160,valueGetter: (_value, row: Model) => row.vendor?.name}
   ],
 };
