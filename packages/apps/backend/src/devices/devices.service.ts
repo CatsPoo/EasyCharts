@@ -2,9 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DeviceEntity } from './entities/device.entity';
-import { CreateDeviceDto, UpdateDeviceDto } from './dto/devices.dto'; 
-import { QueryDto } from './../query/dto/query.dto';                          
+import type  { CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';                          
 import { ModelEntity } from './entities/model.entity';
+import { QueryDto } from '../query/dto/query.dto';
 
 @Injectable()
 export class DevicesService {

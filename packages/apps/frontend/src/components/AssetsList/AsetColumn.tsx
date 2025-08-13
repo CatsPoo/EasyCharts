@@ -1,6 +1,5 @@
+import type { AssetKind, Device ,Model} from '@easy-charts/easycharts-types';
 import type { GridColDef } from '@mui/x-data-grid';
-import type { AssetKind, Device } from '@easy-charts/easycharts-types';
-import { Model } from '@easy-charts/easycharts-types';
 
 export const columns: Record<AssetKind, GridColDef[]> = {
   devices: [

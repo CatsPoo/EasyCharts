@@ -1,6 +1,6 @@
 // AssetPage.tsx
 import { Box, Tabs, Tab, Toolbar, Button, TextField } from '@mui/material';
-import { DataGrid, GridPaginationModel, GridSortModel } from '@mui/x-data-grid';
+import { DataGrid, type GridPaginationModel, type GridSortModel } from '@mui/x-data-grid';
 import { useMemo, useState } from 'react';
 import { columns } from './AsetColumn';
 import { useListAssets, useCreateAsset, useUpdateAsset, useDeleteAsset } from '../../hooks/assetsHooks';

@@ -1,5 +1,5 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
     "rootDir": "src",
@@ -7,7 +7,10 @@
     "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
     "emitDeclarationOnly": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client"],
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "declaration": true
   },
   "include": ["src/**/*.ts"],
   "references": []

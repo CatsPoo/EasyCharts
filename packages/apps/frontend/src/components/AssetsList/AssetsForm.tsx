@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AssetKind, AssetMap } from '@easy-charts/easycharts-types';
+import type { AssetKind, AssetMap } from '@easy-charts/easycharts-types';
 import {AssetsSelectionList} from './AsetsSelectionList.component';
 
 const schemas = {

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions} from '@tanstack/react-query';
 import type { AssetMap } from '@easy-charts/easycharts-types';
 
 // helpful alias

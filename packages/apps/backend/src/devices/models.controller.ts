@@ -11,9 +11,9 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ListModelsQueryDto } from '../query/dto/query.dto';
+import type { CreateModelDto, UpdateModelDto } from '@easy-charts/easycharts-types';
 import { ModelsService } from './model.service';
-import { CreateModelDto, UpdateModelDto } from './dto/model.dto';
+import { ListModelsQueryDto } from '../query/dto/query.dto';
 
 @Controller('models')
 export class ModelsController {
