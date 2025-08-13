@@ -117,21 +117,6 @@ export function ChartsPage() {
         />
             </motion.div>
           )
-          // : (<></>)
-          //   <motion.div
-          //     key="asset-sidebar"
-          //     initial={{ width: 0, opacity: 0 }}
-          //     animate={{ width: 210, opacity: 1 }}
-          //     exit={{ width: 0, opacity: 0 }}
-          //     transition={{ duration: 0.3 }}
-          //     className="flex-none overflow-hidden border-r bg-gray-50"
-          //   >
-          //     <AssetSidebar
-          //       assets={assetsList}
-          //       selectedAsset={selectedAsset}
-          //       onSelect={setSelectedAsset}
-          //     />
-          //   </motion.div>
           }
         </AnimatePresence>
        
@@ -147,7 +132,9 @@ export function ChartsPage() {
           )}
         </Box>
       ) :(
-        <AssetPage/>
+        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex' }}>
+          <AssetPage />
+        </Box>
       )}
       </Box>
       <Dialog

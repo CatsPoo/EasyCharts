@@ -49,7 +49,7 @@ export default function AssetPage() {
   ], [kind, deleteMut]);
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
+    <Box sx={{ height: '100%',width:'100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
       <Tabs value={kind} onChange={(_, v) => setKind(v)}>
         <Tab label="Devices" value="devices" />
         <Tab label="Vendors" value="vendors" />
