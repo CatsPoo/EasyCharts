@@ -1,6 +1,6 @@
 // AssetPage.tsx
 import { Box, Tabs, Tab, Toolbar, Button, TextField } from '@mui/material';
-import { DataGrid, GridPaginationModel, GridSortModel } from '@mui/x-data-grid';
+import { DataGrid, type GridPaginationModel, type GridSortModel } from '@mui/x-data-grid';
 import { useMemo, useState } from 'react';
 import { columns } from './AsetColumn';
 import { useListAssets, useCreateAsset, useUpdateAsset, useDeleteAsset } from '../../hooks/assetsHooks';
@@ -90,7 +90,17 @@ export default function AssetPage() {
         kind={kind}
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onSubmit={(values) => { createMut.mutate(values); setCreateOpen(false); }}
+        onSubmit={(values) => { 
+          if (kind === 'devices') {
+             const { vendorId, ...payload } = values;
+             createMut.mutate(payload); 
+          }
+          else{
+            createMut.mutate(values); 
+          }
+          setCreateOpen(false); 
+        }
+      }
       />
 
       {editing && (
@@ -99,12 +109,15 @@ export default function AssetPage() {
           open
           initial={editing as any}
           onClose={() => setEditing(null)}
-          onSubmit={(values) => {
-      
-      const payload = { id: (editing as any).id, ...values };
-      updateMut.mutate(payload);
-      setEditing(null);
-    }}
+          onSubmit={(values ) => {
+            if (kind === 'devices') {
+              const { vendorId, ...payload } = values; 
+              updateMut.mutate({ ...(editing as any), ...payload });
+            } else {
+              updateMut.mutate({ ...(editing as any), ...values });
+            }
+            setEditing(null);
+          }}
         />
       )}
     </Box>

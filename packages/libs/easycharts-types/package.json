@@ -15,5 +15,7 @@
       "default": "./dist/index.js"
     }
   },
-  "dependencies": {}
+  "dependencies": {
+    "@nestjs/mapped-types": "^2.1.0"
+  }
 }

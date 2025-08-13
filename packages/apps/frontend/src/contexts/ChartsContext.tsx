@@ -1,6 +1,5 @@
+import type { Chart, Chartsinformation } from "@easy-charts/easycharts-types";
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
-import type { Chart } from "@easy-charts/easycharts-types";
-import type { Chartsinformation } from "@easy-charts/easycharts-types";
 
 let chartsMock : Chart[] =
 [

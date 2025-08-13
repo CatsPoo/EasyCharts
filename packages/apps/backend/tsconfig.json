@@ -4,6 +4,9 @@
   "include": [],
   "references": [
     {
+      "path": "../../libs/easycharts-types"
+    },
+    {
       "path": "./tsconfig.app.json"
     },
     {

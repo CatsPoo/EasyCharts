@@ -12,8 +12,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { DevicesService } from './devices.service';
-import { CreateDeviceDto, UpdateDeviceDto } from './dto/devices.dto';
-import { QueryDto } from './../query/dto/query.dto';
+import type  {CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';
+import { QueryDto } from '../query/dto/query.dto';
 
 @Controller('devices')
 export class DevicesController {
