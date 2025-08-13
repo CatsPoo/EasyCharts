@@ -1,15 +1,24 @@
-import * as React from 'react';
-import Box from '@mui/material/Box';
-import { NavBar } from '../components/NavBar';
-import { ChartListSidebar } from '../components/ChartListSideBar';
-import { ChartEditor } from '../components/ChartEditor';
-import type { Chart } from '@easy-charts/easycharts-types'
-import { useState, useEffect, useCallback } from 'react';
-import { AppBar, Button, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
+import type { Chart } from '@easy-charts/easycharts-types';
 import CloseIcon from '@mui/icons-material/Close';
-import {useCharts } from '../contexts/ChartsContext';
+import { AppBar, Button, Dialog, FormControlLabel, IconButton, Switch, Toolbar } from '@mui/material';
+import Box from '@mui/material/Box';
+import { AnimatePresence, motion } from 'framer-motion';
+import * as React from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import AssetPage from '../components/AssetsList/AssetsPage';
+import { ChartEditor } from '../components/ChartsViewer/ChartEditor';
+import { ChartListSidebar } from '../components/ChartsViewer/ChartListSideBar';
+import { NavBar } from '../components/NavBar';
+import { useCharts } from '../contexts/ChartsContext';
 
 export function ChartsPage() {
+      const assetsList = [
+      'Devices',
+      'Models',
+      'Lines',
+      'Vendors',
+    ]
+
     const [tab, setTab] = React.useState(0);
     const [selectedId, setSelectedId] = useState<string>('-1');
     const [editMode, setEditMode] = useState(false);
@@ -21,11 +30,10 @@ export function ChartsPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const [selectedAsset,setSelectedAsset] = useState<string>(assetsList[0]);
     const {getChart,getChartsInformation,updateChart} = useCharts()
     const readonly = false
-  // Your hard‑coded (or later: fetched) data
- 
-  // Derive the list based on the active tab
+
     const chartsLists = getChartsInformation()
     const chartsList = tab === 0 ? chartsLists.myCharts : chartsLists.sharedCharts;
 
@@ -39,7 +47,7 @@ export function ChartsPage() {
 
 
     const handleEdit = (chartId: string) => {
-        const chart = getChart(chartId)
+        const chart:Chart = getChart(chartId)
         if(chart){  
           setSelectedId(chartId);
           setEditChart(structuredClone(chart));
@@ -92,24 +100,42 @@ export function ChartsPage() {
       <NavBar value={tab} onChange={setTab} />
 
       <Box sx={{ display: 'flex', flex: 1 }}>
-        {/* Sidebar of chart names */}
-        <ChartListSidebar
+        <AnimatePresence initial={false}>
+          {(tab !== 2) && (
+            <motion.div
+              key="chart-sidebar"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 210, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="flex-none overflow-hidden border-r bg-gray-100"
+            >
+              <ChartListSidebar
           charts={chartsList}
           onSelect={setSelectedId}
           onEdit={handleEdit}
         />
+            </motion.div>
+          )
+          }
+        </AnimatePresence>
+       
 
-        {/* Preview area */}
-        <Box sx={{ flex: 1, position: 'relative' }}>
+        {(tab!==2)?(<Box sx={{ flex: 1, position: 'relative' }}>
           {selectedChart ? (
             // render in read‑only mode
-            <ChartEditor chart={selectedChart} editMode={false} onEditorChanged={setEditorMadeChanges}  />
+            <ChartEditor chart={selectedChart} editMode={false} onDraftchange={handleDraftChange}  />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
               Select a chart to preview
             </div>
           )}
         </Box>
+      ) :(
+        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex' }}>
+          <AssetPage />
+        </Box>
+      )}
       </Box>
       <Dialog
         fullScreen
@@ -135,11 +161,9 @@ export function ChartsPage() {
           /> : null}
         </div>
         {editMode && (
-        <>
           <Button color="success"  variant="contained"  onClick={onSave} disabled={saving || !editorMageChanges} >
             {saving ? "Saving…" : "Save"}
           </Button>
-        </>
         )}
           </Toolbar>
         </AppBar>

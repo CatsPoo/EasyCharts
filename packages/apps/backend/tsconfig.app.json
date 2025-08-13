@@ -9,7 +9,11 @@
     "emitDecoratorMetadata": true,
     "target": "es2021"
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "../../libs/easycharts-types/src/vendors/vendors.dto.ts",
+    "../../libs/easycharts-types/src/query/dto/query.dto.ts"
+  ],
   "exclude": [
     "out-tsc",
     "dist",
@@ -19,5 +23,10 @@
     "eslint.config.js",
     "eslint.config.cjs",
     "eslint.config.mjs"
+  ],
+  "references": [
+    {
+      "path": "../../libs/easycharts-types/tsconfig.lib.json"
+    }
   ]
 }

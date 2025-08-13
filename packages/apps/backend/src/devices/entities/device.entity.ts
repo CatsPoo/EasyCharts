@@ -1,6 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { Position } from './position.entity'
-
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne,JoinColumn } from 'typeorm';
+import { ModelEntity } from './model.entity';
 @Entity({ name: 'devices' })
 export class DeviceEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -12,15 +11,10 @@ export class DeviceEntity {
   @Column()
   type!: string;
 
-  @Column({ nullable: true })
-  model?: string;
-
-  @Column({ nullable: true })
-  vendor?: string;
+  @ManyToOne(() => ModelEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'model_id' })
+    model: ModelEntity;
 
   @Column({ name: 'ip_address', nullable: true })
   ipAddress?: string;
-
-  @Column(()=>Position)
-  position!: Position;
 }

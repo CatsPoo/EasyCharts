@@ -1,11 +1,10 @@
-import 'reactflow/dist/style.css';import { DevicesSidebar } from './DevicesSideBar';
-import ReactFlow, { addEdge,Background, ConnectionLineType, Controls, reconnectEdge, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
-import { useCallback, useRef, useEffect } from 'react';
-import type {Connection, Edge,EdgeChange,Node, NodeChange} from 'reactflow';
-import { AnimatePresence,motion } from 'framer-motion';
-import type { Chart } from '@easy-charts/easycharts-types';
-import type { Device } from '@easy-charts/easycharts-types';
-import type { Line } from '@easy-charts/easycharts-types';
+import type { Chart, Device, DeviceLocation, Line } from '@easy-charts/easycharts-types';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useEffect, useRef } from 'react';
+import type { Connection, Edge, EdgeChange, Node, NodeChange } from 'reactflow';
+import ReactFlow, { addEdge, Background, ConnectionLineType, Controls, reconnectEdge, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
+import 'reactflow/dist/style.css';
+import { DevicesSidebar } from './DevicesSideBar';
 
 interface ChardEditorProps  {
   chart : Chart
@@ -17,19 +16,20 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
-  const convertDeviceToNode = (device: Device) : Node =>{
+  const convertDeviceToNode = (deviceLocations: DeviceLocation) : Node =>{
+    const {device,position} = deviceLocations
     const node : Node  ={
         id: device.id,
         type: 'default',
-        position: device.position,
+        position,
         data: { label: device.name}
     }
     return node
   }
 
-  const convertDevicesToNodes =(devices: Device[]) : Node[] =>{
-    const nodes : Node[] = devices.map(device => 
-      convertDeviceToNode(device))
+  const convertDevicesToNodes =(devicesLocations: DeviceLocation[]) : Node[] =>{
+    const nodes : Node[] = devicesLocations.map(deviceLocation => 
+      convertDeviceToNode(deviceLocation))
     return nodes
   }
 
@@ -45,12 +45,16 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
     }
   }
 
-  const convertNodeToDevice = (node:Node) :Device =>{
-    return {
+  const convertNodeToDeviceLocation = (node:Node) :DeviceLocation =>{
+
+    const device : Device = {
       id: node.id,
-      position:node.position,
       name: node.data.lable,
       type:'default'
+    }
+    return {
+      device: device,
+      position: node.position
     }
   }
 
@@ -60,22 +64,22 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
 
 
    const [nodes, setNodes, onNodesChangeRF] = useNodesState(
-    convertDevicesToNodes(chart.devices)
+    convertDevicesToNodes(chart.devicesLocations)
   );
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState(
     convertLinesToEdges(chart.lines)
   );
 
  useEffect(() => {
-    setNodes(convertDevicesToNodes(chart.devices));
+    setNodes(convertDevicesToNodes(chart.devicesLocations));
     setEdges(convertLinesToEdges(chart.lines));
   }, [setNodes, setEdges]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       onNodesChangeRF(changes);
-      const updatedDevices :Device[] = nodes.map(nds => convertNodeToDevice(nds))
-      onDraftchange({...chart,devices:updatedDevices})
+      const updatedDevicesLocations :DeviceLocation[] = nodes.map(nds => convertNodeToDeviceLocation(nds))
+      onDraftchange({...chart,devicesLocations:updatedDevicesLocations})
     },
     [onNodesChangeRF]
   );
@@ -120,8 +124,8 @@ const onConnect = useCallback(
         newNode
       ]);
 
-      const newDevice : Device = convertNodeToDevice(newNode)
-      onDraftchange({...chart,devices: [...chart.devices,newDevice]});
+      const newDeviceLocations : DeviceLocation = convertNodeToDeviceLocation(newNode)
+      onDraftchange({...chart,devicesLocations: [...chart.devicesLocations,newDeviceLocations]});
     },
     [editMode, onDraftchange, project, setNodes]
   );

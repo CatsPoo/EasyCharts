@@ -19,6 +19,7 @@ export function NavBar({ value, onChange }: NavBarProps) {
       >
         <Tab label="My Charts" />
         <Tab label="Shared Charts" />
+        <Tab label="Assets" />
       </Tabs>
     </AppBar>
   );
