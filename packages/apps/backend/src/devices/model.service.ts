@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { QueryDto } from '../query/dto/query.dto'
+import { ListModelsQueryDto} from '../query/dto/query.dto'
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ModelEntity } from './entities/model.entity';
@@ -48,26 +48,25 @@ export class ModelsService {
     return this.modelsRepo.save(model);
   }
 
-  async listModels(q: QueryDto) {
+  async listModels(q: ListModelsQueryDto) {
     const take = q.pageSize ?? 25;
     const skip = (q.page ?? 0) * take;
 
     const qb = this.modelsRepo.createQueryBuilder('m')
-  .leftJoinAndSelect('m.vendor', 'v'); // ← include vendor
+      .leftJoinAndSelect('m.vendor', 'v');
 
     if (q.search?.trim()) {
-      qb.where('LOWER(m.name) LIKE :s', { s: `%${q.search.toLowerCase()}%` });
+      qb.andWhere('LOWER(m.name) LIKE :s', { s: `%${q.search.toLowerCase()}%` });
     }
 
-    if (q.search?.trim()) {
-      qb.where('LOWER(v.name) LIKE :s', { s: `%${q.search.toLowerCase()}%` });
+    if (q.vendorId) {
+      qb.andWhere('v.id = :vid', { vid: q.vendorId });
     }
 
-    const allowed = new Set(['name', 'id', 'createdAt', 'updatedAt']);
+    const allowed = new Set(['name', 'createdAt', 'updatedAt', 'id']);
     const sortBy = q.sortBy && allowed.has(q.sortBy) ? q.sortBy : 'name';
     const sortDir = (q.sortDir ?? 'asc').toUpperCase() as 'ASC' | 'DESC';
-
-    qb.orderBy(`v.${sortBy}`, sortDir);
+    qb.orderBy(`m.${sortBy}`, sortDir);
 
     const [rows, total] = await qb.skip(skip).take(take).getManyAndCount();
     return { rows, total };

@@ -11,7 +11,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { QueryDto } from '../query/dto/query.dto';
+import { ListModelsQueryDto, QueryDto } from '../query/dto/query.dto';
 import { ModelsService } from './model.service';
 import { CreateModelDto, UpdateModelDto } from './dto/model.dto';
 
@@ -27,7 +27,7 @@ export class ModelsController {
 
   // GET /vendors?page=&pageSize=&search=&sortBy=&sortDir=
   @Get()
-  list(@Query() q: QueryDto) {
+  list(@Query() q: ListModelsQueryDto) {
     return this.modelsService.listModels(q);
   }
 

@@ -1,7 +1,7 @@
 // AssetForm.tsx (patch)
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Stack, FormControl, InputLabel, Select, MenuItem, FormHelperText } from '@mui/material';
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AssetKind, AssetMap } from '@easy-charts/easycharts-types';
@@ -55,6 +55,8 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
     if (open) reset(mapDefaults(kind, initial));
   }, [open, initial, kind, reset]);
 
+  const selectedVendorId = useWatch({ control, name: 'vendor' });
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{initial?.id ? `Edit ${kind.slice(0, -1)}` : `Create ${kind.slice(0, -1)}`}</DialogTitle>
@@ -73,18 +75,19 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
                   label="Vendor"
                   control={control}
                   errors={errors}
-                  getOptionValue={(v:any) => v.name} // ← store the NAME string
+                  getOptionValue={(v:any) => v.id} // ← store the NAME string
                   getOptionLabel={(v:any) => v.name}
                 />
 
                 <AssetsSelectionList
                   fetchKind="models"
-                  name="model"                     // ← matches your devices schema
+                  name="model"
                   label="Model"
                   control={control}
                   errors={errors}
-                  getOptionValue={(v:any) => v.name} // ← store the NAME string
+                  getOptionValue={(v:any) => v.name}
                   getOptionLabel={(v:any) => v.name}
+                  vendorIdFilter={selectedVendorId}
                 />
 
                 <TextField label="IP Address" {...register('ipAddress')} />
