@@ -4,7 +4,7 @@ import { DataGrid, type GridPaginationModel, type GridSortModel } from '@mui/x-d
 import { useMemo, useState } from 'react';
 import { columns } from './AsetColumn';
 import { useListAssets, useCreateAsset, useUpdateAsset, useDeleteAsset } from '../../hooks/assetsHooks';
-import type { AssetKind, AnyAsset } from '@easy-charts/easycharts-types';
+import type { AssetKind, AnyAsset, UpdateDeviceDto } from '@easy-charts/easycharts-types';
 import { AssetForm } from './AssetsForm';
 
 export default function AssetPage() {
@@ -112,6 +112,7 @@ export default function AssetPage() {
           onSubmit={(values ) => {
             if (kind === 'devices') {
               const { vendorId, ...payload } = values; 
+              console.log(payload)
               updateMut.mutate({ ...(editing as any), ...payload });
             } else {
               updateMut.mutate({ ...(editing as any), ...values });
