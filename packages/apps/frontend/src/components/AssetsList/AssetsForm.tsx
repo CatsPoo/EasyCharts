@@ -1,19 +1,27 @@
 // AssetForm.tsx (patch)
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Stack, FormControl, InputLabel, Select, MenuItem, FormHelperText } from '@mui/material';
 import { useEffect, useMemo } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AssetKind, AssetMap } from '@easy-charts/easycharts-types';
-import { useListAssets } from '../../hooks/assetsHooks';
+import { AssetsSelectionList } from './AsetsSelectionList.component';
 
 const schemas = {
-  devices: z.object({ name: z.string().min(1), type: z.string().min(1), model: z.string().optional(), vendor: z.string().optional(), ipAddress: z.string().optional() }),
+  devices: z.object({ 
+    name: z.string().min(1), 
+    type: z.string().min(1), 
+    model: z.string().optional(), 
+    vendor: z.string().optional(), 
+    ipAddress: z.string().optional() 
+  }),
   models:  z.object({
     name: z.string().min(1),
     vendorId: z.string().min(1)
    }),
-  vendors: z.object({ name: z.string().min(1)}),
+  vendors: z.object({
+     name: z.string().min(1)
+    }),
 } as const;
 
 type Props<K extends AssetKind> = {
@@ -47,14 +55,6 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
     if (open) reset(mapDefaults(kind, initial));
   }, [open, initial, kind, reset]);
 
-  const { data: vendorsData, isLoading: vendorsLoading } = useListAssets(
-  'vendors',
-  { page: 0, pageSize: 1000, sortBy: 'name', sortDir: 'asc' },
-  { enabled: kind === 'models', staleTime: 5 * 60 * 1000 }
-);
-
-const vendorOptions = vendorsData?.rows ?? [];
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{initial?.id ? `Edit ${kind.slice(0, -1)}` : `Create ${kind.slice(0, -1)}`}</DialogTitle>
@@ -72,29 +72,11 @@ const vendorOptions = vendorsData?.rows ?? [];
               </>
             )}
             {kind === 'models' && (
-              <FormControl error={!!errors.vendorId}>
-                <InputLabel id="vendorId-label">Vendor</InputLabel>
-                  <Controller
-                      name="vendorId"
-                      control={control}
-                      render={({ field }) => (
-                        <Select
-                          labelId="vendorId-label"
-                          label="Vendor"
-                          value={field.value}
-                          onChange={(e) => field.onChange(e.target.value)}
-                          disabled={vendorsLoading}
-                        >
-                          <MenuItem value=""><em>None</em></MenuItem>
-                            {vendorOptions.map((v: any) => (
-                          <MenuItem key={v.id} value={v.id}>{v.name}</MenuItem>
-                          ))}
-                        </Select>
-                      )}
-                    />
-                    <FormHelperText>{errors.vendorId?.message as string}</FormHelperText>
-                  </FormControl>
-)}
+              <AssetsSelectionList 
+              kind='vendors'
+              control={control}
+              errors={errors}/>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
