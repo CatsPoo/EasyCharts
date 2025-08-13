@@ -8,12 +8,12 @@ import { AssetKind, AssetMap } from '@easy-charts/easycharts-types';
 import {AssetsSelectionList} from './AsetsSelectionList.component';
 
 const schemas = {
-  devices: z.object({ 
-    name: z.string().min(1), 
-    type: z.string().min(1), 
-    model: z.string().optional(), 
-    vendor: z.string().optional(), 
-    ipAddress: z.string().optional() 
+   devices: z.object({
+    name: z.string().min(1),
+    type: z.string().min(1),
+    vendorId: z.string().min(1),    // ← for filtering UI only (not required by backend, but we validate UX-wise)
+    modelId: z.string().min(1),     // ← REQUIRED by backend
+    ipAddress: z.string().optional(),
   }),
   models:  z.object({
     name: z.string().min(1),
@@ -36,14 +36,19 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
   const schema = schemas[kind] as any;
 
   function mapDefaults(kind: AssetKind, initial: any) {
-  if (!initial) return {};
-  const d: any = { ...initial };
-  if (kind === 'models') {
-    d.vendorId = d.vendorId ?? d.vendor?.id ?? ''; // prefill select
-    delete d.vendor;                                // avoid sending object back
+    if (!initial) return {};
+    const d: any = { ...initial };
+    if (kind === 'models') {
+      d.vendorId = d.vendorId ?? d.vendor?.id ?? '';
+      delete d.vendor;
+    }
+    if (kind === 'devices') {
+      d.modelId = d.modelId ?? d.model?.id ?? '';
+      d.vendorId = d.vendorId ?? d.model?.vendor?.id ?? '';
+      delete d.model; // avoid sending nested object back
+    }
+    return d;
   }
-  return d;
-}
   
   const {control, register, handleSubmit, formState: {  errors, isSubmitting }, reset } = useForm<any>({
     resolver: zodResolver(schema),
@@ -55,12 +60,12 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
     if (open) reset(mapDefaults(kind, initial));
   }, [open, initial, kind, reset]);
 
-  const selectedVendorId = useWatch({ control, name: 'vendor' });
+  const selectedVendorId = useWatch({ control, name: 'vendorId' });
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{initial?.id ? `Edit ${kind.slice(0, -1)}` : `Create ${kind.slice(0, -1)}`}</DialogTitle>
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form onSubmit={handleSubmit(onSubmit, (errs) => console.error('Form validation failed:', errs))} noValidate>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
              {initial?.id && <input type="hidden" {...register('id')} />}
@@ -71,22 +76,22 @@ export function AssetForm<K extends AssetKind>({ kind, open, initial, onClose, o
                 
                 <AssetsSelectionList
                   fetchKind="vendors"
-                  name="vendor"                     // ← matches your devices schema
+                  name="vendorId"
                   label="Vendor"
                   control={control}
                   errors={errors}
-                  getOptionValue={(v:any) => v.id} // ← store the NAME string
+                  getOptionValue={(v:any) => v.id} 
                   getOptionLabel={(v:any) => v.name}
                 />
 
                 <AssetsSelectionList
                   fetchKind="models"
-                  name="model"
+                  name="modelId"
                   label="Model"
                   control={control}
                   errors={errors}
-                  getOptionValue={(v:any) => v.name}
-                  getOptionLabel={(v:any) => v.name}
+                  getOptionValue={(m:any) => m.id}
+                  getOptionLabel={(m:any) => m.name}
                   vendorIdFilter={selectedVendorId}
                 />
 

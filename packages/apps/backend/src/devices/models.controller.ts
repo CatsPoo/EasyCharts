@@ -11,7 +11,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ListModelsQueryDto, QueryDto } from '../query/dto/query.dto';
+import { ListModelsQueryDto } from '../query/dto/query.dto';
 import { ModelsService } from './model.service';
 import { CreateModelDto, UpdateModelDto } from './dto/model.dto';
 
