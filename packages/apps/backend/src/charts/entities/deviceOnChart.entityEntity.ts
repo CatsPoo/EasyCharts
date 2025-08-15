@@ -5,7 +5,7 @@ import { DeviceEntity } from '../../devices/entities/device.entity';
 
 @Entity({ name: 'devices_on_charts' })
 @Index(['chartId', 'deviceId'], { unique: true })
-export class DeviceOnChart {
+export class DeviceOnChartEntity {
   // composite key (device within a chart)
   @PrimaryColumn('uuid')
   chartId!: string;

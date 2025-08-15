@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne,JoinColumn, OneToMany } from 'typeorm';
 import { ModelEntity } from './model.entity';
-import { DeviceOnChart } from '../../charts/entities/deviceOnChart.entity';
+import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entityEntity';
 @Entity({ name: 'devices' })
 export class DeviceEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -20,6 +20,6 @@ export class DeviceEntity {
   @Column({ name: 'ip_address', nullable: true })
   ipAddress?: string;
 
-  @OneToMany(() => DeviceOnChart, (doc:DeviceOnChart) => doc.device)
-  charts!: DeviceOnChart[];
+  @OneToMany(() => DeviceOnChartEntity, (doc:DeviceOnChartEntity) => doc.device)
+  charts!: DeviceOnChartEntity[];
 }

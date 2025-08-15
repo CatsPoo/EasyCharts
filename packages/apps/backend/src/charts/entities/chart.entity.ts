@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { DeviceOnChart } from './deviceOnChart.entity';
+import { DeviceOnChartEntity } from './deviceOnChart.entityEntity';
 
 @Entity({ name: 'charts' })
 export class ChartEntity {
@@ -12,8 +12,8 @@ export class ChartEntity {
   @Column({ nullable: true }) 
   description?: string;
 
-  @OneToMany(() => DeviceOnChart, (doc :DeviceOnChart) => doc.chart, { cascade: true })
-  devices!: DeviceOnChart[];
+  @OneToMany(() => DeviceOnChartEntity, (doc :DeviceOnChart) => doc.chart, { cascade: true })
+  devices!: DeviceOnChartEntity[];
 
 //   @OneToMany(() => Line, line => line.chart, { cascade: true })
 //   lines!: Line[];
