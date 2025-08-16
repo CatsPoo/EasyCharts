@@ -3,7 +3,7 @@ import { ChartsService } from './charts.service';
 import { ChartsController } from './charts.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChartEntity } from './entities/chart.entity';
-import { DeviceOnChartEntity } from './entities/deviceOnChart.entityEntity';
+import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
 
 @Module({
     imports: [

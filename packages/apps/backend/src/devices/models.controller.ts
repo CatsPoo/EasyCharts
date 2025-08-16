@@ -1,3 +1,4 @@
+import type { CreateModelDto, UpdateModelDto } from '@easy-charts/easycharts-types';
 import {
   Body,
   Controller,
@@ -7,13 +8,12 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
-  Put,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
-import type { CreateModelDto, UpdateModelDto } from '@easy-charts/easycharts-types';
-import { ModelsService } from './model.service';
 import { ListModelsQueryDto } from '../query/dto/query.dto';
+import { ModelsService } from "./model.service";
 
 @Controller('models')
 export class ModelsController {

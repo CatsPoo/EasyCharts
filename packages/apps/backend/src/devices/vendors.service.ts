@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { VendorEntity } from '../devices/entities/vendor.entity';
 import type { CreateVendorDto, UpdateVendorDto } from '@easy-charts/easycharts-types';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { QueryDto } from '../query/dto/query.dto';
+import { VendorEntity } from '../devices/entities/vendor.entity';
+import { QueryDto } from "../query/dto/query.dto";
 
 @Injectable()
 export class VendorsService {

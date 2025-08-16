@@ -1,3 +1,4 @@
+import type { CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';
 import {
   Body,
   Controller,
@@ -7,15 +8,14 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
-  Put,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
-import { DevicesService } from './devices.service';
-import type  {CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';
 import { QueryDto } from '../query/dto/query.dto';
+import { DevicesService } from './devices.service';
 
-@Controller('devices')
+@Controller("devices")
 export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
@@ -31,22 +31,22 @@ export class DevicesController {
     return this.devicesService.listDevices(q);
   }
 
-  @Get(':id')
-  getById(@Param('id', new ParseUUIDPipe()) id: string) {
+  @Get(":id")
+  getById(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.devicesService.getDeviceById(id);
   }
 
-  @Put(':id')
+  @Put(":id")
   update(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() payload: UpdateDeviceDto,
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Body() payload: UpdateDeviceDto
   ) {
     return this.devicesService.updateDevice(id, payload);
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', new ParseUUIDPipe()) id: string) {
+  remove(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.devicesService.removeDevice(id);
   }
 }

@@ -1,10 +1,10 @@
+import type { CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DeviceEntity } from './entities/device.entity';
-import type  { CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';                          
-import { ModelEntity } from './entities/model.entity';
 import { QueryDto } from '../query/dto/query.dto';
+import { DeviceEntity } from './entities/device.entity';
+import { ModelEntity } from "./entities/model.entity";
 
 @Injectable()
 export class DevicesService {

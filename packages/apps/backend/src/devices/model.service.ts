@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ModelEntity } from './entities/model.entity';
-import { VendorEntity } from './entities/vendor.entity';
+import { VendorEntity } from "./entities/vendor.entity";
 import type { CreateModelDto, UpdateModelDto } from '@easy-charts/easycharts-types';
 import { ListModelsQueryDto } from '../query/dto/query.dto';
 

@@ -1,20 +1,22 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { DeviceOnChartEntity } from './deviceOnChart.entityEntity';
 
-@Entity({ name: 'charts' })
+@Entity({ name: "charts" })
 export class ChartEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column() 
+  @Column()
   name!: string;
 
-  @Column({ nullable: true }) 
+  @Column({ nullable: true })
   description?: string;
 
-  @OneToMany(() => DeviceOnChartEntity, (doc :DeviceOnChart) => doc.chart, { cascade: true })
+  @OneToMany(() => DeviceOnChartEntity, (doc: DeviceOnChart) => doc.chart, {
+    cascade: true,
+  })
   devices!: DeviceOnChartEntity[];
 
-//   @OneToMany(() => Line, line => line.chart, { cascade: true })
-//   lines!: Line[];
+  //   @OneToMany(() => Line, line => line.chart, { cascade: true })
+  //   lines!: Line[];
 }

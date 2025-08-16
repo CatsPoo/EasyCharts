@@ -1,3 +1,4 @@
+import type { CreateVendorDto, UpdateVendorDto } from '@easy-charts/easycharts-types';
 import {
   Body,
   Controller,
@@ -7,13 +8,12 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
-  Put,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
-import { VendorsService } from './vendors.service';
-import type  { CreateVendorDto, UpdateVendorDto } from '@easy-charts/easycharts-types';
 import { QueryDto } from '../query/dto/query.dto';
+import { VendorsService } from './vendors.service';
 
 @Controller('vendors')
 export class VendorsController {
