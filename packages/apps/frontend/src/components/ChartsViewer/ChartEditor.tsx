@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from 'reactflow';
 import ReactFlow, { addEdge, Background, ConnectionLineType, Controls, reconnectEdge, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { DevicesSidebar } from './DevicesSideBar';
+import { DevicesSidebar } from "./DevicesSideBar";
 
 interface ChardEditorProps  {
   chart : Chart

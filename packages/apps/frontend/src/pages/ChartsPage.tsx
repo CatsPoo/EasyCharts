@@ -1,4 +1,4 @@
-import {type Chart } from "@easy-charts/easycharts-types";
+import { type Chart } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   AppBar,

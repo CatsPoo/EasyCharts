@@ -8,15 +8,15 @@ import { useMemo } from 'react';
 type AnyRow = Record<string, any>;
 
 interface AssetsSelectionListProps<TForm = any, TRow extends AnyRow = AnyRow> {
-  fetchKind: AssetKind;            // e.g. 'vendors'
-  name: string;                    // e.g. 'vendorId' or 'vendor'
-  label: string;                   // UI label
+  fetchKind: AssetKind; // e.g. 'vendors'
+  name: string; // e.g. 'vendorId' or 'vendor'
+  label: string; // UI label
   control: Control<TForm>;
   errors: FieldErrors<TForm>;
   getOptionValue?: (row: TRow) => string; // default: row.id
   getOptionLabel?: (row: TRow) => string; // default: row.name
   allowNone?: boolean;
-  vendorIdFilter?: string | null | undefined;           // default: true
+  vendorIdFilter?: string | null | undefined; // default: true
 }
 
 export function AssetsSelectionList<TForm = any, TRow extends AnyRow = AnyRow>({

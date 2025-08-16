@@ -5,7 +5,7 @@ function App() {
   return (
     <div className="w-screen h-screen">
       <ReactFlowProvider>
-        <ChartsPage/>
+        <ChartsPage />
       </ReactFlowProvider>
     </div>
   );

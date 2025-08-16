@@ -4,7 +4,7 @@ import { DataGrid, type GridPaginationModel, type GridSortModel } from '@mui/x-d
 import { useMemo, useState } from 'react';
 import { columns } from './AsetColumn';
 import { useListAssets, useCreateAsset, useUpdateAsset, useDeleteAsset } from '../../hooks/assetsHooks';
-import type { AssetKind, AnyAsset, UpdateDeviceDto } from '@easy-charts/easycharts-types';
+import type { AssetKind, AnyAsset } from '@easy-charts/easycharts-types';
 import { AssetForm } from './AssetsForm';
 
 export default function AssetPage() {
@@ -49,7 +49,15 @@ export default function AssetPage() {
   ], [kind, deleteMut]);
 
   return (
-    <Box sx={{ height: '100%',width:'100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
+    <Box
+      sx={{
+        height: "100%",
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        gap: 1,
+      }}
+    >
       <Tabs value={kind} onChange={(_, v) => setKind(v)}>
         <Tab label="Devices" value="devices" />
         <Tab label="Vendors" value="vendors" />
@@ -64,7 +72,9 @@ export default function AssetPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <Box sx={{ flex: 1 }} />
-        <Button variant="contained" onClick={() => setCreateOpen(true)}>New {kind.slice(0, -1)}</Button>
+        <Button variant="contained" onClick={() => setCreateOpen(true)}>
+          New {kind.slice(0, -1)}
+        </Button>
       </Toolbar>
 
       <Box sx={{ flex: 1 }}>
@@ -90,17 +100,15 @@ export default function AssetPage() {
         kind={kind}
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onSubmit={(values) => { 
-          if (kind === 'devices') {
-             const { vendorId, ...payload } = values;
-             createMut.mutate(payload); 
+        onSubmit={(values) => {
+          if (kind === "devices") {
+            const { vendorId, ...payload } = values;
+            createMut.mutate(payload);
+          } else {
+            createMut.mutate(values);
           }
-          else{
-            createMut.mutate(values); 
-          }
-          setCreateOpen(false); 
-        }
-      }
+          setCreateOpen(false);
+        }}
       />
 
       {editing && (
@@ -109,10 +117,10 @@ export default function AssetPage() {
           open
           initial={editing as any}
           onClose={() => setEditing(null)}
-          onSubmit={(values ) => {
-            if (kind === 'devices') {
-              const { vendorId, ...payload } = values; 
-              console.log(payload)
+          onSubmit={(values) => {
+            if (kind === "devices") {
+              const { vendorId, ...payload } = values;
+              console.log(payload);
               updateMut.mutate({ ...(editing as any), ...payload });
             } else {
               updateMut.mutate({ ...(editing as any), ...values });

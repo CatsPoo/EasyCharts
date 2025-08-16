@@ -1,13 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Chart, chartMetadata, CreateChartDto } from '@easy-charts/easycharts-types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 
 export async function createChart(dto: CreateChartDto): Promise<Chart> {
   const res = await fetch(`api/charts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(dto),
-    credentials: 'include',
+    credentials: "include",
   });
   if (!res.ok) {
     const msg = await res.text();
