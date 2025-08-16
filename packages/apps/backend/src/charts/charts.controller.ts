@@ -29,7 +29,7 @@ export class ChartsController {
 
   @Post()
   create(@Body() dto: CreateChartDto) {
-    return this.chartsService.createEmptyChart(dto);
+    return this.chartsService.createChart(dto);
   }
 
   // @Put(':id')

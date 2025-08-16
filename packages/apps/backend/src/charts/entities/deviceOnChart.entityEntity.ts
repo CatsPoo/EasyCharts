@@ -13,12 +13,12 @@ export class DeviceOnChartEntity {
   @PrimaryColumn('uuid')
   deviceId!: string;
 
+  @Column(() => Position)
+  position!: Position;
+  
   @ManyToOne(() => ChartEntity, (chart:ChartEntity) => chart.devices, { onDelete: 'CASCADE' })
   chart!: ChartEntity;
 
   @ManyToOne(() => DeviceEntity, (device:DeviceEntity) => device.charts, { eager: true, onDelete: 'CASCADE' })
   device!: DeviceEntity;
-
- @Column(() => Position)
-  position!: Position;
 }
