@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne,JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne,JoinColumn, OneToMany } from 'typeorm';
 import { ModelEntity } from './model.entity';
+import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entityEntity';
 @Entity({ name: 'devices' })
 export class DeviceEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -8,7 +9,8 @@ export class DeviceEntity {
   @Column()
   name!: string;
 
-  @Column()
+  // @Column({ type: 'enum', enum: DeviceType })
+    @Column()
   type!: string;
 
   @ManyToOne(() => ModelEntity, { onDelete: 'CASCADE' })
@@ -17,4 +19,7 @@ export class DeviceEntity {
 
   @Column({ name: 'ip_address', nullable: true })
   ipAddress?: string;
+
+  @OneToMany(() => DeviceOnChartEntity, (doc:DeviceOnChartEntity) => doc.device)
+  charts!: DeviceOnChartEntity[];
 }

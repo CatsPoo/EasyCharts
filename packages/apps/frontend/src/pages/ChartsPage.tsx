@@ -111,10 +111,12 @@ export function ChartsPage() {
               className="flex-none overflow-hidden border-r bg-gray-100"
             >
               <ChartListSidebar
-          charts={chartsList}
-          onSelect={setSelectedId}
-          onEdit={handleEdit}
-        />
+                charts={chartsList}
+                onSelect={(id:string)=>{
+                  setSelectedId(id)
+                }}
+                onEdit={handleEdit}
+              />
             </motion.div>
           )
           }
