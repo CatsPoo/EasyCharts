@@ -1,4 +1,9 @@
 // src/charts/charts.service.ts
+import type {
+  Chart,
+  ChartCreate,
+  ChartUpdate,
+} from "@Easy-charts/easycharts-types";
 import {
   BadRequestException,
   Injectable,
@@ -6,14 +11,8 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
-import type {
-  Chart,
-  ChartCreate,
-  ChartUpdate,
-  DeviceOnChart
-} from "@Easy-charts/easycharts-types";
-import { ChartEntity } from "./entities/chart.entity";
 import { DeviceEntity } from "../devices/entities/device.entity";
+import { ChartEntity } from "./entities/chart.entity";
 import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
 
 @Injectable()

@@ -1,4 +1,4 @@
-import { IdentifiableSchema } from "src/generic.schema.js";
+import { IdentifiableSchema } from "../../generic.schema.js";
 import z from "zod";
 
 export const DeviceBaseSchema = z.object({
