@@ -1,4 +1,9 @@
-import { type CreateChartDto,type  UpdateChartDto } from '@easy-charts/easycharts-types';
+import {
+  type ChartCreate,
+  ChartCreateSchema,
+  type ChartUpdate,
+  ChartUpdateSchema,
+} from "@easy-charts/easycharts-types";
 import {
   Body,
   Controller,
@@ -9,10 +14,11 @@ import {
   Put,
   UsePipes,
   ValidationPipe,
-} from '@nestjs/common';
-import { ChartsService } from './charts.service';
+} from "@nestjs/common";
+import { ChartsService } from "./charts.service";
+import { ZodValidationPipe } from "../common/zodValidation.pipe";
 
-@Controller('charts')
+@Controller("charts")
 @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 export class ChartsController {
   constructor(private readonly chartsService: ChartsService) {}
@@ -22,23 +28,25 @@ export class ChartsController {
     return this.chartsService.getAllCharts();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
+  @Get(":id")
+  findOne(@Param("id") id: string) {
     return this.chartsService.getChartById(id);
   }
 
   @Post()
-  create(@Body() dto: CreateChartDto) {
+  @UsePipes(new ZodValidationPipe(ChartCreateSchema))
+  create(@Body() dto: ChartCreate) {
     return this.chartsService.createChart(dto);
   }
 
   // @Put(':id')
-  // update(@Param('id') id: string, @Body() dto: UpdateChartDto) {
+  //@UsePipes(new ZodValidationPipe(ChartUpdateSchema))
+  // update(@Param('id') id: string, @Body() dto: ChartUpdate) {
   //   return this.chartsService.update(id, dto);
   // }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
+  @Delete(":id")
+  remove(@Param("id") id: string) {
     return this.chartsService.removeChart(id);
   }
 }
