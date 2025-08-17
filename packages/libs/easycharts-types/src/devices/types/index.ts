@@ -1,3 +1,3 @@
 export * from './device.types.js'
-export * from './models.interfaces.js'
-export * from './vendors.interfaces.js'
+export * from './models.types.js'
+export * from './vendors.types.js'
