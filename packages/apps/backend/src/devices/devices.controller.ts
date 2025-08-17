@@ -1,4 +1,3 @@
-import type { CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';
 import {
   Body,
   Controller,
@@ -11,9 +10,17 @@ import {
   Post,
   Put,
   Query,
+  UsePipes,
 } from '@nestjs/common';
 import { QueryDto } from '../query/dto/query.dto';
 import { DevicesService } from './devices.service';
+import { ZodValidationPipe } from '../common/zodValidation.pipe';
+import {
+  type DeviceCreate,
+  DeviceCreateSchema,
+  type DeviceUpdate,
+  DeviceUpdateSchema,
+} from "@easy-charts/easycharts-types";
 
 @Controller("devices")
 export class DevicesController {
@@ -21,8 +28,9 @@ export class DevicesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() payload: CreateDeviceDto) {
-    return this.devicesService.createDevice(payload);
+  @UsePipes(new ZodValidationPipe(DeviceCreateSchema))
+  create(@Body() dto: DeviceCreate) {
+    return this.devicesService.createDevice(dto);
   }
 
   // GET /devices?page=&pageSize=&search=&sortBy=&sortDir=
@@ -37,9 +45,10 @@ export class DevicesController {
   }
 
   @Put(":id")
+  @UsePipes(new ZodValidationPipe(DeviceUpdateSchema))
   update(
     @Param("id", new ParseUUIDPipe()) id: string,
-    @Body() payload: UpdateDeviceDto
+    @Body() payload: DeviceUpdate
   ) {
     return this.devicesService.updateDevice(id, payload);
   }
