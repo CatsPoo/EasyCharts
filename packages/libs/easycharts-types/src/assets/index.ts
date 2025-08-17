@@ -1,1 +1,1 @@
-export * from './assets.interfaces.js'
+export * from './assets.types.js'
