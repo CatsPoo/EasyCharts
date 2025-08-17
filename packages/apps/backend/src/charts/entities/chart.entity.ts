@@ -13,7 +13,7 @@ export class ChartEntity {
   @Column({ nullable: true })
   description?: string;
 
-  @OneToMany(() => DeviceOnChartEntity, (doc: DeviceOnChart) => doc.chart, {
+  @OneToMany(() => DeviceOnChartEntity, (doc: DeviceOnChartEntity) => doc.chart, {
     cascade: true,
   })
   devicesLocations!: DeviceOnChartEntity[];

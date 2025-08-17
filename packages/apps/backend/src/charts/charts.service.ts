@@ -10,6 +10,7 @@ import type {
   Chart,
   ChartCreate,
   ChartUpdate,
+  DeviceOnChart
 } from "@Easy-charts/easycharts-types";
 import { ChartEntity } from "./entities/chart.entity";
 import { DeviceEntity } from "../devices/entities/device.entity";
@@ -32,8 +33,17 @@ export class ChartsService {
   // private readonly lineRepo: Repository<Line>,
   {}
 
+  convertChartEntityToChart = (chartEnrity:ChartEntity) : Chart =>{
+    const {devicesLocations, ...chartData} : ChartEntity = chartEnrity 
+    return {
+      ...chartData,
+      devicesLocations
+    } as Chart
+  }
   async getAllCharts(): Promise<Chart[]> {
-    return this.chartRepo.find({});
+    return (await this.chartRepo.find({})).map(
+      chartEntity => this.convertChartEntityToChart(chartEntity)
+    );
   }
 
   async getChartById(id: string): Promise<ChartEntity> {
@@ -48,11 +58,12 @@ export class ChartsService {
     const chart: ChartEntity = this.chartRepo.create({
       ...dto,
     });
-    return this.chartRepo.save(chart);
+    const newChart : ChartEntity =await  this.chartRepo.save(chart);
+    return this.convertChartEntityToChart(newChart)
   }
 
   async updateChart(id: string, dto: ChartUpdate): Promise<Chart> {
-    return this.dataSource.transaction(async (manager) => {
+    const updatedChart = await this.dataSource.transaction(async (manager) => {
       // 1) Load & update the chart basic fields
       const chart = await manager.findOne(ChartEntity, { where: { id } });
       if (!chart) throw new NotFoundException("Chart not found");
@@ -133,9 +144,11 @@ export class ChartsService {
       // 4) Return hydrated chart
       return manager.findOneOrFail(ChartEntity, {
         where: { id: chart.id },
-        relations: { devices: { device: true } /*lines: true*/ },
+        relations: { devicesLocations: { device: true } /*lines: true*/ },
       });
     });
+
+    return this.convertChartEntityToChart(updatedChart);
   }
 
   async removeChart(id: string): Promise<void> {
