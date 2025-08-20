@@ -65,6 +65,8 @@ export function ChartsPage() {
   };
 
   const onSave = useCallback(async () => {
+    console.log("save!!!")
+    console.log(editChart)
     // //if (!draft) return;
     // setSaving(true);
     // setError(null);
