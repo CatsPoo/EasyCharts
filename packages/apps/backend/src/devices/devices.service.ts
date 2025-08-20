@@ -15,8 +15,8 @@ export class DevicesService {
     private readonly modelsRepo: Repository<ModelEntity>
   ) {}
 
-  async convertDeviceEntity(deviceEntity: DeviceEntity): Promise<Device> {
-    const { id, model, name, type, ipAddress, ...device } = deviceEntity;
+  convertDeviceEntity(deviceEntity: DeviceEntity): Device {
+    const { id, model, name, type, ipAddress} = deviceEntity;
     return {
       id,
       name,
