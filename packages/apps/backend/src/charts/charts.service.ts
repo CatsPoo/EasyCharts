@@ -3,6 +3,8 @@ import type {
   Chart,
   ChartCreate,
   ChartUpdate,
+  DeviceOnChart,
+  Line
 } from "@Easy-charts/easycharts-types";
 import {
   BadRequestException,
@@ -14,7 +16,8 @@ import { DataSource, Repository } from "typeorm";
 import { DeviceEntity } from "../devices/entities/device.entity";
 import { ChartEntity } from "./entities/chart.entity";
 import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
-
+import { LineEntity } from "./entities/line.entity";
+import { DevicesService } from "../devices/devices.service";
 @Injectable()
 export class ChartsService {
   constructor(
@@ -23,21 +26,27 @@ export class ChartsService {
     @InjectRepository(ChartEntity)
     private readonly chartRepo: Repository<ChartEntity>,
 
-    @InjectRepository(DeviceEntity)
-    private readonly deviceRepo: Repository<DeviceEntity>,
-
     @InjectRepository(DeviceOnChartEntity)
-    private readonly docRepo: Repository<DeviceOnChartEntity>
-  ) // @InjectRepository(Line)
-  // private readonly lineRepo: Repository<Line>,
+    private readonly docRepo: Repository<DeviceOnChartEntity>,
+
+    @InjectRepository(LineEntity)
+    private readonly lineRepo: Repository<LineEntity>,
+
+    private readonly devicesService :DevicesService
+  ) 
   {}
 
-  convertChartEntityToChart = (chartEnrity:ChartEntity) : Chart =>{
-    const {devicesLocations, ...chartData} : ChartEntity = chartEnrity 
+  async convertDeviceOnChartEntity = (deviceonChartEntity: DeviceOnChartEntity) : Promise<DeviceOnChart>=>{
+    const {chartId,position,deviceId} = deviceonChartEntity
+    const device = await this.devicesService.getDeviceById(deviceId)
     return {
-      ...chartData,
-      devicesLocations
-    } as Chart
+      chartId,
+      device,
+      position
+    } as DeviceOnChart
+  }
+  convertChartEntityToChart = (chartEnrity:ChartEntity) : Chart =>{
+    const {devicesLocations,lines, ...chartData} : ChartEntity = chartEnrity 
   }
   async getAllCharts(): Promise<Chart[]> {
     return (await this.chartRepo.find({})).map(

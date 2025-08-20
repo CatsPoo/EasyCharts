@@ -15,6 +15,18 @@ export class DevicesService {
     private readonly modelsRepo: Repository<ModelEntity>
   ) {}
 
+  async convertDeviceEntity(deviceEntity: DeviceEntity): Promise<Device> {
+    const { id, model, name, type, ipAddress, ...device } = deviceEntity;
+    return {
+      id,
+      name,
+      type,
+      ipAddress,
+      vendor: model.vendor.name,
+      model: model.name,
+    } as Device;
+  }
+
   async createDevice(dto: DeviceCreate): Promise<Device> {
     const model = await this.modelsRepo.findOne({
       where: { id: dto.modelId },
@@ -26,10 +38,10 @@ export class DevicesService {
       ...dto,
       model,
     });
-    return this.devicesRepo.save(device);
+    return this.convertDeviceEntity(await this.devicesRepo.save(device));
   }
 
-  async listDevices(q: QueryDto): Promise<{rows:Device[],total:number}> {
+  async listDevices(q: QueryDto): Promise<{ rows: Device[]; total: number }> {
     const take = q.pageSize ?? 25;
     const skip = (q.page ?? 0) * take;
 
@@ -62,17 +74,26 @@ export class DevicesService {
     qb.orderBy(sortKey, sortDir);
 
     const [rows, total] = await qb.skip(skip).take(take).getManyAndCount();
-    return { rows, total };
+
+    const devicesRows: Device[] = [];
+    for (const d of rows) {
+      devicesRows.push(await this.convertDeviceEntity(d));
+    }
+
+    return { rows: devicesRows, total };
   }
 
-  getAllDevices(): Promise<Device[]> {
-    return this.devicesRepo.find();
+  async getAllDevices(): Promise<Device[]> {
+    const rows = await this.devicesRepo.find({
+    relations: { model: { vendor: true } }, // if your mapper needs these
+  });
+    return Promise.all(rows.map((e) => this.convertDeviceEntity(e)));
   }
 
   async getDeviceById(id: string): Promise<Device> {
     const device = await this.devicesRepo.findOne({ where: { id } });
     if (!device) throw new NotFoundException(`Device ${id} not found`);
-    return device;
+    return await this.convertDeviceEntity(device)
   }
 
   async updateDevice(id: string, dto: DeviceUpdate): Promise<Device> {
@@ -95,7 +116,7 @@ export class DevicesService {
       device.model = model;
     }
 
-    return this.devicesRepo.save(device);
+    return await this.convertDeviceEntity(await this.devicesRepo.save(device));
   }
 
   async removeDevice(id: string): Promise<void> {

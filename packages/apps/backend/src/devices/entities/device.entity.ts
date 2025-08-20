@@ -18,7 +18,7 @@ export class DeviceEntity {
   model: ModelEntity;
 
   @Column({ name: "ip_address", nullable: true })
-  ipAddress?: string;
+  ipAddress: string;
 
   @OneToMany(
     () => DeviceOnChartEntity,
