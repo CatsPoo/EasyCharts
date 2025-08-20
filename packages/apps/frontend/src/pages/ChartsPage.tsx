@@ -17,6 +17,7 @@ import AssetPage from "../components/AssetsList/AssetsPage";
 import { ChartEditor } from "../components/ChartsViewer/ChartEditor";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
+import { useChartById } from "../hooks/chartsHooks";
 
 export function ChartsPage() {
   const [tab, setTab] = React.useState(0);
@@ -28,30 +29,23 @@ export function ChartsPage() {
   const [editChart, setEditChart] = useState<Chart | null>(null);
   const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // const {getChart,getChartsInformation,updateChart} = useCharts()
   const readonly = false;
 
-  //const chartsLists = getChartsInformation();
- //   tab === 0 ? chartsLists.myCharts : chartsLists.sharedCharts;
-
-  // Whenever the tab changes, clear the selection
   useEffect(() => {
     setSelectedId("-1");
   }, [tab]);
 
   // Find the chart object for the currently selected ID (or undefined)
-  const selectedChart: Chart | undefined = getChart(selectedId);
+  //const selectedChart: Chart | undefined = getChart(selectedId);
+  const { data: selectedChart, isLoading:isSelectedChartLoading, error:selectedChartError } = useChartById(selectedId ?? '');
 
   const handleEdit = (chartId: string) => {
-    const chart: Chart = getChart(chartId);
-    if (chart) {
-      setSelectedId(chartId);
-      setEditChart(structuredClone(chart));
-      setEditorMadeChanges(false);
-      setDialogOpen(true);
-    }
+    setSelectedId(chartId);
+    //setEditChart(structuredClone(selectedChart));
+    setEditorMadeChanges(false);
+    setDialogOpen(true);
     //TODO Handle chart loading error
   };
 
@@ -109,7 +103,7 @@ export function ChartsPage() {
               className="flex-none overflow-hidden border-r bg-gray-100"
             >
               <ChartListSidebar
-                isMyCharts={tab===1}
+                isMyCharts={tab===0}
                 onSelect={(id: string) => {
                   setSelectedId(id);
                 }}

@@ -16,26 +16,46 @@ export async function createChart(dto: ChartCreate): Promise<Chart> {
   return res.json();
 }
 
-export async function getChartsMetadata(): Promise<ChartMetadata[]> {
-  const res = await fetch(`/api/charts/metadata`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to fetch charts');
-  return res.json();
-}
-
-export function useChartsMetadataQuery() {
-  return useQuery<ChartMetadata[]>({
-    queryKey: ['charts'],
-    queryFn: getChartsMetadata,
-  });
-}
-
 export function useCreateChartMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (dto: ChartCreate) => createChart(dto),
     onSuccess: () => {
       // refresh list
-      qc.invalidateQueries({ queryKey: ['charts'] });
+      qc.invalidateQueries({ queryKey: ['chartsMetadata'] });
     },
   });
 }
+
+export async function getChartsMetadata(): Promise<ChartMetadata[]> {
+  const response = await fetch('/api/charts/metadata'); // adjust base path if needed
+  if (!response.ok) {
+    throw new Error('Failed to fetch chart metadata');
+  }
+  return await response.json();
+}
+
+export function useChartsMetadataQuery() {
+  return useQuery<ChartMetadata[]>({
+    queryKey: ['chartsMetadata'],
+    queryFn: getChartsMetadata,
+  });
+}
+
+export async function getChartById(chartId: string): Promise<Chart> {
+  const response = await fetch(`/api/charts/${chartId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch metadata for chart ID: ${chartId}`);
+  }
+  return await response.json();
+}
+
+export function useChartById(id: string) {
+  return useQuery<Chart>({
+    queryKey: ['chart', id],
+    queryFn: () => getChartById(id),
+    enabled: !!id,
+  });
+}
+
+

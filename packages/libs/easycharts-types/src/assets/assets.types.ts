@@ -1,6 +1,6 @@
-import { DeviceSchema } from "src/devices/index.js";
-import { ModelBaseSchema } from "src/devices/schemas/model.schemas.js";
-import { VendorSchema } from "src/devices/schemas/vendor.schema.js";
+import { DeviceSchema } from "../devices/index.js";
+import { ModelBaseSchema } from "..//devices/schemas/model.schemas.js";
+import { VendorSchema } from "../devices/schemas/vendor.schemas.js";
 import z from "zod";
 
 // 1) AssetKind — same literal keys

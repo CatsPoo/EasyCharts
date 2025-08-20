@@ -6,6 +6,7 @@ import { ChartEntity } from './entities/chart.entity';
 import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
 import { DevicesModule } from '../devices/devices.module';
 import { DeviceEntity } from '../devices/entities/device.entity';
+import { LineEntity } from './entities/line.entity';
 
 @Module({
     imports: [
@@ -13,7 +14,8 @@ import { DeviceEntity } from '../devices/entities/device.entity';
         [
            ChartEntity,
            DeviceOnChartEntity,
-           DeviceEntity       
+           DeviceEntity,
+           LineEntity       
         ]),
         DevicesModule,
     ],

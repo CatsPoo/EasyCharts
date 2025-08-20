@@ -25,11 +25,9 @@ export function ChartListSidebar({
   onEdit,
   isMyCharts,
 }: chartsSidebarProps) {
-  const {
-    data: chartsMetadataList,
-    isLoading,
-    error: createChartError,
-  } = useChartsMetadataQuery();
+
+  const { data: chartsMeatadata, isLoading: isChartsMetadataLoading, error:chartMetadataLoading } = useChartsMetadataQuery();
+
   const createMutation = useCreateChartMutation();
 
   const [openCreate, setOpenCreate] = useState(false);
@@ -56,7 +54,7 @@ export function ChartListSidebar({
         height: "100%",
       }}
     >
-      (isMyCharts && (
+      {isMyCharts && (
       <>
         <Tooltip title="Add chart">
           <Fab
@@ -76,9 +74,9 @@ export function ChartListSidebar({
           submitting={createMutation.isPending}
         />
       </>
-      ))
+      )}
       <List>
-        {(chartsMetadataList ?? []).map((chart) => (
+        {(chartsMeatadata ?? []).map((chart) => (
           <ListItem
             key={chart.id}
             disablePadding

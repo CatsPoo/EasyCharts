@@ -37,7 +37,7 @@ export class ChartsService {
   ) 
   {}
 
-  convertDeviceOnChartEntity = (deviceonChartEntity: DeviceOnChartEntity) : DeviceOnChart{
+  convertDeviceOnChartEntity = (deviceonChartEntity: DeviceOnChartEntity) : DeviceOnChart =>{
     const {chartId,position,device} = deviceonChartEntity
     return{
       chartId,
