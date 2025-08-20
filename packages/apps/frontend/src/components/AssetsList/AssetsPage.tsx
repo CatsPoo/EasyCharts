@@ -120,7 +120,6 @@ export default function AssetPage() {
           onSubmit={(values) => {
             if (kind === "devices") {
               const { vendorId, ...payload } = values;
-              console.log(payload);
               updateMut.mutate({ ...(editing as any), ...payload });
             } else {
               updateMut.mutate({ ...(editing as any), ...values });

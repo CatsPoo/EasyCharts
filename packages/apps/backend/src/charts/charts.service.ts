@@ -60,12 +60,13 @@ export class ChartsService {
     );
   }
 
-  async getChartById(id: string): Promise<ChartEntity> {
+  async getChartById(id: string): Promise<Chart> {
     const chart: ChartEntity | null = await this.chartRepo.findOne({
       where: { id },
+      relations: ['lines', 'devicesLocations'],
     });
     if (!chart) throw new NotFoundException("Vendor not found");
-    return chart;
+    return await this.convertChartEntityToChart(chart)
   }
 
   //TODO Add lines to create dto

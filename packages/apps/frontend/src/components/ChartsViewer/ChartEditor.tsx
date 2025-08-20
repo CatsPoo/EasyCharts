@@ -12,7 +12,6 @@ interface ChardEditorProps  {
   onDraftchange : (nextDraft: Chart) => void
 }
 export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
-
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
@@ -59,7 +58,7 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
   }
 
   const convertLinesToEdges = (lines: Line[]): Edge[] => {
-    return lines.map((l) => convertLineToEdge(l));
+    return  (lines) ?lines.map((l) => convertLineToEdge(l)) :[];
   }
 
 

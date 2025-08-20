@@ -47,7 +47,7 @@ export async function getChartById(chartId: string): Promise<Chart> {
   if (!response.ok) {
     throw new Error(`Failed to fetch metadata for chart ID: ${chartId}`);
   }
-  return await response.json();
+  return await response.json() as Chart;
 }
 
 export function useChartById(id: string) {

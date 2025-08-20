@@ -16,8 +16,8 @@ export class ChartEntity {
   @Column()
   name!: string;
 
-  @Column({ nullable: true })
-  description?: string;
+  @Column({ nullable: false, default: "" })
+  description!: string;
 
   @OneToMany(
     () => DeviceOnChartEntity,

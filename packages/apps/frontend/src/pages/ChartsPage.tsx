@@ -21,7 +21,7 @@ import { useChartById } from "../hooks/chartsHooks";
 
 export function ChartsPage() {
   const [tab, setTab] = React.useState(0);
-  const [selectedId, setSelectedId] = useState<string>("-1");
+  const [selectedId, setSelectedId] = useState<string>("");
   const [editMode, setEditMode] = useState(false);
 
   // dialog state:
@@ -34,7 +34,7 @@ export function ChartsPage() {
   const readonly = false;
 
   useEffect(() => {
-    setSelectedId("-1");
+    setSelectedId("");
   }, [tab]);
 
   // Find the chart object for the currently selected ID (or undefined)
@@ -104,9 +104,7 @@ export function ChartsPage() {
             >
               <ChartListSidebar
                 isMyCharts={tab===0}
-                onSelect={(id: string) => {
-                  setSelectedId(id);
-                }}
+                onSelect={setSelectedId}
                 onEdit={handleEdit}
               />
             </motion.div>
@@ -116,7 +114,6 @@ export function ChartsPage() {
         {tab !== 2 ? (
           <Box sx={{ flex: 1, position: "relative" }}>
             {selectedChart ? (
-              // render in read‑only mode
               <ChartEditor
                 chart={selectedChart}
                 editMode={false}
