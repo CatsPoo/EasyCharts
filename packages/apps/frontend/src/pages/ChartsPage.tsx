@@ -17,7 +17,7 @@ import AssetPage from "../components/AssetsList/AssetsPage";
 import { ChartEditor } from "../components/ChartsViewer/ChartEditor";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
-import { useChartById } from "../hooks/chartsHooks";
+import { updateChart, useChartById } from "../hooks/chartsHooks";
 
 export function ChartsPage() {
   const [tab, setTab] = React.useState(0);
@@ -65,11 +65,11 @@ export function ChartsPage() {
     setEditChart(undefined)
   };
 
-  const onSave = useCallback(() => {
+  const onSave = useCallback(async () => {
     if(!editChart) return
     setSelectedId(editChart?.id)
 
-    
+    await updateChart(editChart.id,{...editChart})
 
     setEditChart(undefined)
   }, []);
