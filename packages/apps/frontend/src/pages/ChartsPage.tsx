@@ -26,7 +26,7 @@ export function ChartsPage() {
 
   // dialog state:
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editChart, setEditChart] = useState<Chart | null>(null);
+  const [editChart, setEditChart] = useState<Chart | undefined>(undefined);
   const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
 
@@ -43,7 +43,7 @@ export function ChartsPage() {
 
   const handleEdit = (chartId: string) => {
     setSelectedId(chartId);
-    //setEditChart(structuredClone(selectedChart));
+    setEditChart(structuredClone(selectedChart));
     setEditorMadeChanges(false);
     setDialogOpen(true);
     //TODO Handle chart loading error
