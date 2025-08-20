@@ -1,10 +1,10 @@
-import type { Chart, Device, DeviceLocation, Line } from '@easy-charts/easycharts-types';
+import type { Chart, Device, DeviceOnChart, Line } from '@easy-charts/easycharts-types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useRef } from 'react';
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from 'reactflow';
 import ReactFlow, { addEdge, Background, ConnectionLineType, Controls, reconnectEdge, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { DevicesSidebar } from './DevicesSideBar';
+import { DevicesSidebar } from "./DevicesSideBar";
 
 interface ChardEditorProps  {
   chart : Chart
@@ -12,11 +12,10 @@ interface ChardEditorProps  {
   onDraftchange : (nextDraft: Chart) => void
 }
 export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
-
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
-  const convertDeviceToNode = (deviceLocations: DeviceLocation) : Node =>{
+  const convertDeviceToNode = (deviceLocations: DeviceOnChart) : Node =>{
     const {device,position} = deviceLocations
     const node : Node  ={
         id: device.id,
@@ -27,7 +26,7 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
     return node
   }
 
-  const convertDevicesToNodes =(devicesLocations: DeviceLocation[]) : Node[] =>{
+  const convertDevicesToNodes =(devicesLocations: DeviceOnChart[]) : Node[] =>{
     const nodes : Node[] = devicesLocations.map(deviceLocation => 
       convertDeviceToNode(deviceLocation))
     return nodes
@@ -37,7 +36,7 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
     return {
       id: line.id,
       source: line.sourceDeviceId,
-      target: line.targeDevicetId,
+      target: line.targetDeviceId,
       label: line.label,
       type:  'step',
       animated: false,      // optional: makes the edge animate
@@ -45,7 +44,7 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
     }
   }
 
-  const convertNodeToDeviceLocation = (node:Node) :DeviceLocation =>{
+  const convertNodeToDeviceLocation = (node:Node) :DeviceOnChart =>{
 
     const device : Device = {
       id: node.id,
@@ -59,7 +58,7 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
   }
 
   const convertLinesToEdges = (lines: Line[]): Edge[] => {
-    return lines.map((l) => convertLineToEdge(l));
+    return  (lines) ?lines.map((l) => convertLineToEdge(l)) :[];
   }
 
 
@@ -78,7 +77,7 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       onNodesChangeRF(changes);
-      const updatedDevicesLocations :DeviceLocation[] = nodes.map(nds => convertNodeToDeviceLocation(nds))
+      const updatedDevicesLocations :DeviceOnChart[] = nodes.map(nds => convertNodeToDeviceLocation(nds))
       onDraftchange({...chart,devicesLocations:updatedDevicesLocations})
     },
     [onNodesChangeRF]
@@ -124,7 +123,7 @@ const onConnect = useCallback(
         newNode
       ]);
 
-      const newDeviceLocations : DeviceLocation = convertNodeToDeviceLocation(newNode)
+      const newDeviceLocations : DeviceOnChart = convertNodeToDeviceLocation(newNode)
       onDraftchange({...chart,devicesLocations: [...chart.devicesLocations,newDeviceLocations]});
     },
     [editMode, onDraftchange, project, setNodes]

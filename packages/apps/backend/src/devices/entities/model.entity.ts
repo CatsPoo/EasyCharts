@@ -2,19 +2,18 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMan
 import { VendorEntity } from './vendor.entity';
 import { DeviceEntity } from './device.entity';
 
-@Entity({ name: 'models' })
+@Entity({ name: "models" })
 export class ModelEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id!: string;
 
   @Column({ unique: true })
   name!: string;
 
-  @ManyToOne(() => VendorEntity, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'vendor_id' })
+  @ManyToOne(() => VendorEntity, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "vendor_id" })
   vendor: VendorEntity;
 
   @OneToMany(() => DeviceEntity, (device) => device.model)
-    devices?: DeviceEntity[];
-
+  devices?: DeviceEntity[];
 }

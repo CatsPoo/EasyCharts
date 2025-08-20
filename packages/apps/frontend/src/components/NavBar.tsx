@@ -1,11 +1,10 @@
-import * as React from 'react';
 import AppBar from '@mui/material/AppBar';
-import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 
 interface NavBarProps {
-  value: number;
-  onChange: (newValue: number) => void;
+  value: Number;
+  onChange: (newValue: Number) => void;
 }
 
 export function NavBar({ value, onChange }: NavBarProps) {

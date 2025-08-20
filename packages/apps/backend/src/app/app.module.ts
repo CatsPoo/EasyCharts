@@ -3,7 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DevicesModule } from '../devices/devices.module';
 import { LinesModule } from '../lines/lines.module';
-import { ChartsModule } from '../charts/charts.module';
+import { ChartsModule } from "../charts/charts.module";
 import { AppConfigModule } from '../appConfig/appConfig.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppConfigService } from '../appConfig/appConfig.service';

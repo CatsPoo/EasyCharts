@@ -1,44 +1,41 @@
-import { type CreateChartDto,type  UpdateChartDto } from '@easy-charts/easycharts-types';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  UsePipes,
-  ValidationPipe,
-} from '@nestjs/common';
-import { ChartsService } from './charts.service';
+import { type ChartCreate, ChartCreateSchema, ChartMetadata } from "@easy-charts/easycharts-types";
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, UsePipes, ValidationPipe } from "@nestjs/common";
+import { ChartsService } from "./charts.service";
+import { ZodValidationPipe } from "../common/zodValidation.pipe";
 
-@Controller('charts')
+@Controller("charts")
 @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 export class ChartsController {
-  constructor(private readonly chartsService: ChartsService) {}
+  constructor(private readonly chartService: ChartsService) {}
 
   @Get()
   findAll() {
-    return this.chartsService.getAllCharts();
+    return this.chartService.getAllCharts();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.chartsService.getChartById(id);
+  @Get("metadata")
+  async getAllChartMetadata(): Promise<ChartMetadata[]> {
+    return this.chartService.getAllChartsMetadata();
+  }
+
+  @Get(":id/metadata")
+  async getChartMetadata(@Param("id", new ParseUUIDPipe()) id: string): Promise<ChartMetadata> {
+    return this.chartService.getChartMetadataById(id);
+  }
+
+  @Get(":id")
+  findOne(@Param("id", new ParseUUIDPipe()) id: string) {
+    return this.chartService.getChartById(id);
   }
 
   @Post()
-  create(@Body() dto: CreateChartDto) {
-    return this.chartsService.createChart(dto);
+  @UsePipes(new ZodValidationPipe(ChartCreateSchema))
+  create(@Body() dto: ChartCreate) {
+    return this.chartService.createChart(dto);
   }
 
-  // @Put(':id')
-  // update(@Param('id') id: string, @Body() dto: UpdateChartDto) {
-  //   return this.chartsService.update(id, dto);
-  // }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.chartsService.removeChart(id);
+  @Delete(":id")
+  remove(@Param("id", new ParseUUIDPipe()) id: string) {
+    return this.chartService.removeChart(id);
   }
 }

@@ -1,8 +1,8 @@
 import { Box, List, ListItem, ListItemButton, ListItemText } from "@mui/material";
 
 interface assetsSidebarProps {
-  assets : string[]
-  selectedAsset : string
+  assets: string[];
+  selectedAsset: string;
   onSelect: (asset: string) => void;
 }
 

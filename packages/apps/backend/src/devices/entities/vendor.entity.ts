@@ -1,9 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { ModelEntity } from './model.entity';
 
-@Entity({ name: 'vendors' })
+@Entity({ name: "vendors" })
 export class VendorEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id!: string;
 
   @Column({ unique: true })
@@ -11,5 +11,4 @@ export class VendorEntity {
 
   @OneToMany(() => ModelEntity, (model) => model.vendor)
   models?: ModelEntity[];
-
 }

@@ -1,3 +1,4 @@
+import  { type VendorCreate, VendorCreateSchema,type  VendorUpdate, VendorUpdateSchema } from '@easy-charts/easycharts-types';
 import {
   Body,
   Controller,
@@ -7,21 +8,23 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
-  Put,
   Post,
+  Put,
   Query,
+  UsePipes,
 } from '@nestjs/common';
-import { VendorsService } from './vendors.service';
-import type  { CreateVendorDto, UpdateVendorDto } from '@easy-charts/easycharts-types';
 import { QueryDto } from '../query/dto/query.dto';
+import { VendorsService } from './vendors.service';
+import { ZodValidationPipe } from '../common/zodValidation.pipe';
 
 @Controller('vendors')
 export class VendorsController {
   constructor(private readonly vendorsService: VendorsService) {}
 
   @Post()
+  @UsePipes(new ZodValidationPipe(VendorCreateSchema))
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() payload: CreateVendorDto) {
+  create(@Body() payload: VendorCreate) {
     return this.vendorsService.createVendor(payload);
   }
 
@@ -37,9 +40,10 @@ export class VendorsController {
   }
 
   @Put(':id')
+  @UsePipes(new ZodValidationPipe(VendorUpdateSchema))
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() payload: UpdateVendorDto,
+    @Body() payload: VendorUpdate,
   ) {
     return this.vendorsService.updateVendor(id, payload);
   }

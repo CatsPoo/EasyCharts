@@ -1,9 +1,10 @@
+import type { Vendor, VendorCreate, VendorUpdate } from '@easy-charts/easycharts-types';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { VendorEntity } from '../devices/entities/vendor.entity';
-import type { CreateVendorDto, UpdateVendorDto } from '@easy-charts/easycharts-types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { QueryDto } from '../query/dto/query.dto';
+import { VendorEntity } from '../devices/entities/vendor.entity';
+import { QueryDto } from "../query/dto/query.dto";
+import { promises } from 'dns';
 
 @Injectable()
 export class VendorsService {
@@ -12,12 +13,12 @@ export class VendorsService {
     private readonly vendorsRepo: Repository<VendorEntity>,
   ) {}
 
-  async createVendor(dto: CreateVendorDto) {
+  async createVendor(dto: VendorCreate) : Promise<Vendor> {
     const entity = this.vendorsRepo.create(dto);
     return this.vendorsRepo.save(entity);
   }
 
-  async listVendors(q: QueryDto) {
+  async listVendors(q: QueryDto) : Promise<{rows:Vendor[],total:number}> {
     const take = q.pageSize ?? 25;
     const skip = (q.page ?? 0) * take;
 
@@ -37,18 +38,18 @@ export class VendorsService {
     return { rows, total };
   }
 
-  async getVendorById(id: string) {
+  async getVendorById(id: string):Promise<Vendor> {
     const found = await this.vendorsRepo.findOne({ where: { id } });
     if (!found) throw new NotFoundException('Vendor not found');
     return found;
   }
 
-  async updateVendor(id: string, dto: UpdateVendorDto) {
+  async updateVendor(id: string, dto: VendorUpdate) : Promise<Vendor> {
     await this.vendorsRepo.update(id, dto);
     return this.getVendorById(id);
   }
 
-  async removeVendor(id: string) {
+  async removeVendor(id: string) : Promise<void> {
     await this.vendorsRepo.delete(id);
   }
 }

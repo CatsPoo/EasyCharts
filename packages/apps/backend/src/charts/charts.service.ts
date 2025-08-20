@@ -1,16 +1,24 @@
 // src/charts/charts.service.ts
+import type {
+  Chart,
+  ChartCreate,
+  ChartMetadata,
+  ChartUpdate,
+  Device,
+  DeviceOnChart,
+  Line
+} from "@Easy-charts/easycharts-types";
 import {
-    BadRequestException,
-    Injectable,
-    NotFoundException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
-import { type CreateChartDto, type UpdateChartDto } from '@Easy-charts/easycharts-types';
-import { ChartEntity } from './entities/chart.entity';
-import { DeviceEntity } from '../devices/entities/device.entity';
-import { DeviceOnChartEntity } from './entities/deviceOnChart.entityEntity';
-
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { DataSource, Repository } from "typeorm";
+import { ChartEntity } from "./entities/chart.entity";
+import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
+import { LineEntity } from "./entities/line.entity";
+import { DevicesService } from "../devices/devices.service";
 @Injectable()
 export class ChartsService {
   constructor(
@@ -19,121 +27,175 @@ export class ChartsService {
     @InjectRepository(ChartEntity)
     private readonly chartRepo: Repository<ChartEntity>,
 
-    @InjectRepository(DeviceEntity)
-    private readonly deviceRepo: Repository<DeviceEntity>,
-
     @InjectRepository(DeviceOnChartEntity)
     private readonly docRepo: Repository<DeviceOnChartEntity>,
 
-    // @InjectRepository(Line)
-    // private readonly lineRepo: Repository<Line>,
-  ) {}
+    @InjectRepository(LineEntity)
+    private readonly lineRepo: Repository<LineEntity>,
 
-  async getAllCharts():Promise<ChartEntity[]>{
-    return this.chartRepo.find({});
+    private readonly devicesService :DevicesService
+  ) 
+  {}
+
+  convertDeviceOnChartEntity = (deviceonChartEntity: DeviceOnChartEntity) : DeviceOnChart =>{
+    const {chartId,position,device} = deviceonChartEntity
+    return{
+      chartId,
+      device: this.devicesService.convertDeviceEntity(device),
+      position
+    } 
   }
 
-  async getChartById(id: string):Promise<ChartEntity>{
-    const chart : ChartEntity | null = await this.chartRepo.findOne({ where: { id } });
-    if (!chart) throw new NotFoundException('Vendor not found');
-    return chart;
+  //TODO all lines to convertion function
+  convertChartEntityToChart = (chartEnrity:ChartEntity) : Chart =>{
+    const {devicesLocations,lines, ...chartData} = chartEnrity
+    return {
+      devicesLocations:devicesLocations.map(dl =>this.convertDeviceOnChartEntity(dl)),
+      ...chartData
+    } as Chart
+  }
+  async getAllCharts(): Promise<Chart[]> {
+    return (await this.chartRepo.find({})).map(
+      chartEntity => this.convertChartEntityToChart(chartEntity)
+    );
   }
 
-  async createChart(dto: CreateChartDto) {
-    const chart : ChartEntity = this.chartRepo.create({
-      ...dto,
+  async getChartById(id: string): Promise<Chart> {
+    const chart: ChartEntity | null = await this.chartRepo.findOne({
+      where: { id },
+      relations: ['lines', 'devicesLocations'],
     });
-    return this.chartRepo.save(chart);
+    if (!chart) throw new NotFoundException("Vendor not found");
+    return await this.convertChartEntityToChart(chart)
   }
 
-  async updateChart(id: string, dto: UpdateChartDto) {
-  return this.dataSource.transaction(async (manager) => {
-    // 1) Load & update the chart basic fields
-    const chart = await manager.findOne(ChartEntity, { where: { id } });
-    if (!chart) throw new NotFoundException('Chart not found');
+  //TODO Add lines to create dto
+  async createChart(dto: ChartCreate): Promise<Chart> {
+    const chart: ChartEntity = this.chartRepo.create({
+      name:dto.name,
+      devicesLocations: dto.devicesLocations.map(dl => ({
+        deviceId: dl.device.id,
+        position: dl.position,
+      })),
+      lines:[]
+    })
+    const newChart : ChartEntity =await  this.chartRepo.save(chart);
+    return this.convertChartEntityToChart(newChart)
+  }
 
-    if (dto.name !== undefined) chart.name = dto.name;
-    if (dto.description !== undefined) chart.description = dto.description;
-    await manager.save(ChartEntity, chart);
 
-    // 2) Placements
-    let deviceIdsOnChart: Set<string>;
+  async getAllChartsMetadata(): Promise<ChartMetadata[]>{
+    const charts = await this.chartRepo.find({
+    select: ['id', 'name', 'description'],
+  });
 
-    if (dto.devicesLocations) {
-      // If placements are replaced, clear dependent lines first (optional but safer)
-      //await manager.delete(LineEntity, { chartId: chart.id });
+  return charts as ChartMetadata[];
+  }
+  async getChartMetadataById(id: string): Promise<ChartMetadata> {
+    const chart = await this.chartRepo.findOne({
+      where: { id },
+      select: ['id', 'name', 'description'], // Only the metadata fields
+    });
 
-      // Remove old placements
-      await manager.delete(DeviceOnChartEntity, { chartId: chart.id });
-
-      // Insert new placements
-      const newPlacements: DeviceOnChartEntity[] = [];
-
-      for (const dl of dto.devicesLocations) {
-        const device = await manager.findOne(DeviceEntity, {
-          where: { id: dl.deviceId },
-        });
-        if (!device) {
-          throw new BadRequestException(`Device id ${dl.deviceId} does not exist`);
-        }
-
-        const placement = manager.create(DeviceOnChartEntity, {
-          chartId: chart.id,
-          deviceId: device.id,
-          position: dl.position,
-        });
-
-        newPlacements.push(placement);
-      }
-
-      await manager.save(DeviceOnChartEntity, newPlacements);
-      deviceIdsOnChart = new Set(newPlacements.map((p) => p.deviceId));
-    } else {
-      // No placement change → use existing placements for line validation
-      const current = await manager.find(DeviceOnChartEntity, {
-        where: { chartId: chart.id },
-      });
-      deviceIdsOnChart = new Set(current.map((c) => c.deviceId));
+    if (!chart) {
+      throw new NotFoundException(`Chart with ID ${id} not found`);
     }
 
-    // 3) Lines (replace if provided; otherwise leave as-is)
-    // if (dto.lines) {
-    //   await manager.delete(LineEntity, { chartId: chart.id });
+    return chart as ChartMetadata;
+}
+  // async updateChart(id: string, dto: ChartUpdate): Promise<Chart>{
+  //   return this.convertChartEntityToChart( await this.chartRepo.findOne({where:{id}}))
+  //   // const updatedChart = await this.dataSource.transaction(async (manager) => {
+    //   // 1) Load & update the chart basic fields
+    //   const chart = await manager.findOne(ChartEntity, { where: { id } });
+    //   if (!chart) throw new NotFoundException("Chart not found");
 
-    //   const newLines = dto.lines.map((l) =>
-    //     manager.create(LineEntity, {
-    //       id: l.id, // optional; DB can generate if undefined
-    //       chartId: chart.id,
-    //       label: l.label,
-    //       type: l.type,
-    //       sourceDeviceId: l.sourceDeviceId,
-    //       targetDeviceId: l.targetDeviceId,
-    //     }),
-    //   );
+    //   if (dto.name !== undefined) chart.name = dto.name;
+    //   if (dto.description !== undefined) chart.description = dto.description;
+    //   await manager.save(ChartEntity, chart);
 
-    //   // Validate: both endpoints must exist on this chart
-    //   for (const ln of newLines) {
-    //     if (!deviceIdsOnChart.has(ln.sourceDeviceId) || !deviceIdsOnChart.has(ln.targetDeviceId)) {
-    //       throw new BadRequestException(
-    //         `Line connects devices not on this chart: ${ln.sourceDeviceId} -> ${ln.targetDeviceId}`,
-    //       );
+    //   // 2) Placements
+    //   let deviceIdsOnChart: Set<string>;
+
+    //   if (dto.devicesLocations) {
+    //     // If placements are replaced, clear dependent lines first (optional but safer)
+    //     //await manager.delete(LineEntity, { chartId: chart.id });
+
+    //     // Remove old placements
+    //     await manager.delete(DeviceOnChartEntity, { chartId: chart.id });
+
+    //     // Insert new placements
+    //     const newPlacements: DeviceOnChartEntity[] = [];
+
+    //     for (const dl of dto.devicesLocations) {
+    //       const device = await manager.findOne(DeviceEntity, {
+    //         where: { id: dl.deviceId },
+    //       });
+    //       if (!device) {
+    //         throw new BadRequestException(
+    //           `Device id ${dl.deviceId} does not exist`
+    //         );
+    //       }
+
+    //       const placement = manager.create(DeviceOnChartEntity, {
+    //         chartId: chart.id,
+    //         deviceId: device.id,
+    //         position: dl.position,
+    //       });
+
+    //       newPlacements.push(placement);
     //     }
+
+    //     await manager.save(DeviceOnChartEntity, newPlacements);
+    //     deviceIdsOnChart = new Set(newPlacements.map((p) => p.deviceId));
+    //   } else {
+    //     // No placement change → use existing placements for line validation
+    //     const current = await manager.find(DeviceOnChartEntity, {
+    //       where: { chartId: chart.id },
+    //     });
+    //     deviceIdsOnChart = new Set(current.map((c) => c.deviceId));
     //   }
 
-    //   await manager.save(LineEntity, newLines);
-    // }
+    //   // 3) Lines (replace if provided; otherwise leave as-is)
+    //   // if (dto.lines) {
+    //   //   await manager.delete(LineEntity, { chartId: chart.id });
 
-    // 4) Return hydrated chart
-    return manager.findOneOrFail(ChartEntity, {
-      where: { id: chart.id },
-      relations: { devices: { device: true }, /*lines: true*/ },
-    });
-  });
-}
+    //   //   const newLines = dto.lines.map((l) =>
+    //   //     manager.create(LineEntity, {
+    //   //       id: l.id, // optional; DB can generate if undefined
+    //   //       chartId: chart.id,
+    //   //       label: l.label,
+    //   //       type: l.type,
+    //   //       sourceDeviceId: l.sourceDeviceId,
+    //   //       targetDeviceId: l.targetDeviceId,
+    //   //     }),
+    //   //   );
 
-  async removeChart(id: string) : Promise<void> {
+    //   //   // Validate: both endpoints must exist on this chart
+    //   //   for (const ln of newLines) {
+    //   //     if (!deviceIdsOnChart.has(ln.sourceDeviceId) || !deviceIdsOnChart.has(ln.targetDeviceId)) {
+    //   //       throw new BadRequestException(
+    //   //         `Line connects devices not on this chart: ${ln.sourceDeviceId} -> ${ln.targetDeviceId}`,
+    //   //       );
+    //   //     }
+    //   //   }
+
+    //   //   await manager.save(LineEntity, newLines);
+    //   // }
+
+    //   // 4) Return hydrated chart
+    //   return manager.findOneOrFail(ChartEntity, {
+    //     where: { id: chart.id },
+    //     relations: { devicesLocations: { device: true } /*lines: true*/ },
+    //   });
+    // });
+
+    // return this.convertChartEntityToChart(updatedChart);
+  //}
+
+  async removeChart(id: string): Promise<void> {
     const chart = await this.chartRepo.findOne({ where: { id } });
-    if (!chart) throw new NotFoundException('Chart not found');
+    if (!chart) throw new NotFoundException("Chart not found");
     await this.chartRepo.remove(chart); // cascades will clean placements/lines
   }
 }

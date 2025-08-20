@@ -1,5 +1,5 @@
-import { IsInt, IsOptional, IsString, Min, IsIn, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class QueryDto {
   @IsOptional()
@@ -23,8 +23,8 @@ export class QueryDto {
   sortBy?: string;
 
   @IsOptional()
-  @IsIn(['asc', 'desc'])
-  sortDir?: 'asc' | 'desc';
+  @IsIn(["asc", "desc"])
+  sortDir?: "asc" | "desc";
 }
 
 export class ListModelsQueryDto extends QueryDto {

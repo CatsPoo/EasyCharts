@@ -1,14 +1,12 @@
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app/app.module';
 import 'reflect-metadata';
+import { AppModule } from './app/app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule,
-    {
-      logger: ['log', 'error', 'warn', 'debug', 'verbose']
-    }
-  );
+  const app = await NestFactory.create(AppModule, {
+    logger: ["log", "error", "warn", "debug", "verbose"],
+  });
 
   app.use((req: { method: any; originalUrl: any; }, res: { on: (arg0: string, arg1: () => void) => void; statusCode: any; }, next: () => void) => {
     const start = Date.now();

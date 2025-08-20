@@ -1,20 +1,35 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { DeviceOnChartEntity } from './deviceOnChart.entityEntity';
+import {
+  Column,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  type Relation,
+} from "typeorm";
+import { DeviceOnChartEntity } from "./deviceOnChart.entityEntity";
+import { LineEntity } from "./line.entity";
 
-@Entity({ name: 'charts' })
+@Entity({ name: "charts" })
 export class ChartEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column() 
+  @Column()
   name!: string;
 
-  @Column({ nullable: true }) 
-  description?: string;
+  @Column({ nullable: false, default: "" })
+  description!: string;
 
-  @OneToMany(() => DeviceOnChartEntity, (doc :DeviceOnChart) => doc.chart, { cascade: true })
-  devices!: DeviceOnChartEntity[];
+  @OneToMany(
+    () => DeviceOnChartEntity,
+    (doc: DeviceOnChartEntity) => doc.chart,
+    {
+      cascade: true,
+    }
+  )
+  devicesLocations!: DeviceOnChartEntity[];
 
-//   @OneToMany(() => Line, line => line.chart, { cascade: true })
-//   lines!: Line[];
+  @OneToMany(() => LineEntity, (line) => line.chart, {
+    cascade: true, // allows saving via parent; keep if you use replace-on-update
+  })
+  lines!: Relation<LineEntity[]>;
 }

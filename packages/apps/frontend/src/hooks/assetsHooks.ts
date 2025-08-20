@@ -6,15 +6,21 @@ type ListResponse<K extends keyof AssetMap> = { rows: Array<AssetMap[K]>; total:
 
 export function useListAssets<K extends keyof AssetMap>(
   kind: K,
-  params?: { page?: number; pageSize?: number; search?: string; sortBy?: string; sortDir?: 'asc' | 'desc' },
+  params?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    sortBy?: string;
+    sortDir?: "asc" | "desc";
+  },
   options?: UseQueryOptions<ListResponse<K>>
 ) {
   return useQuery<ListResponse<K>>({
-    queryKey: ['assets', kind, params] as const,
+    queryKey: ["assets", kind, params] as const,
     queryFn: async () => {
       const qs = toQueryString(params);
       const res = await fetch(`/api/${kind}?${qs}`);
-      if (!res.ok) throw new Error('Failed to fetch');
+      if (!res.ok) throw new Error("Failed to fetch");
       return (await res.json()) as ListResponse<K>;
     },
     placeholderData: (prev) => prev,
