@@ -1,8 +1,8 @@
-import type { Chart, chartMetadata, CreateChartDto } from '@easy-charts/easycharts-types';
+import type { Chart, ChartMetadata, ChartCreate } from '@easy-charts/easycharts-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 
-export async function createChart(dto: CreateChartDto): Promise<Chart> {
+export async function createChart(dto: ChartCreate): Promise<Chart> {
   const res = await fetch(`api/charts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -16,14 +16,14 @@ export async function createChart(dto: CreateChartDto): Promise<Chart> {
   return res.json();
 }
 
-export async function getChartsMetadata(): Promise<chartMetadata[]> {
+export async function getChartsMetadata(): Promise<ChartMetadata[]> {
   const res = await fetch(`/api/charts/metadata`, { credentials: 'include' });
   if (!res.ok) throw new Error('Failed to fetch charts');
   return res.json();
 }
 
 export function useChartsMetadataQuery() {
-  return useQuery<chartMetadata[]>({
+  return useQuery<ChartMetadata[]>({
     queryKey: ['charts'],
     queryFn: getChartsMetadata,
   });
@@ -32,7 +32,7 @@ export function useChartsMetadataQuery() {
 export function useCreateChartMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateChartDto) => createChart(dto),
+    mutationFn: (dto: ChartCreate) => createChart(dto),
     onSuccess: () => {
       // refresh list
       qc.invalidateQueries({ queryKey: ['charts'] });

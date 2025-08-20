@@ -21,5 +21,5 @@ export const ChartSchema = IdentifiableSchema.extend({
 
 export const ChartMetadataSchema = ChartSchema.omit({
   devicesLocations: true,
-  // lines: true,
+  lines: true,
 });
