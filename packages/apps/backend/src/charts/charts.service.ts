@@ -2,6 +2,7 @@
 import type {
   Chart,
   ChartCreate,
+  ChartMetadata,
   ChartUpdate,
   Device,
   DeviceOnChart,
@@ -81,6 +82,26 @@ export class ChartsService {
     return this.convertChartEntityToChart(newChart)
   }
 
+
+  async getAllChartsMetadata(): Promise<ChartMetadata[]>{
+    const charts = await this.chartRepo.find({
+    select: ['id', 'name', 'description'],
+  });
+
+  return charts as ChartMetadata[];
+  }
+  async getChartMetadataById(id: string): Promise<ChartMetadata> {
+    const chart = await this.chartRepo.findOne({
+      where: { id },
+      select: ['id', 'name', 'description'], // Only the metadata fields
+    });
+
+    if (!chart) {
+      throw new NotFoundException(`Chart with ID ${id} not found`);
+    }
+
+    return chart as ChartMetadata;
+}
   // async updateChart(id: string, dto: ChartUpdate): Promise<Chart>{
   //   return this.convertChartEntityToChart( await this.chartRepo.findOne({where:{id}}))
   //   // const updatedChart = await this.dataSource.transaction(async (manager) => {
