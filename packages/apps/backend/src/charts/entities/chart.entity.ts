@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { DeviceOnChartEntity } from './deviceOnChart.entityEntity';
+import { DeviceOnChart } from '@easy-charts/easycharts-types';
 
 @Entity({ name: "charts" })
 export class ChartEntity {
@@ -12,10 +13,10 @@ export class ChartEntity {
   @Column({ nullable: true })
   description?: string;
 
-  @OneToMany(() => DeviceOnChartEntity, (doc: DeviceOnChart) => doc.chart, {
+  @OneToMany(() => DeviceOnChartEntity, (doc: DeviceOnChartEntity) => doc.chart, {
     cascade: true,
   })
-  devices!: DeviceOnChartEntity[];
+  devicesLocations!: DeviceOnChartEntity[];
 
   //   @OneToMany(() => Line, line => line.chart, { cascade: true })
   //   lines!: Line[];

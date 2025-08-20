@@ -1,4 +1,4 @@
-import type { CreateChartDto } from "@easy-charts/easycharts-types";
+import type { ChartCreate } from "@easy-charts/easycharts-types";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import { Fab, IconButton, Tooltip } from "@mui/material";
@@ -37,7 +37,7 @@ export function ChartListSidebar({
   const handleCreateChartDialogOpen = () => setOpenCreate(true);
   const handleCreateChartDialogClose = () => setOpenCreate(false);
 
-  const handleCreate = async (payload: CreateChartDto) => {
+  const handleCreate = async (payload: ChartCreate) => {
     try {
       await createMutation.mutateAsync(payload);
       handleCreateChartDialogClose();

@@ -3,12 +3,12 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Button, Stack
 } from '@mui/material';
-import type { CreateChartDto } from '@easy-charts/easycharts-types';
+import type { ChartCreate } from '@easy-charts/easycharts-types';
 
 export interface CreateChartDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateChartDto) => void;
+  onSubmit: (data: ChartCreate) => void;
   submitting?: boolean;
 }
 

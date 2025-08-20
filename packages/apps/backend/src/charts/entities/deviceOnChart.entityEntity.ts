@@ -16,7 +16,7 @@ export class DeviceOnChartEntity {
   @Column(() => Position)
   position!: Position;
 
-  @ManyToOne(() => ChartEntity, (chart: ChartEntity) => chart.devices, {
+  @ManyToOne(() => ChartEntity, (chart: ChartEntity) => chart.devicesLocations, {
     onDelete: "CASCADE",
   })
   chart!: ChartEntity;
