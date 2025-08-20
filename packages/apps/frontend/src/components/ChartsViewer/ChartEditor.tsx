@@ -1,76 +1,104 @@
-import type { Chart, Device, DeviceLocation, Line } from '@easy-charts/easycharts-types';
-import { AnimatePresence, motion } from 'framer-motion';
-import { useCallback, useEffect, useRef } from 'react';
-import type { Connection, Edge, EdgeChange, Node, NodeChange } from 'reactflow';
-import ReactFlow, { addEdge, Background, ConnectionLineType, Controls, reconnectEdge, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
-import 'reactflow/dist/style.css';
-import { DevicesSidebar } from './DevicesSideBar';
+import type {
+  Chart,
+  Device,
+  DeviceOnChart,
+  Line,
+} from "@easy-charts/easycharts-types";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import type { Connection, Edge, EdgeChange, Node, NodeChange } from "reactflow";
+import ReactFlow, {
+  addEdge,
+  Background,
+  ConnectionLineType,
+  Controls,
+  reconnectEdge,
+  useEdgesState,
+  useNodesState,
+  useReactFlow,
+} from "reactflow";
+import "reactflow/dist/style.css";
+import { DevicesSidebar } from "./DevicesSideBar";
+import { useListAssets } from "../../hooks/assetsHooks";
 
-interface ChardEditorProps  {
-  chart : Chart
-  editMode:boolean
-  onDraftchange : (nextDraft: Chart) => void
+interface ChardEditorProps {
+  chart: Chart;
+  setChart: (chart: Chart) => void;
+  editMode: boolean;
+  setMadeChanges: (val: boolean) => void;
 }
-export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
-
+export function ChartEditor({
+  chart,
+  setChart,
+  editMode,
+  setMadeChanges,
+}: ChardEditorProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
-  const convertDeviceToNode = (deviceLocations: DeviceLocation) : Node =>{
-    const {device,position} = deviceLocations
-    const node : Node  ={
-        id: device.id,
-        type: 'default',
-        position,
-        data: { label: device.name}
-    }
-    return node
-  }
+  const { data: availableDevicesResponse } = useListAssets("devices", {
+    page: 0,
+    pageSize: 100000,
+  });
 
-  const convertDevicesToNodes =(devicesLocations: DeviceLocation[]) : Node[] =>{
-    const nodes : Node[] = devicesLocations.map(deviceLocation => 
-      convertDeviceToNode(deviceLocation))
-    return nodes
-  }
+  const availableDevices = availableDevicesResponse?.rows ?? [];
 
-  const convertLineToEdge = (line:Line) : Edge =>{
+  const devicesById = useMemo<Map<string, Device>>(
+    () =>
+      new Map(availableDevices.map((d: Device): [string, Device] => [d.id, d])),
+    [availableDevices]
+  );
+
+  const convertDeviceToNode = (deviceLocations: DeviceOnChart): Node => {
+    const { device, position } = deviceLocations;
+    const node: Node = {
+      id: device.id,
+      type: "default",
+      position,
+      data: { label: device.name },
+    };
+    return node;
+  };
+
+  const convertDevicesToNodes = (devicesLocations: DeviceOnChart[]): Node[] => {
+    const nodes: Node[] = devicesLocations.map((deviceLocation) =>
+      convertDeviceToNode(deviceLocation)
+    );
+    return nodes;
+  };
+
+  const convertNodeToDeviceOnChart = (node: Node): DeviceOnChart => {
+    return {
+      chartId: chart.id,
+      device: devicesById.get(node.id),
+      position: node.position,
+    } as DeviceOnChart;
+  };
+
+  const convertLineToEdge = (line: Line): Edge => {
     return {
       id: line.id,
       source: line.sourceDeviceId,
-      target: line.targeDevicetId,
+      target: line.targetDeviceId,
       label: line.label,
-      type:  'step',
-      animated: false,      // optional: makes the edge animate
+      type: "step",
+      animated: false, // optional: makes the edge animate
       //style: { strokeDasharray: l.type === 'rj45' ? '5 5' : undefined },
-    }
-  }
-
-  const convertNodeToDeviceLocation = (node:Node) :DeviceLocation =>{
-
-    const device : Device = {
-      id: node.id,
-      name: node.data.lable,
-      type:'default'
-    }
-    return {
-      device: device,
-      position: node.position
-    }
-  }
+    };
+  };
 
   const convertLinesToEdges = (lines: Line[]): Edge[] => {
-    return (lines)? lines.map((l) => convertLineToEdge(l)) : [];
-  }
+    return lines ? lines.map((l) => convertLineToEdge(l)) : [];
+  };
 
-
-   const [nodes, setNodes, onNodesChangeRF] = useNodesState(
+  const [nodes, setNodes, onNodesChangeRF] = useNodesState(
     convertDevicesToNodes(chart.devicesLocations)
   );
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState(
     convertLinesToEdges(chart.lines)
   );
 
- useEffect(() => {
+  useEffect(() => {
     setNodes(convertDevicesToNodes(chart.devicesLocations));
     setEdges(convertLinesToEdges(chart.lines));
   }, [setNodes, setEdges]);
@@ -78,8 +106,6 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       onNodesChangeRF(changes);
-      const updatedDevicesLocations :DeviceLocation[] = nodes.map(nds => convertNodeToDeviceLocation(nds))
-      onDraftchange({...chart,devicesLocations:updatedDevicesLocations})
     },
     [onNodesChangeRF]
   );
@@ -87,54 +113,61 @@ export function ChartEditor({chart,editMode,onDraftchange} : ChardEditorProps) {
     (changes: EdgeChange[]) => {
       onEdgesChangeRF(changes);
     },
-    [onEdgesChangeRF,setEdges]
+    [onEdgesChangeRF, setEdges]
   );
 
-const onConnect = useCallback(
+  const onConnect = useCallback(
     (c: Connection) => {
       setEdges((eds) => addEdge(c, eds));
-      onDraftchange({...chart});
     },
-    [onDraftchange, setEdges]
+    [setEdges]
   );
 
   const onDragOver = useCallback(
     (e: React.DragEvent) => {
       if (!editMode) return;
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = "move";
     },
-    [editMode, onDraftchange]
+    [editMode]
   );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       if (!editMode || !reactFlowWrapper.current) return;
       e.preventDefault();
-      const type = e.dataTransfer.getData('application/reactflow');
-      if (!type) return;
+      const deviceId = e.dataTransfer.getData("application/reactflow");
+      if (!deviceId) return;
+
+      const device: Device = devicesById.get(deviceId);
       const bounds = reactFlowWrapper.current.getBoundingClientRect();
       const position = project({
         x: e.clientX - bounds.left,
         y: e.clientY - bounds.top,
       });
-      const newNode = { id: `${type}-${Date.now()}`, type: 'default', position, data: { label: type } }
-      setNodes((nds) => [
-        ...nds,
-        newNode
-      ]);
+      const newNode = {
+        id: `${deviceId}`,
+        type: "default",
+        position,
+        data: { label: device.name },
+      };
+      setNodes((nds) => [...nds, newNode]);
 
-      const newDeviceLocations : DeviceLocation = convertNodeToDeviceLocation(newNode)
-      onDraftchange({...chart,devicesLocations: [...chart.devicesLocations,newDeviceLocations]});
+      const newDeviceOnChart: DeviceOnChart =
+        convertNodeToDeviceOnChart(newNode);
+
+      let {devicesLocations,...chartPayload} = chart
+      devicesLocations.push(newDeviceOnChart)
+      setChart({devicesLocations,...chartPayload})
+      setMadeChanges(true);
     },
-    [editMode, onDraftchange, project, setNodes]
+    [editMode, project, setNodes]
   );
   const onEdgeUpdate = useCallback(
     (oldE: Edge, conn: Connection) => {
-      onDraftchange({...chart});
       setEdges((eds) => reconnectEdge(oldE, conn, eds));
     },
-    [onDraftchange, setEdges]
+    [setEdges]
   );
 
   return (
@@ -144,36 +177,38 @@ const onConnect = useCallback(
           <motion.div
             key="sidebar"
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 192, opacity: 1 }}   // 192px = 12rem
+            animate={{ width: 192, opacity: 1 }} // 192px = 12rem
             exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className="flex-none overflow-hidden border-r bg-gray-100"
           >
-            <DevicesSidebar />
+            <DevicesSidebar devicesList={availableDevices} />
           </motion.div>
         )}
       </AnimatePresence>
-      <div ref={reactFlowWrapper} 
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-       className="flex-1">
-        <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={editMode ? onNodesChange : undefined}
-        onEdgesChange={editMode ? onEdgesChange : undefined}
-        onConnect={editMode ? onConnect : undefined}
-        onEdgeUpdate={editMode ? onEdgeUpdate : undefined}
-        nodesDraggable={editMode}
-        nodesConnectable={editMode}
-        defaultEdgeOptions={{type:ConnectionLineType.Step}}
-         connectionLineType={ConnectionLineType.Step}
-        fitView
-        style={{ width: '100%', height: '100%' }}
+      <div
+        ref={reactFlowWrapper}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        className="flex-1"
       >
-        <Background />
-        <Controls />
-      </ReactFlow>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={editMode ? onNodesChange : undefined}
+          onEdgesChange={editMode ? onEdgesChange : undefined}
+          onConnect={editMode ? onConnect : undefined}
+          onEdgeUpdate={editMode ? onEdgeUpdate : undefined}
+          nodesDraggable={editMode}
+          nodesConnectable={editMode}
+          defaultEdgeOptions={{ type: ConnectionLineType.Step }}
+          connectionLineType={ConnectionLineType.Step}
+          fitView
+          style={{ width: "100%", height: "100%" }}
+        >
+          <Background />
+          <Controls />
+        </ReactFlow>
       </div>
     </div>
   );

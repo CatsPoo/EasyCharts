@@ -59,33 +59,19 @@ export function ChartsPage() {
       }
     }
     setDialogOpen(false);
-    setSelectedId("-1");
+    setSelectedId("");
     setEditMode(false);
     setEditorMadeChanges(false);
+    setEditChart(undefined)
   };
 
-  const onSave = useCallback(async () => {
-    console.log("save!!!")
-    console.log(editChart)
-    // //if (!draft) return;
-    // setSaving(true);
-    // setError(null);
-    // try {
-    //   // const saved = await saveChartToDB(draft); // your API
-    //   // updateLiveChart(saved);                   // update global store AFTER save
-    //   // setIsEditing(false);
-    //   setEditorMadeChanges(false);
-    //   if (editChart) updateChart(editChart.id, editChart);
-    // } catch (e: any) {
-    //   setError(e?.message ?? "Failed to save chart");
-    // } finally {
-    //   setSaving(false);
-    // }
-  }, []);
+  const onSave = useCallback(() => {
+    if(!editChart) return
+    setSelectedId(editChart?.id)
 
-  const handleDraftChange = useCallback((next: Chart) => {
-    setEditChart(next); // update draft only
-    setEditorMadeChanges(true); // enable Save button
+    
+
+    setEditChart(undefined)
   }, []);
 
   return (
@@ -118,8 +104,9 @@ export function ChartsPage() {
             {selectedChart ? (
               <ChartEditor
                 chart={selectedChart}
+                setChart={setEditChart}
                 editMode={false}
-                onDraftchange={handleDraftChange}
+                setMadeChanges={setEditorMadeChanges}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
@@ -185,8 +172,9 @@ export function ChartsPage() {
         {editChart && (
           <ChartEditor
             chart={editChart}
+            setChart={setEditChart}
             editMode={editMode}
-            onDraftchange={handleDraftChange}
+            setMadeChanges={setEditorMadeChanges}
           />
         )}
       </Dialog>
