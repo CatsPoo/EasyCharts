@@ -7,7 +7,7 @@ export const ChartCreateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   devicesLocations: z.array(DeviceOnChartSchema),
-  // lines: z.array(LineSchema).optional() // re-enable when you define Line
+  lines: z.array(LineSchema).optional()
 });
 
 export const ChartUpdateSchema = ChartCreateSchema.partial();

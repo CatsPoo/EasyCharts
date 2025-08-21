@@ -7,34 +7,17 @@ import {
   Button,
   TextField,
   Stack,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormHelperText,
 } from "@mui/material";
 import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { AssetKind, AssetMap } from "@easy-charts/easycharts-types";
+import { DeviceSchema, ModelSchema, VendorSchema, type AssetKind, type AssetMap } from "@easy-charts/easycharts-types";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
 
 const schemas = {
-  devices: z.object({
-    name: z.string().min(1),
-    type: z.string().min(1),
-    vendorId: z.string().min(1), // ← for filtering UI only (not required by backend, but we validate UX-wise)
-    modelId: z.string().min(1), // ← REQUIRED by backend
-    ipAddress: z.string().optional(),
-  }),
-  models: z.object({
-    name: z.string().min(1),
-    vendorId: z.string().min(1),
-  }),
-  vendors: z.object({
-    name: z.string().min(1),
-  }),
+  devices: DeviceSchema,
+  models: ModelSchema,
+  vendors: VendorSchema,
 } as const;
 
 type Props<K extends AssetKind> = {

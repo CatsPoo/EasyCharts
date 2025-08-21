@@ -65,14 +65,36 @@ export function ChartsPage() {
     setEditChart(undefined)
   };
 
-  const onSave = useCallback(async () => {
-    if(!editChart) return
-    setSelectedId(editChart?.id)
+  const onSave = useCallback(async (e?: React.MouseEvent<HTMLButtonElement>) => {
+  // prevent form submit refresh if inside a <form>
+  e?.preventDefault();
 
-    await updateChart(editChart.id,{...editChart})
+  if (!editChart) return;
 
-    setEditChart(undefined)
-  }, []);
+  // only send fields your API expects (partial DTO)
+  const payload = {
+    name: editChart.name,
+    description: editChart.description ?? "",
+    devicesLocations: editChart.devicesLocations, // [{deviceId, position:{x,y}}, ...]
+    lines: editChart.lines, // [{id?, sourceDeviceId, targetDeviceId, type, label?}, ...]
+  };
+
+  setSaving(true);
+  try {
+    setSelectedId('');
+    const newChart : Chart= await updateChart(editChart.id, payload);
+    setSelectedId(newChart.id)
+    setEditChart(undefined);
+    setDialogOpen(false)
+    setEditorMadeChanges(false)
+    
+  } catch (err: any) {
+    console.error("updateChart failed:", err);
+    // toast.error(err?.message ?? "Failed to save chart");
+  } finally {
+    setSaving(false);
+  }
+}, [editChart, updateChart, setSelectedId, setEditChart]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>

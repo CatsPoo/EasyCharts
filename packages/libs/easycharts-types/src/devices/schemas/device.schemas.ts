@@ -1,11 +1,13 @@
 import { IdentifiableSchema } from "../../generic.schema.js";
 import z from "zod";
+import { ModelSchema } from "./model.schemas.js";
+import { VendorSchema } from "./vendor.schemas.js";
 
 export const DeviceBaseSchema = z.object({
   name: z.string().min(1),
   type: z.string().min(1),
-  model: z.string().min(1),
-  vendor: z.string().min(1),
+  model: ModelSchema,
+  vendor: VendorSchema,
   ipAddress: z.string(), //.ip({ version: "v4" }).optional(),
 });
 
