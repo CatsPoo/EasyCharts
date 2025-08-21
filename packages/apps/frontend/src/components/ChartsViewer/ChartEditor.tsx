@@ -41,7 +41,17 @@ export function ChartEditor({
     pageSize: 100000,
   });
 
+
+  const usedIds = useMemo(
+    () => new Set(chart.devicesLocations.map(d => d.device.id)),
+    [chart.devicesLocations,setChart]
+  );
+
   const availableDevices = availableDevicesResponse?.rows ?? [];
+  // Devices not yet placed
+  const unusedDevices = useMemo(() => {
+    return availableDevices.filter((dev) => !usedIds.has(dev.id));
+  }, [availableDevicesResponse, usedIds]);
 
   const devicesById = useMemo<Map<string, Device>>(
     () =>
@@ -154,15 +164,17 @@ export function ChartEditor({
       };
       setNodes((nds) => [...nds, newNode]);
 
-      const newDeviceOnChart: DeviceOnChart =
-        convertNodeToDeviceOnChart(newNode);
-
-      let {devicesLocations,...chartPayload} = chart
-      devicesLocations.push(newDeviceOnChart)
-      setChart({devicesLocations,...chartPayload})
+      const nextChart: Chart = {
+        ...chart,
+        devicesLocations: [
+          ...chart.devicesLocations,
+          { chartId: chart.id, device, position } as DeviceOnChart,
+        ],
+      };
+      setChart(nextChart);
       setMadeChanges(true);
     },
-    [editMode, project, setNodes]
+    [editMode, project, devicesById, setNodes, setChart, setMadeChanges, chart]
   );
   const onEdgeUpdate = useCallback(
     (oldE: Edge, conn: Connection) => {
@@ -183,7 +195,7 @@ export function ChartEditor({
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="flex-none overflow-hidden border-r bg-gray-100"
           >
-            <DevicesSidebar devicesList={availableDevices} />
+            <DevicesSidebar devicesList={unusedDevices} />
           </motion.div>
         )}
       </AnimatePresence>
