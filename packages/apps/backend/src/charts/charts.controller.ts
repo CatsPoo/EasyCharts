@@ -1,5 +1,21 @@
-import { type ChartCreate, ChartCreateSchema, ChartMetadata } from "@easy-charts/easycharts-types";
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, UsePipes, ValidationPipe } from "@nestjs/common";
+import {
+  type ChartCreate,
+  ChartCreateSchema,
+  ChartMetadata,
+  type ChartUpdate,
+} from "@easy-charts/easycharts-types";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  UsePipes,
+  ValidationPipe,
+} from "@nestjs/common";
 import { ChartsService } from "./charts.service";
 import { ZodValidationPipe } from "../common/zodValidation.pipe";
 
@@ -19,7 +35,9 @@ export class ChartsController {
   }
 
   @Get(":id/metadata")
-  async getChartMetadata(@Param("id", new ParseUUIDPipe()) id: string): Promise<ChartMetadata> {
+  async getChartMetadata(
+    @Param("id", new ParseUUIDPipe()) id: string
+  ): Promise<ChartMetadata> {
     return this.chartService.getChartMetadataById(id);
   }
 
@@ -38,4 +56,13 @@ export class ChartsController {
   remove(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.chartService.removeChart(id);
   }
+
+  @Patch(":id")
+  async updateChart(
+    @Param("id") id: string,
+    @Body() body: ChartUpdate,
+  ) {
+    return this.chartService.updateChart(id, body);
+  }
+
 }

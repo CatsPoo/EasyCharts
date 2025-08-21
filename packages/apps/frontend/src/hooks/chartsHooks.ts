@@ -1,4 +1,4 @@
-import type { Chart, ChartMetadata, ChartCreate } from '@easy-charts/easycharts-types';
+import { type Chart, type ChartMetadata, type ChartCreate, type ChartUpdate, ChartUpdateSchema } from '@easy-charts/easycharts-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 
@@ -58,4 +58,12 @@ export function useChartById(id: string) {
   });
 }
 
+export async function updateChart(id: string, data: ChartUpdate): Promise<Chart> {
+  const res = await fetch(`/api/charts/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+   return (await res.json()) as Chart;
+}
 

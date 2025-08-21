@@ -28,8 +28,7 @@ export class DevicesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @UsePipes(new ZodValidationPipe(DeviceCreateSchema))
-  create(@Body() dto: DeviceCreate) {
+  create(@Body(new ZodValidationPipe(DeviceCreateSchema)) dto: DeviceCreate) {
     return this.devicesService.createDevice(dto);
   }
 
@@ -45,10 +44,9 @@ export class DevicesController {
   }
 
   @Put(":id")
-  @UsePipes(new ZodValidationPipe(DeviceUpdateSchema))
   update(
     @Param("id", new ParseUUIDPipe()) id: string,
-    @Body() payload: DeviceUpdate
+    @Body(new ZodValidationPipe(DeviceUpdateSchema)) payload: DeviceUpdate
   ) {
     return this.devicesService.updateDevice(id, payload);
   }

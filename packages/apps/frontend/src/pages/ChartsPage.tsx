@@ -17,7 +17,7 @@ import AssetPage from "../components/AssetsList/AssetsPage";
 import { ChartEditor } from "../components/ChartsViewer/ChartEditor";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
-import { useChartById } from "../hooks/chartsHooks";
+import { updateChart, useChartById } from "../hooks/chartsHooks";
 
 export function ChartsPage() {
   const [tab, setTab] = React.useState(0);
@@ -26,7 +26,7 @@ export function ChartsPage() {
 
   // dialog state:
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editChart, setEditChart] = useState<Chart | null>(null);
+  const [editChart, setEditChart] = useState<Chart | undefined>(undefined);
   const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
 
@@ -39,15 +39,25 @@ export function ChartsPage() {
 
   // Find the chart object for the currently selected ID (or undefined)
   //const selectedChart: Chart | undefined = getChart(selectedId);
-  const { data: selectedChart, isLoading:isSelectedChartLoading, error:selectedChartError } = useChartById(selectedId ?? '');
+  const {
+    data: selectedChart,
+    isLoading: isSelectedChartLoading,
+    error: selectedChartError,
+  } = useChartById(selectedId ?? "");
 
   const handleEdit = (chartId: string) => {
     setSelectedId(chartId);
-    //setEditChart(structuredClone(selectedChart));
-    setEditorMadeChanges(false);
+    setEditMode(false);
     setDialogOpen(true);
-    //TODO Handle chart loading error
+    setEditorMadeChanges(false);
   };
+
+  useEffect(() => {
+    if (dialogOpen && selectedChart) {
+      setEditChart(structuredClone(selectedChart));
+      setEditorMadeChanges(false);
+    }
+  }, [dialogOpen, selectedChart]);
 
   const handleDialogClose = () => {
     if (editorMageChanges) {
@@ -59,32 +69,44 @@ export function ChartsPage() {
       }
     }
     setDialogOpen(false);
-    setSelectedId("-1");
+    setSelectedId("");
     setEditMode(false);
     setEditorMadeChanges(false);
+    setEditChart(undefined);
   };
 
-  const onSave = useCallback(async () => {
-    // //if (!draft) return;
-    // setSaving(true);
-    // setError(null);
-    // try {
-    //   // const saved = await saveChartToDB(draft); // your API
-    //   // updateLiveChart(saved);                   // update global store AFTER save
-    //   // setIsEditing(false);
-    //   setEditorMadeChanges(false);
-    //   if (editChart) updateChart(editChart.id, editChart);
-    // } catch (e: any) {
-    //   setError(e?.message ?? "Failed to save chart");
-    // } finally {
-    //   setSaving(false);
-    // }
-  }, []);
+  const onSave = useCallback(
+    async (e?: React.MouseEvent<HTMLButtonElement>) => {
+      // prevent form submit refresh if inside a <form>
+      e?.preventDefault();
 
-  const handleDraftChange = useCallback((next: Chart) => {
-    setEditChart(next); // update draft only
-    setEditorMadeChanges(true); // enable Save button
-  }, []);
+      if (!editChart) return;
+
+      const payload = {
+        name: editChart.name,
+        description: editChart.description ?? "",
+        devicesLocations: editChart.devicesLocations, // [{deviceId, position:{x,y}}, ...]
+        lines: editChart.lines, // [{id?, sourceDeviceId, targetDeviceId, type, label?}, ...]
+      };
+
+      setSaving(true);
+      try {
+        setSelectedId("");
+        const newChart: Chart = await updateChart(editChart.id, payload);
+        setSelectedId(newChart.id);
+        setEditChart(undefined);
+        setDialogOpen(false);
+        setEditorMadeChanges(false);
+        
+      } catch (err: any) {
+        console.error("updateChart failed:", err);
+        // toast.error(err?.message ?? "Failed to save chart");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [editChart, updateChart, setSelectedId, setEditChart]
+  );
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -103,7 +125,7 @@ export function ChartsPage() {
               className="flex-none overflow-hidden border-r bg-gray-100"
             >
               <ChartListSidebar
-                isMyCharts={tab===0}
+                isMyCharts={tab === 0}
                 onSelect={setSelectedId}
                 onEdit={handleEdit}
               />
@@ -115,9 +137,11 @@ export function ChartsPage() {
           <Box sx={{ flex: 1, position: "relative" }}>
             {selectedChart ? (
               <ChartEditor
+                key={selectedChart.id}
                 chart={selectedChart}
+                setChart={setEditChart}
                 editMode={false}
-                onDraftchange={handleDraftChange}
+                setMadeChanges={setEditorMadeChanges}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
@@ -182,9 +206,11 @@ export function ChartsPage() {
 
         {editChart && (
           <ChartEditor
+            key={`edit-${editChart.id}-${editMode}`}
             chart={editChart}
+            setChart={setEditChart}
             editMode={editMode}
-            onDraftchange={handleDraftChange}
+            setMadeChanges={setEditorMadeChanges}
           />
         )}
       </Dialog>

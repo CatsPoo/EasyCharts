@@ -16,14 +16,14 @@ export class DevicesService {
   ) {}
 
   convertDeviceEntity(deviceEntity: DeviceEntity): Device {
-    const { id, model, name, type, ipAddress} = deviceEntity;
+    const { id, model, name, type, ipAddress } = deviceEntity;
     return {
       id,
       name,
       type,
       ipAddress,
-      vendor: model.vendor.name,
-      model: model.name,
+      vendor: model.vendor,
+      model: model,
     } as Device;
   }
 
@@ -85,15 +85,20 @@ export class DevicesService {
 
   async getAllDevices(): Promise<Device[]> {
     const rows = await this.devicesRepo.find({
-    relations: { model: { vendor: true } }, // if your mapper needs these
-  });
+      relations: { model: { vendor: true } }, // if your mapper needs these
+    });
     return Promise.all(rows.map((e) => this.convertDeviceEntity(e)));
   }
 
   async getDeviceById(id: string): Promise<Device> {
-    const device = await this.devicesRepo.findOne({ where: { id } });
+    const device = await this.devicesRepo
+      .createQueryBuilder("d")
+      .leftJoinAndSelect("d.model", "m")
+      .leftJoinAndSelect("m.vendor", "v")
+      .where("d.id = :id", { id })
+      .getOne();
     if (!device) throw new NotFoundException(`Device ${id} not found`);
-    return await this.convertDeviceEntity(device)
+    return await this.convertDeviceEntity(device);
   }
 
   async updateDevice(id: string, dto: DeviceUpdate): Promise<Device> {

@@ -1,8 +1,44 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions} from '@tanstack/react-query';
-import type { AssetMap } from '@easy-charts/easycharts-types';
+import type { AssetMap, Device, DeviceUpdate, Model, ModelUpdate, Vendor, VendorUpdate } from '@easy-charts/easycharts-types';
 
 // helpful alias
 type ListResponse<K extends keyof AssetMap> = { rows: Array<AssetMap[K]>; total: number };
+
+
+function serializeForApi(kind: keyof AssetMap, data: any, mode: 'create' | 'update') {
+  switch (kind) {
+    case 'vendors': {
+      // Backend expects: { name, ... } (no nested refs)
+      const {...rest } = data as Vendor ?? {};
+      return rest as VendorUpdate;
+    }
+
+    case 'models': {
+      if(mode === 'create')
+        return data
+      // Frontend: { name, vendor: { id, name, ... } }
+      // Backend expects: { name, vendorId }
+      const {vendor, ...rest } = data as Model ?? {};
+      return {
+        ...rest,
+        vendorId: vendor?.id ?? null,
+      } as ModelUpdate;
+    }
+
+    case 'devices': {
+      const {id:_omit,model,vendor, ...rest } = data as Device ?? {};
+      return {
+        ...rest,
+        modelId: model?.id ?? null,
+      } as DeviceUpdate;
+    }
+
+    default: {
+      const {...rest } = data ?? {};
+      return rest;
+    }
+  }
+}
 
 export function useListAssets<K extends keyof AssetMap>(
   kind: K,
@@ -33,6 +69,7 @@ export function useCreateAsset<K extends keyof AssetMap>(kind: K) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: Omit<AssetMap[K], 'id'>) => {
+
       const res = await fetch(`/api/${kind}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -50,18 +87,20 @@ export function useUpdateAsset<K extends keyof AssetMap>(kind: K) {
   return useMutation({
     mutationFn: async (data: AssetMap[K]) => {
       const id = (data as any).id as string;
-      // strip id from the payload
-      const { id: _omit, ...put } = data as any;
+      if (!id) throw new Error('Missing id for update');
 
+      // Strip id from body and map nested objects → ids
+      const { id: _omit, ...rest } = data as any;
+      const payload = serializeForApi(kind, rest, 'update');
       const res = await fetch(`/api/${kind}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(put),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Update failed');
       return res.json() as Promise<AssetMap[K]>;
     },
-    onSuccess: (_data, _vars, _ctx) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['assets', kind] });
     },
   });

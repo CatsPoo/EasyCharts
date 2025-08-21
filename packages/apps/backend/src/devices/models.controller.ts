@@ -27,8 +27,8 @@ export class ModelsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @UsePipes(new ZodValidationPipe(ModelCreateSchema))
-  create(@Body() payload: ModelCreate) {
+  create(
+    @Body(new ZodValidationPipe(ModelCreateSchema)) payload: ModelCreate) {
     return this.modelsService.createModel(payload);
   }
 
@@ -44,10 +44,9 @@ export class ModelsController {
   }
 
   @Put(":id")
-  @UsePipes(new ZodValidationPipe(ModelUpdateSchema))
   update(
     @Param("id", new ParseUUIDPipe()) id: string,
-    @Body() payload: ModelUpdate
+    @Body(new ZodValidationPipe(ModelUpdateSchema)) payload: ModelUpdate
   ) {
     return this.modelsService.updateModel(id, payload);
   }
