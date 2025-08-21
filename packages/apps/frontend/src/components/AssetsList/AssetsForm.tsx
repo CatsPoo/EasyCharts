@@ -1,25 +1,35 @@
 // AssetForm.tsx (patch)
+import { DeviceBaseSchema, ModelBaseSchema, VendorBaseSchema, type AssetKind, type AssetMap } from "@easy-charts/easycharts-types";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
-  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Stack,
+  TextField,
 } from "@mui/material";
 import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { DeviceSchema, ModelSchema, VendorSchema, type AssetKind, type AssetMap } from "@easy-charts/easycharts-types";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
+import z from "zod";
 
 const schemas = {
-  devices: DeviceSchema,
-  models: ModelSchema,
-  vendors: VendorSchema,
+  devices: z.object({
+    name: z.string().min(1),
+    type: z.string().min(1),
+    vendorId: z.string().min(1), 
+    ipAddress: z.string().optional(),
+  }),
+  models: z.object({
+    name: z.string().min(1),
+    vendorId: z.string().min(1),
+  }),
+  vendors: z.object({
+    name: z.string().min(1),
+  }),
 } as const;
-
 type Props<K extends AssetKind> = {
   kind: K;
   open: boolean;

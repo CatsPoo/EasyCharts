@@ -67,9 +67,30 @@ export class ChartsService {
   async getChartById(id: string): Promise<Chart> {
     const chart: ChartEntity | null = await this.chartRepo.findOne({
       where: { id },
-      relations: ["lines", "devicesLocations"],
+      relations: {
+        devicesLocations:{
+          device:{
+            model:{
+              vendor:true
+            }
+          },
+          position:true
+        },
+        lines:{
+          sourceDevice:{
+            model:{
+              vendor:true
+            }
+          },
+          targetDevice:{
+            model:{
+              vendor:true
+            }
+          }
+        }
+      },
     });
-    if (!chart) throw new NotFoundException("Vendor not found");
+    if (!chart) throw new NotFoundException("chart not found");
     return await this.convertChartEntityToChart(chart);
   }
 

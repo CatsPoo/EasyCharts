@@ -3,7 +3,6 @@ import z from "zod";
 
 export const VendorBaseSchema = z.object({
   name: z.string().min(1),
-  iconUrl: z.string().url().optional(),
 });
 
 export const VendorCreateSchema = VendorBaseSchema;

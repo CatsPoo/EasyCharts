@@ -139,7 +139,8 @@ export function ChartEditor({
       const deviceId = e.dataTransfer.getData("application/reactflow");
       if (!deviceId) return;
 
-      const device: Device = devicesById.get(deviceId);
+      const device: Device | undefined = devicesById.get(deviceId);
+      if(!device) return 
       const bounds = reactFlowWrapper.current.getBoundingClientRect();
       const position = project({
         x: e.clientX - bounds.left,

@@ -4,12 +4,14 @@ import { VendorSchema } from "./vendor.schemas.js";
 
 export const ModelBaseSchema = z.object({
   name: z.string().min(1),
-  vendor: VendorSchema, // if you store relation by id in DB, expose vendorId on DTO instead
+  vendor: VendorSchema,
+  iconUrl: z.string().url().optional(),
 });
 
 export const ModelCreateSchema = z.object({
   name: z.string().min(1),
-  vendorId: z.string().uuid().optional(),    // from your CreateModelDto
+  vendorId: z.string().uuid().optional(),
+  iconUrl: z.string().url().optional(),    // from your CreateModelDto
 });
 
 export const ModelUpdateSchema = ModelCreateSchema.partial();

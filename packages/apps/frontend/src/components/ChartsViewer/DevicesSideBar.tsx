@@ -25,8 +25,8 @@ export function DevicesSidebar(
             }}
           >
             {device.name}
-            {device.model}
-            {device.vendor}
+            {device.model.name}
+            {device.vendor.name}
           </li>
         ))}
       </ul>
