@@ -6,7 +6,6 @@ type ListResponse<K extends keyof AssetMap> = { rows: Array<AssetMap[K]>; total:
 
 
 function serializeForApi(kind: keyof AssetMap, data: any, mode: 'create' | 'update') {
-  console.log(data)
   switch (kind) {
     case 'vendors': {
       // Backend expects: { name, ... } (no nested refs)
@@ -15,6 +14,8 @@ function serializeForApi(kind: keyof AssetMap, data: any, mode: 'create' | 'upda
     }
 
     case 'models': {
+      if(mode === 'create')
+        return data
       // Frontend: { name, vendor: { id, name, ... } }
       // Backend expects: { name, vendorId }
       const {vendor, ...rest } = data as Model ?? {};
@@ -25,9 +26,7 @@ function serializeForApi(kind: keyof AssetMap, data: any, mode: 'create' | 'upda
     }
 
     case 'devices': {
-      // Frontend: { name, type, ipAddress?, model: { id, ... } }
-      // Backend expects: { name, type, ipAddress?, modelId }
-      const {model,vendor, ...rest } = data as Device ?? {};
+      const {id:_omit,model,vendor, ...rest } = data as Device ?? {};
       return {
         ...rest,
         modelId: model?.id ?? null,
@@ -70,6 +69,7 @@ export function useCreateAsset<K extends keyof AssetMap>(kind: K) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: Omit<AssetMap[K], 'id'>) => {
+
       const res = await fetch(`/api/${kind}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,8 +92,6 @@ export function useUpdateAsset<K extends keyof AssetMap>(kind: K) {
       // Strip id from body and map nested objects → ids
       const { id: _omit, ...rest } = data as any;
       const payload = serializeForApi(kind, rest, 'update');
-      console.log('@@@@')
-      console.log(payload)
       const res = await fetch(`/api/${kind}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

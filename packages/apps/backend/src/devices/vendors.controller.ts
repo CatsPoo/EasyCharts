@@ -1,4 +1,4 @@
-import  { type VendorCreate, VendorCreateSchema,type  VendorUpdate, VendorUpdateSchema } from '@easy-charts/easycharts-types';
+import  { type VendorCreate,VendorCreateSchema,type  VendorUpdate, VendorUpdateSchema } from '@easy-charts/easycharts-types';
 import {
   Body,
   Controller,
@@ -22,9 +22,8 @@ export class VendorsController {
   constructor(private readonly vendorsService: VendorsService) {}
 
   @Post()
-  @UsePipes(new ZodValidationPipe(VendorCreateSchema))
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() payload: VendorCreate) {
+  create(@Body(new ZodValidationPipe(VendorCreateSchema)) payload: VendorCreate) {
     return this.vendorsService.createVendor(payload);
   }
 
@@ -40,10 +39,9 @@ export class VendorsController {
   }
 
   @Put(':id')
-  @UsePipes(new ZodValidationPipe(VendorUpdateSchema))
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() payload: VendorUpdate,
+    @Body(new ZodValidationPipe(VendorUpdateSchema))  payload: VendorUpdate,
   ) {
     return this.vendorsService.updateVendor(id, payload);
   }

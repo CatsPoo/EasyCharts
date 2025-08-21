@@ -18,5 +18,7 @@ export const DeviceCreateSchema = z.object({
   ipAddress: z.string(), //.ip({ version: "v4" }),
 });
 
-export const DeviceUpdateSchema = DeviceCreateSchema.partial();
+export const DeviceUpdateSchema = DeviceCreateSchema.partial()
+.refine(v => Object.keys(v).length > 0, { message: 'At least one field is required' });
+
 export const DeviceSchema = DeviceBaseSchema.extend(IdentifiableSchema.shape)

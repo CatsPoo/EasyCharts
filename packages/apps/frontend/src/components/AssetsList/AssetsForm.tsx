@@ -19,7 +19,7 @@ const schemas = {
   devices: z.object({
     name: z.string().min(1),
     type: z.string().min(1),
-    vendorId: z.string().min(1), 
+    modelId: z.string().min(1), 
     ipAddress: z.string().optional(),
   }),
   models: z.object({
