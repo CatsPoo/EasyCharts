@@ -9,6 +9,7 @@ import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
 import { IconButton } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
 
@@ -68,7 +69,7 @@ export default function DeviceNode({
   ]);
 
   const onAddHandle = (side:Side) => {
-    setPendingSide
+    setPendingSide(side)
   };
 
   const onConfirmAdd = (side: Side, value: string) => {
@@ -142,64 +143,112 @@ export default function DeviceNode({
     />
   );
 
-  // Compute inline editor style for pending side
   const inlineEditor = (() => {
     if (!pendingSide) return null;
-    const { axis, value } = nextOffsetForSide(pendingSide);
+    const { value } = nextOffsetForSide(pendingSide);
     const common = "absolute z-10 flex items-center gap-1";
     const input =
       "h-7 rounded-md border border-slate-300 bg-white px-2 text-xs shadow focus:outline-none focus:ring";
-    const button =
-      "h-7 px-2 rounded-md border border-slate-300 bg-white shadow text-xs hover:bg-slate-50";
+    const btn =
+     "inline-flex items-center justify-center w-7 h-7 rounded-md border border-slate-300 " +
+  "bg-white shadow hover:bg-slate-50 focus:outline-none";
+
+    const InputEl = (
+      <input
+        autoFocus
+        value={draftValue}
+        onChange={(e) => setDraftValue(e.target.value)}
+        placeholder="new handle id"
+        className={input}
+        onMouseDown={(e) => e.stopPropagation()}
+      />
+    );
+
+    const ConfirmBtn = (
+      <button
+        type="button"
+        className={btn}
+        onClick={(e) => {
+          e.stopPropagation();
+          confirmInlineEditor();
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <CheckIcon htmlColor="#2563eb" fontSize="small" />
+      </button>
+    );
+
+    const CancelBtn = (
+      <button
+        type="button"
+        className={btn}
+        onClick={(e) => {
+          e.stopPropagation();
+          cancelInlineEditor();
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <CloseIcon htmlColor="#9ca3af" fontSize="small" />
+      </button>
+    );
 
     if (pendingSide === "left") {
       return (
-        <div className={`${common}`} style={{ top: `${value}%`, left: -170, transform: "translateY(-50%)" }}>
-          <input
-            autoFocus
-            value={draftValue}
-            onChange={(e) => setDraftValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") confirmInlineEditor(); if (e.key === "Escape") cancelInlineEditor(); }}
-            placeholder="new handle id"
-            className={input}
-          />
-          <button className={button} onClick={confirmInlineEditor}><CheckIcon htmlColor="#2563eb" fontSize="small" /></button>
+        <div
+          className={common}
+          style={{
+            top: `${value}%`,
+            left: -200,
+            transform: "translateY(-50%)",
+          }}
+        >
+          {InputEl}
+          {ConfirmBtn}
+          {CancelBtn}
         </div>
       );
     }
     if (pendingSide === "right") {
       return (
-        <div className={`${common}`} style={{ top: `${value}%`, right: -170, transform: "translateY(-50%)" }}>
-          <input
-            autoFocus value={draftValue} onChange={(e) => setDraftValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") confirmInlineEditor(); if (e.key === "Escape") cancelInlineEditor(); }}
-            placeholder="new handle id" className={input}
-          />
-          <button className={button} onClick={confirmInlineEditor}><CheckIcon htmlColor="#2563eb" fontSize="small" /></button>
+        <div
+          className={common}
+          style={{
+            top: `${value}%`,
+            right: -200,
+            transform: "translateY(-50%)",
+          }}
+        >
+          {InputEl}
+          {ConfirmBtn}
+          {CancelBtn}
         </div>
       );
     }
     if (pendingSide === "top") {
       return (
-        <div className={`${common}`} style={{ left: `${value}%`, top: -38, transform: "translateX(-50%)" }}>
-          <input
-            autoFocus value={draftValue} onChange={(e) => setDraftValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") confirmInlineEditor(); if (e.key === "Escape") cancelInlineEditor(); }}
-            placeholder="new handle id" className={input}
-          />
-          <button className={button} onClick={confirmInlineEditor}><CheckIcon htmlColor="#2563eb" fontSize="small" /></button>
+        <div
+          className={common}
+          style={{ left: `${value}%`, top: -38, transform: "translateX(-50%)" }}
+        >
+          {InputEl}
+          {ConfirmBtn}
+          {CancelBtn}
         </div>
       );
     }
     // bottom
     return (
-      <div className={`${common}`} style={{ left: `${value}%`, bottom: -38, transform: "translateX(-50%)" }}>
-        <input
-          autoFocus value={draftValue} onChange={(e) => setDraftValue(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") confirmInlineEditor(); if (e.key === "Escape") cancelInlineEditor(); }}
-          placeholder="new handle id" className={input}
-        />
-        <button className={button} onClick={confirmInlineEditor}><CheckIcon htmlColor="#2563eb" fontSize="small" /></button>
+      <div
+        className={common}
+        style={{
+          left: `${value}%`,
+          bottom: -38,
+          transform: "translateX(-50%)",
+        }}
+      >
+        {InputEl}
+        {ConfirmBtn}
+        {CancelBtn}
       </div>
     );
   })();

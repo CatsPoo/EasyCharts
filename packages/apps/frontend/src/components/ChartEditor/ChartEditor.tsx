@@ -87,8 +87,8 @@ export function ChartEditor({
   const convertLineToEdge = (line: Line): Edge => {
     return {
       id: line.id,
-      source: line.sourceDeviceId,
-      target: line.targetDeviceId,
+      source: line.sourcePorteId,
+      target: line.targetPortId,
       label: line.label,
       type: "step",
       animated: false, // optional: makes the edge animate
@@ -99,8 +99,8 @@ export function ChartEditor({
   const convertEdgeToLine = (edge: Edge): Line => {
     return {
       id: edge.id,
-      sourceDeviceId: edge.source,
-      targetDeviceId: edge.target,
+      sourcePorteId: edge.source,
+      targetPortId: edge.target,
       label: edge.label,
       type: edge.type
     } as Line;
