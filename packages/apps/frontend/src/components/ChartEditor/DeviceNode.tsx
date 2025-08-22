@@ -5,6 +5,7 @@ import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { IconButton } from "@mui/material";
+import { v4 as uuidv4 } from "uuid";
 
 type DeviceNodeData = {
   deviceOnChart: DeviceOnChart;
@@ -57,7 +58,33 @@ export default function DeviceNode({
   ]);
 
   const onAddHandle = (side: "left" | "right" | "top" | "bottom") => {
-    // TODO: implement add handle for `side`
+    const newHandleUid = uuidv4(); 
+    switch (side) {
+      case "left":
+        setHandles({
+          ...handles,
+          left: [...(handles.left ?? []), newHandleUid],
+        });
+        return;
+      case "right":
+        setHandles({
+          ...handles,
+          right: [...(handles.right ?? []), newHandleUid],
+        });
+        return;
+      case "top":
+        setHandles({
+          ...handles,
+          top: [...(handles.top ?? []), newHandleUid],
+        });
+        return;
+      case "bottom":
+        setHandles({
+          ...handles,
+          bottom: [...(handles.bottom ?? []), newHandleUid],
+        });
+        return;
+    }
   };
   const onRemoveHandle = (side: "left" | "right" | "top" | "bottom") => {
     // TODO: implement remove handle for `side`
@@ -160,7 +187,8 @@ export default function DeviceNode({
               size="small"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
-                e.stopPropagation(); /* onAddHandle('left') */
+                e.stopPropagation();
+                onAddHandle("left"); 
               }}
               disableRipple
               disableFocusRipple
@@ -176,7 +204,8 @@ export default function DeviceNode({
               size="small"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
-                e.stopPropagation(); /* onAddHandle('left') */
+                e.stopPropagation();
+                onRemoveHandle("left");
               }}
               disableRipple
               disableFocusRipple
@@ -196,7 +225,8 @@ export default function DeviceNode({
               size="small"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
-                e.stopPropagation(); /* onAddHandle('left') */
+                e.stopPropagation();
+                onAddHandle('right');
               }}
               disableRipple
               disableFocusRipple
@@ -212,7 +242,8 @@ export default function DeviceNode({
               size="small"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
-                e.stopPropagation(); /* onAddHandle('left') */
+                e.stopPropagation();  
+                onRemoveHandle('right'); 
               }}
               disableRipple
               disableFocusRipple
@@ -232,7 +263,8 @@ export default function DeviceNode({
               size="small"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
-                e.stopPropagation(); /* onAddHandle('left') */
+                e.stopPropagation();
+                onAddHandle('top');
               }}
               disableRipple
               disableFocusRipple
@@ -248,7 +280,8 @@ export default function DeviceNode({
               size="small"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
-                e.stopPropagation(); /* onAddHandle('left') */
+                e.stopPropagation();
+                onRemoveHandle('top');
               }}
               disableRipple
               disableFocusRipple
@@ -268,7 +301,8 @@ export default function DeviceNode({
               size="small"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
-                e.stopPropagation(); /* onAddHandle('left') */
+                e.stopPropagation();
+                onAddHandle('bottom');
               }}
               disableRipple
               disableFocusRipple
@@ -284,7 +318,8 @@ export default function DeviceNode({
               size="small"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
-                e.stopPropagation(); /* onAddHandle('left') */
+                e.stopPropagation();
+                onRemoveHandle('bottom');   
               }}
               disableRipple
               disableFocusRipple
