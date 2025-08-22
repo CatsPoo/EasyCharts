@@ -2,7 +2,7 @@ import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from "typ
 import { DeviceEntity } from "./device.entity";
 
 @Entity({ name: "ports" })
-@Index(['deviceId', 'portId'])
+@Index(['deviceId'])
 export class PortEntity {
   @PrimaryColumn("uuid")
   id!: string;
