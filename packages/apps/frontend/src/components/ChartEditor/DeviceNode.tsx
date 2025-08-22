@@ -39,11 +39,13 @@ export default function DeviceNode({
   const [handles, setHandles] = useState<Handles>(deviceHandles);
   const [pendingSide, setPendingSide] = useState<Side | null>(null);
   const [draftValue, setDraftValue] = useState("");
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   const updateInternals = useUpdateNodeInternals();
 
   function spread(count: number, pad = 10) {
     if (count <= 0) return [];
+    if (count === 1) return [50];
     const usable = 100 - pad * 2;
     return Array.from(
       { length: count },
@@ -69,37 +71,41 @@ export default function DeviceNode({
   ]);
 
   const onAddHandle = (side:Side) => {
-    setPendingSide(side)
-  };
-
-  const onConfirmAdd = (side: Side, value: string) => {
-    let newport: Port = { id: uuidv4(), name: "" };
+    if(isEditorOpen) return;
+    setIsEditorOpen(true);
+    let newport: Port = { id: uuidv4(), name: draftValue };
     switch (side) {
       case "left":
         setHandles({
           ...handles,
           left: [...(handles.left ?? []), newport],
         });
-        return;
+        break;
       case "right":
         setHandles({
           ...handles,
           right: [...(handles.right ?? []), newport],
         });
-        return;
+        break;
       case "top":
         setHandles({
           ...handles,
           top: [...(handles.top ?? []), newport],
         });
-        return;
+        break;
       case "bottom":
         setHandles({
           ...handles,
           bottom: [...(handles.bottom ?? []), newport],
         });
-        return;
+        break;
     }
+    setPendingSide(side)
+  };
+
+  const onConfirmAdd = (side: Side, value: string) => {
+    setIsEditorOpen(false);
+    setDraftValue("");
   };
   const onRemoveHandle = (side:Side) => {
     // TODO: implement remove handle for `side`
@@ -112,12 +118,6 @@ export default function DeviceNode({
     return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
   };
 
-  const openInlineEditor = (side: Side) => {
-    setPendingSide(side);
-    setDraftValue("");
-    onAddHandle(side);
-  };
-
   const confirmInlineEditor = () => {
     if (!pendingSide) return;
     onConfirmAdd(pendingSide, draftValue.trim());
@@ -126,8 +126,36 @@ export default function DeviceNode({
   };
 
   const cancelInlineEditor = () => {
-    setPendingSide(null);
     setDraftValue("");
+    setIsEditorOpen(false);
+
+    switch (pendingSide) {
+      case "left":
+        setHandles({
+          ...handles,
+          left: (handles.left ?? []).slice(0, -1),
+        });
+        break
+      case "right":
+        setHandles({
+          ...handles,
+          right: (handles.right ?? []).slice(0, -1),
+        });
+        break
+      case "top":
+        setHandles({
+          ...handles,
+          top: (handles.top ?? []).slice(0, -1),
+        });
+        break
+      case "bottom":
+        setHandles({
+          ...handles,
+          bottom: (handles.bottom ?? []).slice(0, -1),
+        });
+        break
+    }
+    setPendingSide(null);
   };
 
   const TransparentBtn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = (props) => (
@@ -342,7 +370,7 @@ export default function DeviceNode({
         />
       ))}
 
-      {editMode && pendingSide && inlineEditor}
+      {editMode && isEditorOpen && inlineEditor}
 
       {editMode && selected && (
         <>
