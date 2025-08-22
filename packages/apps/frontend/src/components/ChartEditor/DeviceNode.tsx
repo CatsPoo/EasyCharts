@@ -1,4 +1,4 @@
-import type { DeviceOnChart, Handles } from "@easy-charts/easycharts-types";
+import type { DeviceOnChart, Handles, Port } from "@easy-charts/easycharts-types";
 import { useEffect, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
@@ -58,30 +58,30 @@ export default function DeviceNode({
   ]);
 
   const onAddHandle = (side: "left" | "right" | "top" | "bottom") => {
-    const newHandleUid = uuidv4(); 
+    let newport:Port = { id: uuidv4(), name: ""};
     switch (side) {
       case "left":
         setHandles({
           ...handles,
-          left: [...(handles.left ?? []), newHandleUid],
+          left: [...(handles.left ?? []), newport],
         });
         return;
       case "right":
         setHandles({
           ...handles,
-          right: [...(handles.right ?? []), newHandleUid],
+          right: [...(handles.right ?? []), newport],
         });
         return;
       case "top":
         setHandles({
           ...handles,
-          top: [...(handles.top ?? []), newHandleUid],
+          top: [...(handles.top ?? []), newport],
         });
         return;
       case "bottom":
         setHandles({
           ...handles,
-          bottom: [...(handles.bottom ?? []), newHandleUid],
+          bottom: [...(handles.bottom ?? []), newport],
         });
         return;
     }
@@ -144,8 +144,8 @@ export default function DeviceNode({
 
       {leftYs.map((y, i) => (
         <Handle
-          key={handles?.left?.[i]}
-          id={handles?.left?.[i]}
+          key={handles?.left?.[i].id}
+          id={handles?.left?.[i].id}
           type="target"
           position={Position.Left}
           style={{ top: `${y}%` }}
@@ -153,8 +153,8 @@ export default function DeviceNode({
       ))}
       {rightYs.map((y, i) => (
         <Handle
-          key={handles?.right?.[i]}
-          id={handles?.right?.[i]}
+          key={handles?.right?.[i].id}
+          id={handles?.right?.[i].id}
           type="source"
           position={Position.Right}
           style={{ top: `${y}%` }}
@@ -162,8 +162,8 @@ export default function DeviceNode({
       ))}
       {topXs.map((x, i) => (
         <Handle
-          key={handles?.top?.[i]}
-          id={handles?.top?.[i]}
+          key={handles?.top?.[i].id}
+          id={handles?.top?.[i].id}
           type="target"
           position={Position.Top}
           style={{ left: `${x}%` }}
@@ -171,8 +171,8 @@ export default function DeviceNode({
       ))}
       {bottomXs.map((x, i) => (
         <Handle
-          key={handles?.bottom?.[i]}
-          id={handles?.bottom?.[i]}
+          key={handles?.bottom?.[i].id}
+          id={handles?.bottom?.[i].id}
           type="target"
           position={Position.Bottom}
           style={{ left: `${x}%` }}

@@ -6,7 +6,7 @@ import {
   type Relation,
 } from "typeorm";
 import { DeviceOnChartEntity } from "./deviceOnChart.entityEntity";
-import { LineEntity } from "./line.entity";
+import { LineEntity } from "../../lines/entities/line.entity";
 
 @Entity({ name: "charts" })
 export class ChartEntity {

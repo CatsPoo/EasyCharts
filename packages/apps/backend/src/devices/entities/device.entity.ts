@@ -1,6 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entityEntity';
 import { ModelEntity } from './model.entity';
+import { PortEntity } from './port.entity';
 @Entity({ name: "devices" })
 export class DeviceEntity {
   @PrimaryGeneratedColumn("uuid")
@@ -25,4 +26,10 @@ export class DeviceEntity {
     (doc: DeviceOnChartEntity) => doc.device
   )
   charts!: DeviceOnChartEntity[];
+
+  @OneToMany(() => PortEntity, (p) => p.device, {
+    cascade: true,      
+    eager: false,       
+  })
+  ports!: PortEntity[];
 }
