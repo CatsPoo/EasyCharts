@@ -142,6 +142,21 @@ export function ChartEditor({
     [editMode]
   );
 
+  const onNodeDragStop = useCallback(
+  (_e: React.MouseEvent, node: Node) => {
+    // find the device-on-chart and update its position immutably
+    const next: Chart = {
+      ...chart,
+      devicesLocations: chart.devicesLocations.map((loc) =>
+        loc.device.id === node.id ? { ...loc, position: node.position } : loc
+      ),
+    };
+    setChart(next);
+    setMadeChanges(true);
+  },
+  [chart, setChart, setMadeChanges]
+);
+
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       if (!editMode || !reactFlowWrapper.current) return;
@@ -209,6 +224,7 @@ export function ChartEditor({
           nodes={nodes}
           edges={edges}
           onNodesChange={editMode ? onNodesChange : undefined}
+          onNodeDragStop={editMode ? onNodeDragStop : undefined}
           onEdgesChange={editMode ? onEdgesChange : undefined}
           onConnect={editMode ? onConnect : undefined}
           onEdgeUpdate={editMode ? onEdgeUpdate : undefined}
