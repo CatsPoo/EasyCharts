@@ -1,11 +1,14 @@
 import type { DeviceOnChart, Handles } from "@easy-charts/easycharts-types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { NodeProps } from "reactflow";
-import { Handle, Position } from "reactflow";
+import { Handle, Position, useUpdateNodeInternals } from "reactflow";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
+import { IconButton } from "@mui/material";
 
 type DeviceNodeData = {
   deviceOnChart: DeviceOnChart;
-  editmode: boolean;
+  editMode: boolean;
 };
 
 function initials(text?: string) {
@@ -19,14 +22,14 @@ export default function DeviceNode({
   data,
   selected,
 }: NodeProps<DeviceNodeData>) {
-  const { deviceOnChart, editmode } = data;
+  const { deviceOnChart, editMode } = data;
   const { device, handles: deviceHandles, chartId } = deviceOnChart;
   const { id: deviceId, name, ipAddress, model } = device;
   const { name: modelName, iconUrl, vendor } = model;
   const { name: vendorName } = vendor ?? {};
 
   const [handles, setHandles] = useState<Handles>(deviceHandles);
-
+  const updateInternals = useUpdateNodeInternals();
   function spread(count: number, pad = 10) {
     if (count <= 0) return [];
     const usable = 100 - pad * 2;
@@ -40,6 +43,25 @@ export default function DeviceNode({
   const rightYs = spread(handles?.right?.length ?? 0);
   const topXs = spread(handles?.top?.length ?? 0);
   const bottomXs = spread(handles?.bottom?.length ?? 0);
+
+  useEffect(() => {
+    updateInternals(deviceId);
+  }, [
+    deviceId,
+    editMode,
+    handles?.left?.length,
+    handles?.right?.length,
+    handles?.top?.length,
+    handles?.bottom?.length,
+    updateInternals,
+  ]);
+
+  const onAddHandle = (side: "left" | "right" | "top" | "bottom") => {
+    // TODO: implement add handle for `side`
+  };
+  const onRemoveHandle = (side: "left" | "right" | "top" | "bottom") => {
+    // TODO: implement remove handle for `side`
+  };
 
   return (
     <div
@@ -129,6 +151,154 @@ export default function DeviceNode({
           style={{ left: `${x}%` }}
         />
       ))}
+
+      {editMode && selected && (
+        <>
+          {/* LEFT controls */}
+          <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+            <IconButton
+              size="small"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation(); /* onAddHandle('left') */
+              }}
+              disableRipple
+              disableFocusRipple
+              sx={{
+                p: 0.25,
+                bgcolor: "transparent",
+                "&:hover": { bgcolor: "transparent" },
+              }}
+            >
+              <AddIcon fontSize="small" color="success" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation(); /* onAddHandle('left') */
+              }}
+              disableRipple
+              disableFocusRipple
+              sx={{
+                p: 0.25,
+                bgcolor: "transparent",
+                "&:hover": { bgcolor: "transparent" },
+              }}
+            >
+              <RemoveIcon fontSize="small" color="error" />
+            </IconButton>
+          </div>
+
+          {/* RIGHT controls */}
+          <div className="absolute -right-1 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+            <IconButton
+              size="small"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation(); /* onAddHandle('left') */
+              }}
+              disableRipple
+              disableFocusRipple
+              sx={{
+                p: 0.25,
+                bgcolor: "transparent",
+                "&:hover": { bgcolor: "transparent" },
+              }}
+            >
+              <AddIcon fontSize="small" color="success" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation(); /* onAddHandle('left') */
+              }}
+              disableRipple
+              disableFocusRipple
+              sx={{
+                p: 0.25,
+                bgcolor: "transparent",
+                "&:hover": { bgcolor: "transparent" },
+              }}
+            >
+              <RemoveIcon fontSize="small" color="error" />
+            </IconButton>
+          </div>
+
+          {/* TOP controls */}
+          <div className="absolute left-1/2 -translate-x-1/2 -top-1 flex gap-1">
+            <IconButton
+              size="small"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation(); /* onAddHandle('left') */
+              }}
+              disableRipple
+              disableFocusRipple
+              sx={{
+                p: 0.25,
+                bgcolor: "transparent",
+                "&:hover": { bgcolor: "transparent" },
+              }}
+            >
+              <AddIcon fontSize="small" color="success" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation(); /* onAddHandle('left') */
+              }}
+              disableRipple
+              disableFocusRipple
+              sx={{
+                p: 0.25,
+                bgcolor: "transparent",
+                "&:hover": { bgcolor: "transparent" },
+              }}
+            >
+              <RemoveIcon fontSize="small" color="error" />
+            </IconButton>
+          </div>
+
+          {/* BOTTOM controls */}
+          <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 flex gap-1">
+            <IconButton
+              size="small"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation(); /* onAddHandle('left') */
+              }}
+              disableRipple
+              disableFocusRipple
+              sx={{
+                p: 0.25,
+                bgcolor: "transparent",
+                "&:hover": { bgcolor: "transparent" },
+              }}
+            >
+              <AddIcon fontSize="small" color="success" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation(); /* onAddHandle('left') */
+              }}
+              disableRipple
+              disableFocusRipple
+              sx={{
+                p: 0.25,
+                bgcolor: "transparent",
+                "&:hover": { bgcolor: "transparent" },
+              }}
+            >
+              <RemoveIcon fontSize="small" color="error" />
+            </IconButton>
+          </div>
+        </>
+      )}
     </div>
   );
 }

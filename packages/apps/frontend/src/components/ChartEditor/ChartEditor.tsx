@@ -7,6 +7,7 @@ import type {
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from "reactflow";
+
 import ReactFlow, {
   addEdge,
   Background,
@@ -63,18 +64,14 @@ export function ChartEditor({
   );
 
   const convertDeviceToNode = (deviceLocations: DeviceOnChart): Node => {
-    const { device, position,handles } = deviceLocations;
+    const { device, position } = deviceLocations;
     const node: Node = {
       id: device.id,
       type: "device",
       position,
       data: {
-        name: device.name,
-        ip: device.ipAddress ,
-        modelName: device.model?.name,
-        modelIconUrl: device.model?.iconUrl,
-        vendorName: device.model?.vendor?.name,
-        hamdles: handles
+        deviceOnChart: deviceLocations,
+        editMode,
       },
     };
     return node;
