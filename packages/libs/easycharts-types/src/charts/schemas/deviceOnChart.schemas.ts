@@ -1,12 +1,12 @@
 import z from "zod";
 import { PositionSchema } from "./position.schema.js";
-import { DeviceSchema } from "../../devices/index.js";
+import { DeviceSchema, PortSchema } from "../../devices/index.js";
 
 export const HandlesSchema = z.object({
-  left: z.array(z.string().uuid()).optional().default([]),
-  right: z.array(z.string().uuid()).optional().default([]),
-  top: z.array(z.string().uuid()).optional().default([]),
-  bottom: z.array(z.string().uuid()).optional().default([]),
+  left: z.array(PortSchema).default([]),
+  right: z.array(PortSchema).default([]),
+  top: z.array(PortSchema).default([]),
+  bottom: z.array(PortSchema).default([]),
 }).default({ left: [], right: [], top: [], bottom: [] });
 
 export const DeviceOnChartSchema = z.object({

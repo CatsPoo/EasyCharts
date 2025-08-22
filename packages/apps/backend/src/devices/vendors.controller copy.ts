@@ -1,4 +1,4 @@
-import  { type VendorCreate,VendorCreateSchema,type  VendorUpdate, VendorUpdateSchema } from '@easy-charts/easycharts-types';
+import { type VendorCreate, VendorCreateSchema, type VendorUpdate, VendorUpdateSchema } from '@easy-charts/easycharts-types';
 import {
   Body,
   Controller,
@@ -10,12 +10,11 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
-  Query,
-  UsePipes,
+  Query
 } from '@nestjs/common';
-import { QueryDto } from '../query/dto/query.dto';
-import { VendorsService } from './vendors.service';
 import { ZodValidationPipe } from '../common/zodValidation.pipe';
+import { QueryDto } from '../query/dto/query.dto';
+import { VendorsService } from "./vendors.service copy";
 
 @Controller('vendors')
 export class VendorsController {
