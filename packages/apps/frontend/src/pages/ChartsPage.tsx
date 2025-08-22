@@ -14,7 +14,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 import AssetPage from "../components/AssetsList/AssetsPage";
-import { ChartEditor } from "../components/ChartsViewer/ChartEditor";
+import { ChartEditor } from "../components/ChartEditor/ChartEditor"; 
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
 import { updateChart, useChartById } from "../hooks/chartsHooks";

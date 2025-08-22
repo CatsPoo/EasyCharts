@@ -18,8 +18,9 @@ import ReactFlow, {
   useReactFlow,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { DevicesSidebar } from "./DevicesSideBar";
+import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import { useListAssets } from "../../hooks/assetsHooks";
+import DeviceNode from "./DeviceNode";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -34,6 +35,8 @@ export function ChartEditor({
   setMadeChanges,
 }: ChardEditorProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
+
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
   const { data: availableDevicesResponse } = useListAssets("devices", {
@@ -63,9 +66,15 @@ export function ChartEditor({
     const { device, position } = deviceLocations;
     const node: Node = {
       id: device.id,
-      type: "default",
+      type: "device",
       position,
-      data: { label: device.name },
+      data: {
+        name: device.name,
+        ip: device.ipAddress ?? null,
+        modelName: device.model?.name ?? null,
+        modelIconUrl: device.model?.iconUrl ?? null, // keep null for now
+        vendorName: device.model?.vendor?.name ?? null,
+      },
     };
     return node;
   };
@@ -77,13 +86,7 @@ export function ChartEditor({
     return nodes;
   };
 
-  const convertNodeToDeviceOnChart = (node: Node): DeviceOnChart => {
-    return {
-      chartId: chart.id,
-      device: devicesById.get(node.id),
-      position: node.position,
-    } as DeviceOnChart;
-  };
+
 
   const convertLineToEdge = (line: Line): Edge => {
     return {
@@ -96,6 +99,16 @@ export function ChartEditor({
       //style: { strokeDasharray: l.type === 'rj45' ? '5 5' : undefined },
     };
   };
+
+  const convertEdgeToLine = (edge: Edge): Line => {
+    return {
+      id: edge.id,
+      sourceDeviceId: edge.source,
+      targetDeviceId: edge.target,
+      label: edge.label,
+      type: edge.type
+    } as Line;
+  }
 
   const convertLinesToEdges = (lines: Line[]): Edge[] => {
     return lines ? lines.map((l) => convertLineToEdge(l)) : [];
@@ -143,19 +156,19 @@ export function ChartEditor({
   );
 
   const onNodeDragStop = useCallback(
-  (_e: React.MouseEvent, node: Node) => {
-    // find the device-on-chart and update its position immutably
-    const next: Chart = {
-      ...chart,
-      devicesLocations: chart.devicesLocations.map((loc) =>
-        loc.device.id === node.id ? { ...loc, position: node.position } : loc
-      ),
-    };
-    setChart(next);
-    setMadeChanges(true);
-  },
-  [chart, setChart, setMadeChanges]
-);
+    (_e: React.MouseEvent, node: Node) => {
+      // find the device-on-chart and update its position immutably
+      const next: Chart = {
+        ...chart,
+        devicesLocations: chart.devicesLocations.map((loc) =>
+          loc.device.id === node.id ? { ...loc, position: node.position } : loc
+        ),
+      };
+      setChart(next);
+      setMadeChanges(true);
+    },
+    [chart, setChart, setMadeChanges]
+  );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -171,12 +184,7 @@ export function ChartEditor({
         x: e.clientX - bounds.left,
         y: e.clientY - bounds.top,
       });
-      const newNode = {
-        id: `${deviceId}`,
-        type: "default",
-        position,
-        data: { label: device.name },
-      };
+      const newNode: Node = convertDeviceToNode({device, position} as DeviceOnChart); 
       setNodes((nds) => [...nds, newNode]);
 
       const nextChart: Chart = {
@@ -221,6 +229,7 @@ export function ChartEditor({
         className="flex-1"
       >
         <ReactFlow
+          nodeTypes={nodeTypes}
           nodes={nodes}
           edges={edges}
           onNodesChange={editMode ? onNodesChange : undefined}
