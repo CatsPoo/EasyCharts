@@ -27,9 +27,4 @@ export class ChartEntity {
     }
   )
   devicesLocations!: DeviceOnChartEntity[];
-
-  @OneToMany(() => LineEntity, (line) => line.chart, {
-    cascade: true, // allows saving via parent; keep if you use replace-on-update
-  })
-  lines!: Relation<LineEntity[]>;
 }

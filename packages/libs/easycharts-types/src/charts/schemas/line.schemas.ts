@@ -20,11 +20,9 @@ export const LineUpdateSchema = LineCreateSchema.partial();
 
 export const LineSchema = z.object({
   id: z.string().uuid(),
-  label: z.string().nullable().optional()
-    .transform(v => (v ?? undefined)),
+  label: z.string(),
   type: LineTypeEnum,
-  sourceDeviceId: z.string().uuid(),
-  targetDeviceId: z.string().uuid(),
-  sourceHamdleId: z.string().uuid(),
-  targetHandleId: z.string().uuid(),
+  sourcePorteId: z.string().uuid(),
+  targetPortId: z.string().uuid(),
+
 });

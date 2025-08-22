@@ -6,6 +6,7 @@ import type {
   ChartUpdate,
   Device,
   DeviceOnChart,
+  Handles,
   Line,
 } from "@Easy-charts/easycharts-types";
 import {
@@ -20,6 +21,7 @@ import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
 import { LineEntity } from "../lines/entities/line.entity";
 import { DevicesService } from "../devices/devices.service";
 import { DeviceEntity } from "../devices/entities/device.entity";
+import { PortEntity } from "../devices/entities/port.entity";
 @Injectable()
 export class ChartsService {
   constructor(
@@ -37,31 +39,72 @@ export class ChartsService {
     private readonly devicesService: DevicesService
   ) {}
 
-  convertDeviceOnChartEntity = (
+  convertDeviceOnChartEntity = async (
     deviceonChartEntity: DeviceOnChartEntity
-  ): DeviceOnChart => {
+  ): Promise<DeviceOnChart> => {
     const { chartId, position, device } = deviceonChartEntity;
     return {
       chartId,
       device: this.devicesService.convertDeviceEntity(device),
       position,
-    };
+      handles:  await this.calculateRelevanthandles(chartId, device.id)  
+    } as DeviceOnChart;
   };
 
+  calculateRelevanthandles =async  (chartId:string, deviceId:string) :Promise<Handles>=>{
+    const handles:Handles={left:[],right:[],top:[],bottom:[]};
+    // const lines = await this.lineRepo.find({
+    //   where:[
+    //     {chart:{id:chartId},sourcePort:{device:{id:deviceId}}},
+    //     {chart:{id:chartId},targetPort:{device:{id:deviceId}}}
+    //   ],
+    //   relations:{
+    //     sourcePort:true,
+    //     targetPort:true
+    //   }
+    // });
+    // for(const l of lines){
+    //   if(l.sourcePort.device.id===deviceId){
+    //     //outgoing
+    //     switch(l.sourcePort.position){
+    //       case 'left': handles.left.push(l.sourcePort.id); break;
+    //       case 'right': handles.right.push(l.sourcePort.id); break;
+    //       case 'top': handles.top.push(l.sourcePort.id); break;
+    //       case 'bottom': handles.bottom.push(l.sourcePort.id); break;
+    //     }
+    //   }
+    //   if(l.targetPort.device.id===deviceId){
+    //     //incoming
+    //     switch(l.targetPort.position){
+    //       case 'left': handles.left.push(l.targetPort.id); break;
+    //       case 'right': handles.right.push(l.targetPort.id); break;
+    //       case 'top': handles.top.push(l.targetPort.id); break;
+    //       case 'bottom': handles.bottom.push(l.targetPort.id); break;
+    //     }
+    //   }
+    // }
+    return handles;
+  }
+
   //TODO all lines to convertion function
-  convertChartEntityToChart = (chartEnrity: ChartEntity): Chart => {
-    const { devicesLocations, lines, ...chartData } = chartEnrity;
+  convertChartEntityToChart = async (chartEnrity: ChartEntity): Promise<Chart> => {
+    const { devicesLocations, ...chartData } = chartEnrity;
+    let convertedDevicesLocations : DeviceOnChart[] = []
+    for(const dl of devicesLocations){
+      convertedDevicesLocations.push(await this.convertDeviceOnChartEntity(dl)); 
+    }
     return {
-      devicesLocations: devicesLocations.map((dl) =>
-        this.convertDeviceOnChartEntity(dl)
-      ),
+      devicesLocations: convertedDevicesLocations,
       ...chartData,
     } as Chart;
   };
   async getAllCharts(): Promise<Chart[]> {
-    return (await this.chartRepo.find({})).map((chartEntity) =>
-      this.convertChartEntityToChart(chartEntity)
-    );
+    let convertedCharts:Chart[]=[]
+    const charts = await this.chartRepo.find({});
+    for(const c of charts){
+      convertedCharts.push(await this.convertChartEntityToChart(c));
+    }
+    return convertedCharts
   }
 
   async getChartById(id: string): Promise<Chart> {
@@ -76,18 +119,6 @@ export class ChartsService {
           },
           position:true
         },
-        lines:{
-          sourceDevice:{
-            model:{
-              vendor:true
-            }
-          },
-          targetDevice:{
-            model:{
-              vendor:true
-            }
-          }
-        }
       },
     });
     if (!chart) throw new NotFoundException("chart not found");
@@ -102,7 +133,6 @@ export class ChartsService {
         deviceId: dl.device.id,
         position: dl.position,
       })),
-      lines: [],
     });
     const newChart: ChartEntity = await this.chartRepo.save(chart);
     return this.convertChartEntityToChart(newChart);
@@ -139,7 +169,6 @@ export class ChartsService {
           where: { id: chartId },
           relations: {
             devicesLocations: { device: true }, // <-- critical change
-            lines: true,
           },
         });
         if (!chart) throw new NotFoundException(`Chart ${chartId} not found`);
@@ -209,8 +238,8 @@ export class ChartsService {
             // Validate endpoints exist
             const endpointIds = new Set<string>();
             for (const l of incoming) {
-              endpointIds.add(l.sourceDeviceId);
-              endpointIds.add(l.targetDeviceId);
+              endpointIds.add(l.sourcePorteId);
+              endpointIds.add(l.targetPortId);
             }
             if (endpointIds.size) {
               const endpointsCount = await deviceRepo.count({
@@ -249,10 +278,8 @@ export class ChartsService {
             // Save each line (id present => update; id missing => insert)
             for (const l of incoming) {
               const line = lineRepo.create({
-                id: l.id, // undefined inserts
-                chart: { id: chartId } as ChartEntity,
-                sourceDevice: { id: l.sourceDeviceId } as DeviceEntity,
-                targetDevice: { id: l.targetDeviceId } as DeviceEntity,
+                sourcePort: { id: l.sourcePorteId } as PortEntity,
+                targetPort: { id: l.targetPortId } as PortEntity,
                 type: l.type,
                 label: l.label ?? null,
               });
@@ -271,10 +298,6 @@ export class ChartsService {
                   vendor: true,
                 },
               },
-            },
-            lines: {
-              sourceDevice: { model: { vendor: true } },
-              targetDevice: { model: { vendor: true } },
             },
           },
         });

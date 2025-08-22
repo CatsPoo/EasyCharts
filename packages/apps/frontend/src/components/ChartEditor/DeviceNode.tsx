@@ -1,9 +1,14 @@
-import type { DeviceOnChart, Handles, Port } from "@easy-charts/easycharts-types";
+import type {
+  DeviceOnChart,
+  Handles,
+  Port,
+} from "@easy-charts/easycharts-types";
 import { useEffect, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
+import CheckIcon from "@mui/icons-material/Check";
 import { IconButton } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
 
@@ -29,8 +34,13 @@ export default function DeviceNode({
   const { name: modelName, iconUrl, vendor } = model;
   const { name: vendorName } = vendor ?? {};
 
+  type Side = "left" | "right" | "top" | "bottom";
   const [handles, setHandles] = useState<Handles>(deviceHandles);
+  const [pendingSide, setPendingSide] = useState<Side | null>(null);
+  const [draftValue, setDraftValue] = useState("");
+
   const updateInternals = useUpdateNodeInternals();
+
   function spread(count: number, pad = 10) {
     if (count <= 0) return [];
     const usable = 100 - pad * 2;
@@ -57,8 +67,12 @@ export default function DeviceNode({
     updateInternals,
   ]);
 
-  const onAddHandle = (side: "left" | "right" | "top" | "bottom") => {
-    let newport:Port = { id: uuidv4(), name: ""};
+  const onAddHandle = (side:Side) => {
+    setPendingSide
+  };
+
+  const onConfirmAdd = (side: Side, value: string) => {
+    let newport: Port = { id: uuidv4(), name: "" };
     switch (side) {
       case "left":
         setHandles({
@@ -86,9 +100,109 @@ export default function DeviceNode({
         return;
     }
   };
-  const onRemoveHandle = (side: "left" | "right" | "top" | "bottom") => {
+  const onRemoveHandle = (side:Side) => {
     // TODO: implement remove handle for `side`
   };
+
+  const nextOffsetForSide = (side: Side) => {
+    if (side === "left")   return { axis: "y", value: spread(handles.left.length + 1).at(-1) ?? 0 };
+    if (side === "right")  return { axis: "y", value: spread(handles.right.length + 1).at(-1) ?? 0 };
+    if (side === "top")    return { axis: "x", value: spread(handles.top.length + 1).at(-1) ?? 0 };
+    return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
+  };
+
+  const openInlineEditor = (side: Side) => {
+    setPendingSide(side);
+    setDraftValue("");
+    onAddHandle(side);
+  };
+
+  const confirmInlineEditor = () => {
+    if (!pendingSide) return;
+    onConfirmAdd(pendingSide, draftValue.trim());
+    setPendingSide(null);
+    setDraftValue("");
+  };
+
+  const cancelInlineEditor = () => {
+    setPendingSide(null);
+    setDraftValue("");
+  };
+
+  const TransparentBtn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = (props) => (
+    <button
+      {...props}
+      className={[
+        "h-7 w-7 rounded-full bg-transparent border-0 shadow-none",
+        "flex items-center justify-center hover:bg-transparent active:bg-transparent focus:outline-none",
+        props.className ?? ""
+      ].join(" ")}
+      onMouseDown={(e) => { e.stopPropagation(); props.onMouseDown?.(e); }}
+      onClick={(e) => { e.stopPropagation(); props.onClick?.(e); }}
+    />
+  );
+
+  // Compute inline editor style for pending side
+  const inlineEditor = (() => {
+    if (!pendingSide) return null;
+    const { axis, value } = nextOffsetForSide(pendingSide);
+    const common = "absolute z-10 flex items-center gap-1";
+    const input =
+      "h-7 rounded-md border border-slate-300 bg-white px-2 text-xs shadow focus:outline-none focus:ring";
+    const button =
+      "h-7 px-2 rounded-md border border-slate-300 bg-white shadow text-xs hover:bg-slate-50";
+
+    if (pendingSide === "left") {
+      return (
+        <div className={`${common}`} style={{ top: `${value}%`, left: -170, transform: "translateY(-50%)" }}>
+          <input
+            autoFocus
+            value={draftValue}
+            onChange={(e) => setDraftValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") confirmInlineEditor(); if (e.key === "Escape") cancelInlineEditor(); }}
+            placeholder="new handle id"
+            className={input}
+          />
+          <button className={button} onClick={confirmInlineEditor}><CheckIcon htmlColor="#2563eb" fontSize="small" /></button>
+        </div>
+      );
+    }
+    if (pendingSide === "right") {
+      return (
+        <div className={`${common}`} style={{ top: `${value}%`, right: -170, transform: "translateY(-50%)" }}>
+          <input
+            autoFocus value={draftValue} onChange={(e) => setDraftValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") confirmInlineEditor(); if (e.key === "Escape") cancelInlineEditor(); }}
+            placeholder="new handle id" className={input}
+          />
+          <button className={button} onClick={confirmInlineEditor}><CheckIcon htmlColor="#2563eb" fontSize="small" /></button>
+        </div>
+      );
+    }
+    if (pendingSide === "top") {
+      return (
+        <div className={`${common}`} style={{ left: `${value}%`, top: -38, transform: "translateX(-50%)" }}>
+          <input
+            autoFocus value={draftValue} onChange={(e) => setDraftValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") confirmInlineEditor(); if (e.key === "Escape") cancelInlineEditor(); }}
+            placeholder="new handle id" className={input}
+          />
+          <button className={button} onClick={confirmInlineEditor}><CheckIcon htmlColor="#2563eb" fontSize="small" /></button>
+        </div>
+      );
+    }
+    // bottom
+    return (
+      <div className={`${common}`} style={{ left: `${value}%`, bottom: -38, transform: "translateX(-50%)" }}>
+        <input
+          autoFocus value={draftValue} onChange={(e) => setDraftValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") confirmInlineEditor(); if (e.key === "Escape") cancelInlineEditor(); }}
+          placeholder="new handle id" className={input}
+        />
+        <button className={button} onClick={confirmInlineEditor}><CheckIcon htmlColor="#2563eb" fontSize="small" /></button>
+      </div>
+    );
+  })();
 
   return (
     <div
@@ -179,6 +293,8 @@ export default function DeviceNode({
         />
       ))}
 
+      {editMode && pendingSide && inlineEditor}
+
       {editMode && selected && (
         <>
           {/* LEFT controls */}
@@ -188,7 +304,7 @@ export default function DeviceNode({
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                onAddHandle("left"); 
+                onAddHandle("left");
               }}
               disableRipple
               disableFocusRipple
@@ -226,7 +342,7 @@ export default function DeviceNode({
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                onAddHandle('right');
+                onAddHandle("right");
               }}
               disableRipple
               disableFocusRipple
@@ -242,8 +358,8 @@ export default function DeviceNode({
               size="small"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
-                e.stopPropagation();  
-                onRemoveHandle('right'); 
+                e.stopPropagation();
+                onRemoveHandle("right");
               }}
               disableRipple
               disableFocusRipple
@@ -264,7 +380,7 @@ export default function DeviceNode({
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                onAddHandle('top');
+                onAddHandle("top");
               }}
               disableRipple
               disableFocusRipple
@@ -281,7 +397,7 @@ export default function DeviceNode({
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                onRemoveHandle('top');
+                onRemoveHandle("top");
               }}
               disableRipple
               disableFocusRipple
@@ -302,7 +418,7 @@ export default function DeviceNode({
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                onAddHandle('bottom');
+                onAddHandle("bottom");
               }}
               disableRipple
               disableFocusRipple
@@ -319,7 +435,7 @@ export default function DeviceNode({
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                onRemoveHandle('bottom');   
+                onRemoveHandle("bottom");
               }}
               disableRipple
               disableFocusRipple
