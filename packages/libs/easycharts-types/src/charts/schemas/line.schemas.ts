@@ -25,4 +25,6 @@ export const LineSchema = z.object({
   type: LineTypeEnum,
   sourceDeviceId: z.string().uuid(),
   targetDeviceId: z.string().uuid(),
+  sourceHamdleId: z.string().uuid(),
+  targetHandleId: z.string().uuid(),
 });

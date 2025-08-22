@@ -63,17 +63,18 @@ export function ChartEditor({
   );
 
   const convertDeviceToNode = (deviceLocations: DeviceOnChart): Node => {
-    const { device, position } = deviceLocations;
+    const { device, position,handles } = deviceLocations;
     const node: Node = {
       id: device.id,
       type: "device",
       position,
       data: {
         name: device.name,
-        ip: device.ipAddress ?? null,
-        modelName: device.model?.name ?? null,
-        modelIconUrl: device.model?.iconUrl ?? null, // keep null for now
-        vendorName: device.model?.vendor?.name ?? null,
+        ip: device.ipAddress ,
+        modelName: device.model?.name,
+        modelIconUrl: device.model?.iconUrl,
+        vendorName: device.model?.vendor?.name,
+        hamdles: handles
       },
     };
     return node;
@@ -85,8 +86,6 @@ export function ChartEditor({
     );
     return nodes;
   };
-
-
 
   const convertLineToEdge = (line: Line): Edge => {
     return {
@@ -184,7 +183,7 @@ export function ChartEditor({
         x: e.clientX - bounds.left,
         y: e.clientY - bounds.top,
       });
-      const newNode: Node = convertDeviceToNode({device, position} as DeviceOnChart); 
+      const newNode: Node = convertDeviceToNode({device, position,handles:{}} as DeviceOnChart); 
       setNodes((nds) => [...nds, newNode]);
 
       const nextChart: Chart = {
