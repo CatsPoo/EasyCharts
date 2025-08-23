@@ -76,6 +76,15 @@ export default function DeviceNode({
   const topXs    = useMemo(() => spread(handles.top.length),    [handles.top]);
   const bottomXs = useMemo(() => spread(handles.bottom.length), [handles.bottom]);
 
+  const portsInuse = useMemo(() => {
+    const all = [
+      ...(handles.left ?? []),
+      ...(handles.right ?? []),
+      ...(handles.top ?? []),
+      ...(handles.bottom ?? []),
+    ];
+    return all
+  },[handles])
   useLayoutEffect(() => {
     updateInternals(deviceId);
   }, [deviceId,editMode, deviceOnChart, updateInternals]);
@@ -181,9 +190,11 @@ export default function DeviceNode({
       <option value="" disabled>
         Choose a port…
       </option>
-      {device.ports.map((p) => (
+      
+      {/* show only ports not already in use */}
+      {device.ports.filter(x => !new Set(portsInuse).has(x)) .map((p) => (
         <option key={p.id} value={p.id}>
-          {p.name} {/* you can append ` (p.type)` if you like */}
+          {p.name} ({p.type})
         </option>
       ))}
     </select>
