@@ -93,6 +93,8 @@ export function ChartsPage() {
       try {
         setSelectedId("");
         const newChart: Chart = await updateChart(editChart.id, payload);
+        console.log('$$$$#$')
+        console.log(newChart)
         setSelectedId(newChart.id);
         setEditChart(undefined);
         setDialogOpen(false);

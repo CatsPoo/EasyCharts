@@ -9,6 +9,7 @@ import { DeviceEntity } from '../devices/entities/device.entity';
 import { LineEntity } from '../lines/entities/line.entity';
 import { PortEntity } from '../devices/entities/port.entity';
 import { LinesModule } from '../lines/lines.module';
+import { PortOnChartEntity } from './entities/portOnChart.entity';
 
 @Module({
     imports: [
@@ -18,7 +19,8 @@ import { LinesModule } from '../lines/lines.module';
            DeviceOnChartEntity,
            DeviceEntity,
            LineEntity,
-           PortEntity       
+           PortEntity,
+           PortOnChartEntity       
         ]),
         DevicesModule,
         LinesModule

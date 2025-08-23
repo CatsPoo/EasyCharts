@@ -3,4 +3,5 @@ import { DeviceOnChartSchema, HandlesSchema } from "../schemas/deviceOnChart.sch
 
 export type DeviceOnChart = z.infer<typeof DeviceOnChartSchema>;
 export type Handles = z.infer<typeof HandlesSchema>;
-export type Side = keyof Handles;
+export const SIDES = ['left', 'right', 'top', 'bottom'] as const;
+export type Side = typeof SIDES[number]
