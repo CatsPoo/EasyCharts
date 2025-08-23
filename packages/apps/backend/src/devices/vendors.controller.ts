@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { ZodValidationPipe } from '../common/zodValidation.pipe';
 import { QueryDto } from '../query/dto/query.dto';
-import { VendorsService } from "./vendors.service copy";
+import { VendorsService } from "./vendors.service";
 
 @Controller('vendors')
 export class VendorsController {

@@ -2,6 +2,7 @@ import type {
   Chart,
   Device,
   DeviceOnChart,
+  Handles,
   Line,
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
@@ -63,6 +64,19 @@ export function ChartEditor({
     [availableDevices]
   );
 
+  const updateDeviceOnChartHandles = useCallback(
+    (deviceId: string, handles: Handles) => {
+      const next: Chart = {
+        ...chart,
+        devicesLocations: chart.devicesLocations.map((loc) =>
+          loc.device.id === deviceId ? { ...loc, handles } : loc
+        ),
+      };
+      setChart(next);
+      setMadeChanges(true);
+    },[setChart, setMadeChanges]
+  );
+
   const convertDeviceToNode = (deviceLocations: DeviceOnChart): Node => {
     const { device, position } = deviceLocations;
     const node: Node = {
@@ -72,6 +86,7 @@ export function ChartEditor({
       data: {
         deviceOnChart: deviceLocations,
         editMode,
+        updateHandles: updateDeviceOnChartHandles
       },
     };
     return node;

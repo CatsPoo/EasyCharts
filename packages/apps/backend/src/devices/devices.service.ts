@@ -16,7 +16,7 @@ export class DevicesService {
   ) {}
 
   convertDeviceEntity(deviceEntity: DeviceEntity): Device {
-    const { id, model, name, type, ipAddress } = deviceEntity;
+    const { id, model, name, type, ipAddress,ports } = deviceEntity;
     return {
       id,
       name,
@@ -24,6 +24,7 @@ export class DevicesService {
       ipAddress,
       vendor: model.vendor,
       model: model,
+      ports
     } as Device;
   }
 
@@ -91,12 +92,21 @@ export class DevicesService {
   }
 
   async getDeviceById(id: string): Promise<Device> {
-    const device = await this.devicesRepo
-      .createQueryBuilder("d")
-      .leftJoinAndSelect("d.model", "m")
-      .leftJoinAndSelect("m.vendor", "v")
-      .where("d.id = :id", { id })
-      .getOne();
+    const device = await this.devicesRepo.findOne({
+      where: { id },
+      relations: {
+            model:{
+              vendor:true
+            },
+            ports:true
+          },
+    });
+      // .createQueryBuilder("d")
+      // .leftJoinAndSelect("d.model", "m")
+      // .leftJoinAndSelect("m.vendor", "v")
+      // .leftJoinAndSelect("d.ports", "p")
+      // .where("d.id = :id", { id })
+      // .getOne();
     if (!device) throw new NotFoundException(`Device ${id} not found`);
     return await this.convertDeviceEntity(device);
   }

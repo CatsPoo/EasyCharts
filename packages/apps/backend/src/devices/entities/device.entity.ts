@@ -29,7 +29,7 @@ export class DeviceEntity {
 
   @OneToMany(() => PortEntity, (p) => p.device, {
     cascade: true,      
-    eager: false,       
+    eager: true,       
   })
   ports!: PortEntity[];
 }

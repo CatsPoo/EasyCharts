@@ -1,21 +1,25 @@
-import type {
-  DeviceOnChart,
-  Handles,
-  Port,
+import {
+  PortTypeValues,
+  type DeviceOnChart,
+  type Handles,
+  type Port,
+  type PortCreate,
 } from "@easy-charts/easycharts-types";
-import { useEffect, useState } from "react";
+import {useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
-import { IconButton } from "@mui/material";
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, Select, TextField } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
+import { createPort } from "../../hooks/portsHooks";
 
 type DeviceNodeData = {
   deviceOnChart: DeviceOnChart;
   editMode: boolean;
+  updateHandles:  (deviceId:string,handles: Handles) => void; 
 };
 
 function initials(text?: string) {
@@ -29,19 +33,28 @@ export default function DeviceNode({
   data,
   selected,
 }: NodeProps<DeviceNodeData>) {
-  const { deviceOnChart, editMode } = data;
-  const { device, handles: deviceHandles, chartId } = deviceOnChart;
+  const { deviceOnChart, editMode,updateHandles } = data;
+  const { device, handles} = deviceOnChart;
   const { id: deviceId, name, ipAddress, model } = device;
   const { name: modelName, iconUrl, vendor } = model;
   const { name: vendorName } = vendor ?? {};
 
   type Side = "left" | "right" | "top" | "bottom";
-  const [handles, setHandles] = useState<Handles>(deviceHandles);
+
   const [pendingSide, setPendingSide] = useState<Side | null>(null);
   const [draftValue, setDraftValue] = useState("");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   const updateInternals = useUpdateNodeInternals();
+
+  const portTypeOptions :string[] = Object.values(PortTypeValues) ?? []
+
+  const [selectedPortId, setSelectedPortId] = useState<string>("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newPortName, setNewPortName] = useState("");
+  const [newPortType, setNewPortType] = useState<string>(
+    portTypeOptions[0] ?? ""
+  );
 
   function spread(count: number, pad = 10) {
     if (count <= 0) return [];
@@ -53,57 +66,38 @@ export default function DeviceNode({
     );
   }
 
-  const leftYs = spread(handles?.left?.length ?? 0);
-  const rightYs = spread(handles?.right?.length ?? 0);
-  const topXs = spread(handles?.top?.length ?? 0);
-  const bottomXs = spread(handles?.bottom?.length ?? 0);
+  const leftYs   = useMemo(() => spread(handles.left.length),   [handles.left]);
+  const rightYs  = useMemo(() => spread(handles.right.length),  [handles.right]);
+  const topXs    = useMemo(() => spread(handles.top.length),    [handles.top]);
+  const bottomXs = useMemo(() => spread(handles.bottom.length), [handles.bottom]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     updateInternals(deviceId);
-  }, [
-    deviceId,
-    editMode,
-    handles?.left?.length,
-    handles?.right?.length,
-    handles?.top?.length,
-    handles?.bottom?.length,
-    updateInternals,
-  ]);
+  }, [deviceId,editMode, deviceOnChart, updateInternals]);
 
-  const onAddHandle = (side:Side) => {
-    if(isEditorOpen) return;
+  const onAddHandle = (side: Side) => {
+    if (isEditorOpen) return;
     setIsEditorOpen(true);
-    let newport: Port = { id: uuidv4(), name: draftValue };
-    switch (side) {
-      case "left":
-        setHandles({
-          ...handles,
-          left: [...(handles.left ?? []), newport],
-        });
-        break;
-      case "right":
-        setHandles({
-          ...handles,
-          right: [...(handles.right ?? []), newport],
-        });
-        break;
-      case "top":
-        setHandles({
-          ...handles,
-          top: [...(handles.top ?? []), newport],
-        });
-        break;
-      case "bottom":
-        setHandles({
-          ...handles,
-          bottom: [...(handles.bottom ?? []), newport],
-        });
-        break;
-    }
-    setPendingSide(side)
+    let newport: Port =device.ports[0] ?? { id: uuidv4(), name: draftValue,type:'rj45', deviceId };
+    updateHandles(deviceId,{
+      ...handles,
+      [side]: [...(handles[side] ?? []), newport],
+    });
+    setPendingSide(side);
   };
 
-  const onConfirmAdd = (side: Side, value: string) => {
+  const onConfirmAdd =async  (side: Side,port:Port) => {
+    try{
+      updateHandles(deviceId,{
+        ...handles,
+        [side]: [...(handles[side]?? []).slice(0, -1), port]
+      })
+    }
+    catch(err){
+      console.error(err)
+      cancelInlineEditor()
+      return
+    }
     setIsEditorOpen(false);
     setDraftValue("");
   };
@@ -118,168 +112,133 @@ export default function DeviceNode({
     return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
   };
 
-  const confirmInlineEditor = () => {
-    if (!pendingSide) return;
-    onConfirmAdd(pendingSide, draftValue.trim());
-    setPendingSide(null);
-    setDraftValue("");
-  };
-
   const cancelInlineEditor = () => {
+    if(!pendingSide) return;
     setDraftValue("");
     setIsEditorOpen(false);
-
-    switch (pendingSide) {
-      case "left":
-        setHandles({
+    updateHandles(deviceId,{
           ...handles,
-          left: (handles.left ?? []).slice(0, -1),
+          [pendingSide]: (handles[pendingSide] ?? []).slice(0, -1),
         });
-        break
-      case "right":
-        setHandles({
-          ...handles,
-          right: (handles.right ?? []).slice(0, -1),
-        });
-        break
-      case "top":
-        setHandles({
-          ...handles,
-          top: (handles.top ?? []).slice(0, -1),
-        });
-        break
-      case "bottom":
-        setHandles({
-          ...handles,
-          bottom: (handles.bottom ?? []).slice(0, -1),
-        });
-        break
-    }
     setPendingSide(null);
   };
 
-  const TransparentBtn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = (props) => (
-    <button
-      {...props}
-      className={[
-        "h-7 w-7 rounded-full bg-transparent border-0 shadow-none",
-        "flex items-center justify-center hover:bg-transparent active:bg-transparent focus:outline-none",
-        props.className ?? ""
-      ].join(" ")}
-      onMouseDown={(e) => { e.stopPropagation(); props.onMouseDown?.(e); }}
-      onClick={(e) => { e.stopPropagation(); props.onClick?.(e); }}
-    />
-  );
+  const onConfirmPickExistingPort = (side: Side, portId: string) => {
+    const port:Port = device.ports.find(p=>p.id===portId)!
+    onConfirmAdd(side, port); 
+  };
+
+  const onCreatePort = async (name: string, type: string) => {
+    if(!pendingSide) return;
+    const id: string = uuidv4();
+    try{
+      const newPort = await createPort({id,deviceId,name,type} as PortCreate)
+       updateHandles(deviceId,{
+          ...handles,
+          [pendingSide]: [(handles[pendingSide] ?? []).slice(0, -1),newPort],
+        });
+      setCreateDialogOpen(false);
+    }catch(err){
+      console.error(err)
+      return
+    }
+  };
 
   const inlineEditor = (() => {
-    if (!pendingSide) return null;
-    const { value } = nextOffsetForSide(pendingSide);
-    const common = "absolute z-10 flex items-center gap-1";
-    const input =
-      "h-7 rounded-md border border-slate-300 bg-white px-2 text-xs shadow focus:outline-none focus:ring";
-    const btn =
-     "inline-flex items-center justify-center w-7 h-7 rounded-md border border-slate-300 " +
-  "bg-white shadow hover:bg-slate-50 focus:outline-none";
+  if (!pendingSide) return null;
+  const { value } = nextOffsetForSide(pendingSide);
+  const common =
+    "absolute z-10 flex items-center gap-2 bg-white/90 backdrop-blur px-2 py-1 rounded-md border border-slate-200 shadow";
 
-    const InputEl = (
-      <input
-        autoFocus
-        value={draftValue}
-        onChange={(e) => setDraftValue(e.target.value)}
-        placeholder="new handle id"
-        className={input}
-        onMouseDown={(e) => e.stopPropagation()}
-      />
-    );
+  const iconBtn =
+    "inline-flex items-center justify-center w-7 h-7 rounded-md border border-slate-300 " +
+    "bg-white shadow hover:bg-slate-50 focus:outline-none";
 
-    const ConfirmBtn = (
-      <button
-        type="button"
-        className={btn}
-        onClick={(e) => {
-          e.stopPropagation();
-          confirmInlineEditor();
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CheckIcon htmlColor="#2563eb" fontSize="small" />
-      </button>
-    );
+  const SelectEl = (
+    <select
+      value={selectedPortId}
+      onChange={(e) => setSelectedPortId(e.target.value)}
+      className="h-8 min-w-[160px] rounded-md border border-slate-300 bg-white px-2 text-xs shadow focus:outline-none focus:ring"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <option value="" disabled>
+        Choose a port…
+      </option>
+      {device.ports.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.name} {/* you can append ` (p.type)` if you like */}
+        </option>
+      ))}
+    </select>
+  );
 
-    const CancelBtn = (
-      <button
-        type="button"
-        className={btn}
-        onClick={(e) => {
-          e.stopPropagation();
-          cancelInlineEditor();
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CloseIcon htmlColor="#9ca3af" fontSize="small" />
-      </button>
-    );
+  const AddPortBtn = (
+    <button
+      type="button"
+      className={iconBtn}
+      title="Create new port"
+      onClick={(e) => {
+        e.stopPropagation();
+        setCreateDialogOpen(true);
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <AddIcon htmlColor="#2563eb" fontSize="small" />
+    </button>
+  );
 
-    if (pendingSide === "left") {
-      return (
-        <div
-          className={common}
-          style={{
-            top: `${value}%`,
-            left: -200,
-            transform: "translateY(-50%)",
-          }}
-        >
-          {InputEl}
-          {ConfirmBtn}
-          {CancelBtn}
-        </div>
-      );
-    }
-    if (pendingSide === "right") {
-      return (
-        <div
-          className={common}
-          style={{
-            top: `${value}%`,
-            right: -200,
-            transform: "translateY(-50%)",
-          }}
-        >
-          {InputEl}
-          {ConfirmBtn}
-          {CancelBtn}
-        </div>
-      );
-    }
-    if (pendingSide === "top") {
-      return (
-        <div
-          className={common}
-          style={{ left: `${value}%`, top: -38, transform: "translateX(-50%)" }}
-        >
-          {InputEl}
-          {ConfirmBtn}
-          {CancelBtn}
-        </div>
-      );
-    }
-    // bottom
-    return (
-      <div
-        className={common}
-        style={{
-          left: `${value}%`,
-          bottom: -38,
-          transform: "translateX(-50%)",
-        }}
-      >
-        {InputEl}
-        {ConfirmBtn}
-        {CancelBtn}
-      </div>
-    );
-  })();
+  const ConfirmBtn = (
+    <button
+      type="button"
+      className={iconBtn}
+      disabled={!selectedPortId}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!pendingSide || !selectedPortId) return;
+        onConfirmPickExistingPort(pendingSide, selectedPortId);
+        setPendingSide(null);
+        setSelectedPortId("");
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <CheckIcon fontSize="small" />
+    </button>
+  );
+
+  const CancelBtn = (
+    <button
+      type="button"
+      className={iconBtn}
+      onClick={(e) => {
+        e.stopPropagation();
+        cancelInlineEditor()
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <CloseIcon fontSize="small" />
+    </button>
+  );
+
+  // position around the node depending on side
+  const styleFor = (side: Side) =>
+    side === "left"
+      ? { top: `${value}%`, left: -240, transform: "translateY(-50%)" }
+      : side === "right"
+      ? { top: `${value}%`, right: -240, transform: "translateY(-50%)" }
+      : side === "top"
+      ? { left: `${value}%`, top: -44, transform: "translateX(-50%)" }
+      : { left: `${value}%`, bottom: -44, transform: "translateX(-50%)" };
+
+  return (
+    <div className={common} style={styleFor(pendingSide)} onMouseDown={(e) => e.stopPropagation()}>
+      {SelectEl}
+      {AddPortBtn}
+      {ConfirmBtn}
+      {CancelBtn}
+    </div>
+  );
+})();
+
 
   return (
     <div
@@ -527,6 +486,57 @@ export default function DeviceNode({
           </div>
         </>
       )}
+
+      <Dialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Create Port</DialogTitle>
+        <DialogContent dividers>
+          <div className="flex flex-col gap-3 pt-1">
+            <TextField
+              label="Name"
+              size="small"
+              value={newPortName}
+              onChange={(e) => setNewPortName(e.target.value)}
+              autoFocus
+            />
+            <FormControl size="small">
+              <InputLabel id="port-type-label">Type</InputLabel>
+              <Select
+                labelId="port-type-label"
+                label="Type"
+                value={newPortType}
+                onChange={(e) => setNewPortType(String(e.target.value))}
+              >
+                {portTypeOptions.map((t) => (
+                  <MenuItem key={t} value={t}>
+                    {t}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              await onCreatePort(newPortName.trim(), newPortType);
+              // Optionally: keep dialog open on error; for now, close and clear
+              setCreateDialogOpen(false);
+              setNewPortName("");
+              // You might want to setSelectedPortId(newPort.id) inside onCreatePort
+            }}
+            disabled={!newPortName.trim() || !newPortType}
+          >
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

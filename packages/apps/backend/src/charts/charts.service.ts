@@ -115,7 +115,8 @@ export class ChartsService {
           device:{
             model:{
               vendor:true
-            }
+            },
+            ports:true
           },
           position:true
         },
@@ -297,6 +298,7 @@ export class ChartsService {
                 model: {
                   vendor: true,
                 },
+                ports: true,
               },
             },
           },
