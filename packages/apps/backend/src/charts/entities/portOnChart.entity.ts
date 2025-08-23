@@ -13,7 +13,7 @@ import { PortEntity } from "../../devices/entities/port.entity";
 export const PortSideValues = ["left", "right", "top", "bottom"] as const;
 export type PortSide = (typeof PortSideValues)[number];
 
-@Entity({ name: "ports_on_chart_devices" })
+@Entity({ name: "ports_on_chart" })
 @Index(["chartId", "deviceId"]) // fast lookups per node
 @Index(["chartId", "deviceId", "side"], { unique: true }) // no dup slot
 @Index(["chartId", "deviceId", "portId"], { unique: true }) // same port once per node
