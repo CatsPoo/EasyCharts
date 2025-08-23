@@ -144,9 +144,6 @@ export function ChartEditor({
         const doc = docsById.get(prevNode.id);
         if (!doc) return prevNode; // device removed, leave as-is
 
-        // build fresh data for this node (whatever you already do in toNode)
-        const base = convertDeviceToNode(doc);
-
         // PATCH: keep selection/dragging/zIndex etc., update just what changed
         return {
           ...prevNode,

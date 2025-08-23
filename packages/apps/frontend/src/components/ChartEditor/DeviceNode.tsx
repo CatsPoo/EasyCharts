@@ -4,6 +4,7 @@ import {
   type Handles,
   type Port,
   type PortCreate,
+  type Side,
 } from "@easy-charts/easycharts-types";
 import {useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
@@ -39,8 +40,6 @@ export default function DeviceNode({
   const { name: modelName, iconUrl, vendor } = model;
   const { name: vendorName } = vendor ?? {};
 
-  type Side = "left" | "right" | "top" | "bottom";
-
   const [pendingSide, setPendingSide] = useState<Side | null>(null);
   const [draftValue, setDraftValue] = useState("");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -65,6 +64,12 @@ export default function DeviceNode({
       (_, i) => pad + (i * usable) / (count - 1)
     );
   }
+   const nextOffsetForSide = (side: Side) => {
+    if (side === "left")   return { axis: "y", value: spread(handles.left.length + 1).at(-1) ?? 0 };
+    if (side === "right")  return { axis: "y", value: spread(handles.right.length + 1).at(-1) ?? 0 };
+    if (side === "top")    return { axis: "x", value: spread(handles.top.length + 1).at(-1) ?? 0 };
+    return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
+  };
 
   const leftYs   = useMemo(() => spread(handles.left.length),   [handles.left]);
   const rightYs  = useMemo(() => spread(handles.right.length),  [handles.right]);
@@ -78,7 +83,7 @@ export default function DeviceNode({
   const onAddHandle = (side: Side) => {
     if (isEditorOpen) return;
     setIsEditorOpen(true);
-    let newport: Port =device.ports[0] ?? { id: uuidv4(), name: draftValue,type:'rj45', deviceId };
+    let newport: Port ={ id: uuidv4(), name: draftValue,type:'rj45', deviceId };
     updateHandles(deviceId,{
       ...handles,
       [side]: [...(handles[side] ?? []), newport],
@@ -86,7 +91,7 @@ export default function DeviceNode({
     setPendingSide(side);
   };
 
-  const onConfirmAdd =async  (side: Side,port:Port) => {
+  const addPortToHandle =async  (side: Side,port:Port) => {
     try{
       updateHandles(deviceId,{
         ...handles,
@@ -105,12 +110,7 @@ export default function DeviceNode({
     // TODO: implement remove handle for `side`
   };
 
-  const nextOffsetForSide = (side: Side) => {
-    if (side === "left")   return { axis: "y", value: spread(handles.left.length + 1).at(-1) ?? 0 };
-    if (side === "right")  return { axis: "y", value: spread(handles.right.length + 1).at(-1) ?? 0 };
-    if (side === "top")    return { axis: "x", value: spread(handles.top.length + 1).at(-1) ?? 0 };
-    return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
-  };
+ 
 
   const cancelInlineEditor = () => {
     if(!pendingSide) return;
@@ -123,10 +123,21 @@ export default function DeviceNode({
     setPendingSide(null);
   };
 
-  const onConfirmPickExistingPort = (side: Side, portId: string) => {
-    const port:Port = device.ports.find(p=>p.id===portId)!
-    onConfirmAdd(side, port); 
-  };
+  const onInlineEditorPlusClick  = (e:React.MouseEvent<HTMLButtonElement, MouseEvent>) =>{
+    e.stopPropagation();
+    setCreateDialogOpen(true);
+  }
+
+  const onInlineEditorCheckClick = (e:React.MouseEvent<HTMLButtonElement, MouseEvent>) =>{
+    e.stopPropagation();
+    if (!pendingSide || !selectedPortId) return;
+
+    const port:Port = device.ports.find(p=>p.id===selectedPortId)!
+    addPortToHandle(pendingSide, port); 
+
+    setPendingSide(null);
+    setSelectedPortId("");
+  }
 
   const onCreatePort = async (name: string, type: string) => {
     if(!pendingSide) return;
@@ -143,6 +154,12 @@ export default function DeviceNode({
       return
     }
   };
+
+  const onDialogCreateButtonClick = async  () =>{
+    await onCreatePort(newPortName.trim(), newPortType);
+    setCreateDialogOpen(false);
+    setNewPortName("");
+  }
 
   const inlineEditor = (() => {
   if (!pendingSide) return null;
@@ -177,10 +194,7 @@ export default function DeviceNode({
       type="button"
       className={iconBtn}
       title="Create new port"
-      onClick={(e) => {
-        e.stopPropagation();
-        setCreateDialogOpen(true);
-      }}
+      onClick={(e) => onInlineEditorPlusClick(e)}
       onMouseDown={(e) => e.stopPropagation()}
     >
       <AddIcon htmlColor="#2563eb" fontSize="small" />
@@ -192,13 +206,7 @@ export default function DeviceNode({
       type="button"
       className={iconBtn}
       disabled={!selectedPortId}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!pendingSide || !selectedPortId) return;
-        onConfirmPickExistingPort(pendingSide, selectedPortId);
-        setPendingSide(null);
-        setSelectedPortId("");
-      }}
+      onClick={(e) => {onInlineEditorCheckClick(e)}}
       onMouseDown={(e) => e.stopPropagation()}
     >
       <CheckIcon fontSize="small" />
@@ -524,13 +532,7 @@ export default function DeviceNode({
           <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
           <Button
             variant="contained"
-            onClick={async () => {
-              await onCreatePort(newPortName.trim(), newPortType);
-              // Optionally: keep dialog open on error; for now, close and clear
-              setCreateDialogOpen(false);
-              setNewPortName("");
-              // You might want to setSelectedPortId(newPort.id) inside onCreatePort
-            }}
+            onClick={onDialogCreateButtonClick}
             disabled={!newPortName.trim() || !newPortType}
           >
             Create
