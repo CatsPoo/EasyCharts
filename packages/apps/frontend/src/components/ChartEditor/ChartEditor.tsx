@@ -23,6 +23,7 @@ import "reactflow/dist/style.css";
 import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import { useListAssets } from "../../hooks/assetsHooks";
 import DeviceNode from "./DeviceNode";
+import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -87,7 +88,7 @@ export function ChartEditor({
         deviceOnChart: deviceLocations,
         editMode,
         updateHandles: updateDeviceOnChartHandles
-      },
+      } as DeviceNodeData,
     };
     return node;
   };
@@ -133,9 +134,29 @@ export function ChartEditor({
   );
 
   useEffect(() => {
-    setNodes(convertDevicesToNodes(chart.devicesLocations));
+    setNodes((prev) => {
+      const docsById = new Map(
+        chart.devicesLocations.map((doc) => [doc.device.id, doc])
+      );
+
+      return prev.map((prevNode) => {
+        if (!prevNode.selected) return prevNode; // only touch selected
+        const doc = docsById.get(prevNode.id);
+        if (!doc) return prevNode; // device removed, leave as-is
+
+        // build fresh data for this node (whatever you already do in toNode)
+        const base = convertDeviceToNode(doc);
+
+        // PATCH: keep selection/dragging/zIndex etc., update just what changed
+        return {
+          ...prevNode,
+          data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData, // handles, callbacks, etc.
+          selected: prevNode.selected, // preserve selection (explicit)
+        };
+      });
+    });
     setEdges(convertLinesToEdges(chart.lines));
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, chart.devicesLocations]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
