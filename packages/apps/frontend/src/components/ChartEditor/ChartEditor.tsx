@@ -81,8 +81,6 @@ export function ChartEditor({
   );
 
   const convertDeviceToNode = (deviceOnChart: DeviceOnChart): Node => {
-    console.log(deviceOnChart)
-    console.log(deviceOnChart.handles)
     const { device, position } = deviceOnChart;
     const node: Node = {
       id: device.id,
@@ -225,13 +223,13 @@ export function ChartEditor({
         x: e.clientX - bounds.left,
         y: e.clientY - bounds.top,
       });
-      const newNode: Node = convertDeviceToNode({device, position,handles:{}} as DeviceOnChart); 
+      const newNode: Node = convertDeviceToNode({device, position,handles:{left:[],right:[],top:[],bottom:[]} as Handles} as DeviceOnChart); 
       setNodes((nds) => [...nds, newNode]);
 
       const nextChart: Chart = {
         ...chart,
-        devicesOnCharts: [
-          ...chart.devicesOnCharts,
+        devicesOnChart: [
+          ...chart.devicesOnChart,
           { chartId: chart.id, device, position } as DeviceOnChart,
         ],
       };
