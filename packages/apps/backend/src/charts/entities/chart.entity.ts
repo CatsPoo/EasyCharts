@@ -2,11 +2,9 @@ import {
   Column,
   Entity,
   OneToMany,
-  PrimaryGeneratedColumn,
-  type Relation,
+  PrimaryGeneratedColumn
 } from "typeorm";
 import { DeviceOnChartEntity } from "./deviceOnChart.entityEntity";
-import { LineEntity } from "../../lines/entities/line.entity";
 
 @Entity({ name: "charts" })
 export class ChartEntity {
@@ -26,5 +24,5 @@ export class ChartEntity {
       cascade: true,
     }
   )
-  devicesLocations!: DeviceOnChartEntity[];
+  devicesOnChart!: DeviceOnChartEntity[];
 }

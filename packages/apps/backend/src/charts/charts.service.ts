@@ -1,5 +1,6 @@
 // src/charts/charts.service.ts
 import {
+  Handle,
   Port,
   SIDES,
   type Chart,
@@ -49,16 +50,16 @@ export class ChartsService {
   SIDES.forEach((side: Side) => {
     const arr = handles[side] ?? [];
     arr.forEach((p, idx) => {
-      rows.push({ chartId, deviceId, portId: p.id, side });
+      rows.push({ chartId, deviceId, portId: p.port.id, side });
     });
   });
   return rows;
 }
 
  rowsToHandles(placements: PortOnChartEntity[]) :Handles{
-  const bySide: Record<Side, Port[]> = { left: [], right: [], top: [], bottom: [] };
+  const bySide: Record<Side, Handle[]> = { left: [], right: [], top: [], bottom: [] };
   for (const r of placements) {
-    bySide[r.side].push(this.convertPortEntityToPort(r.port))
+    bySide[r.side].push({port:this.convertPortEntityToPort(r.port), direction: r.direction})
   }
   return bySide;
 }
@@ -66,12 +67,12 @@ export class ChartsService {
   convertDeviceOnChartEntity = async (
     deviceonChartEntity: DeviceOnChartEntity
   ): Promise<DeviceOnChart> => {
-    const { chartId, position, device } = deviceonChartEntity;
+    const { chartId, position, device, portPlacements } = deviceonChartEntity;
     return {
       chartId,
       device: this.devicesService.convertDeviceEntity(device),
       position,
-      handles: this.rowsToHandles(deviceonChartEntity.portPlacements ?? []) 
+      handles: this.rowsToHandles(portPlacements ?? []) 
     } as DeviceOnChart;
   };
 
@@ -79,13 +80,13 @@ export class ChartsService {
 
   //TODO all lines to convertion function
   convertChartEntityToChart = async (chartEnrity: ChartEntity): Promise<Chart> => {
-    const { devicesLocations, ...chartData } = chartEnrity;
-    let convertedDevicesLocations : DeviceOnChart[] = []
-    for(const dl of devicesLocations){
-      convertedDevicesLocations.push(await this.convertDeviceOnChartEntity(dl)); 
+    const { devicesOnChart, ...chartData } = chartEnrity;
+    let convertedDeviceOnCharts : DeviceOnChart[] = []
+    for(const dl of devicesOnChart){
+      convertedDeviceOnCharts.push(await this.convertDeviceOnChartEntity(dl)); 
     }
     return {
-      devicesLocations: convertedDevicesLocations,
+      devicesOnCharts: convertedDeviceOnCharts,
       ...chartData,
     } as Chart;
   };
@@ -102,16 +103,16 @@ export class ChartsService {
     const chart: ChartEntity | null = await this.chartRepo.findOne({
       where: { id },
       relations: {
-        devicesLocations:{
+        devicesOnChart:{
           device: {
              model: {
                vendor: true 
               },
-              ports: true 
+              ports: true,
             },
           portPlacements: {
-             port: true 
-            },
+             port: true,
+          },
           position:true
         },
       },
@@ -124,7 +125,8 @@ export class ChartsService {
   async createChart(dto: ChartCreate): Promise<Chart> {
     const chart: ChartEntity = this.chartRepo.create({
       name: dto.name,
-      devicesLocations: dto.devicesLocations.map((dl) => ({
+      description: dto.description,
+      devicesOnChart: dto.devicesLocations.map((dl) => ({
         deviceId: dl.device.id,
         position: dl.position,
       })),
@@ -163,7 +165,7 @@ export class ChartsService {
 
     const chart = await chartsRepo.findOne({
       where: { id: chartId },
-      relations: { devicesLocations: true },
+      relations: { devicesOnChart: true },
     });
     if (!chart) throw new NotFoundException(`Chart ${chartId} not found`);
 
@@ -212,7 +214,7 @@ export class ChartsService {
     return chartsRepo.findOneOrFail({
       where: { id: chartId },
       relations: {
-        devicesLocations: {
+        devicesOnChart: {
           device: { model: { vendor: true }, ports: true },
           portPlacements: { port: true },
         },

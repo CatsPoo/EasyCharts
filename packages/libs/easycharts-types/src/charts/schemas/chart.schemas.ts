@@ -15,11 +15,11 @@ export const ChartUpdateSchema = ChartCreateSchema.partial();
 export const ChartSchema = IdentifiableSchema.extend({
   name: z.string(),
   description: z.string(),
-  devicesLocations: z.array(DeviceOnChartSchema),
+  devicesOnCharts: z.array(DeviceOnChartSchema),
   lines: z.array(LineSchema)
 });
 
 export const ChartMetadataSchema = ChartSchema.omit({
-  devicesLocations: true,
+  devicesOnCharts: true,
   lines: true,
 });

@@ -1,6 +1,5 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from "typeorm";
 import { DeviceEntity } from "./device.entity";
-
 @Entity({ name: "ports" })
 @Index(['deviceId'])
 export class PortEntity {

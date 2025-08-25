@@ -2,11 +2,16 @@ import z from "zod";
 import { PositionSchema } from "./position.schema.js";
 import { DeviceSchema, PortSchema } from "../../devices/index.js";
 
-export const HandlesSchema = z.object({
-  left: z.array(PortSchema).default([]),
-  right: z.array(PortSchema).default([]),
-  top: z.array(PortSchema).default([]),
-  bottom: z.array(PortSchema).default([]),
+export const handleSchema = z.object({
+  port: PortSchema,
+  direction: z.enum(["source", "target"]),
+});
+
+  export const HandlesSchema = z.object({
+  left: z.array(handleSchema).default([]),
+  right: z.array(handleSchema).default([]),
+  top: z.array(handleSchema).default([]),
+  bottom: z.array(handleSchema).default([]),
 }).default({ left: [], right: [], top: [], bottom: [] });
 
 export const DeviceOnChartSchema = z.object({

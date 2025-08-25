@@ -6,7 +6,7 @@ import {
   type PortCreate,
   type Side,
 } from "@easy-charts/easycharts-types";
-import {useLayoutEffect, useMemo, useState } from "react";
+import {useCallback, useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import AddIcon from "@mui/icons-material/Add";
@@ -170,6 +170,10 @@ export default function DeviceNode({
     setNewPortName("");
   }
 
+  const getHandleType = useCallback((portId:string)=>{
+
+  },[])
+
   const inlineEditor = (() => {
   if (!pendingSide) return null;
   const { value } = nextOffsetForSide(pendingSide);
@@ -315,7 +319,7 @@ export default function DeviceNode({
         <Handle
           key={handles?.left?.[i].id}
           id={handles?.left?.[i].id}
-          type="target"
+          type={selected}
           position={Position.Left}
           style={{ top: `${y}%` }}
         />

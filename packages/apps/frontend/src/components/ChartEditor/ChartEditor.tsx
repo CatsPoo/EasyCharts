@@ -6,7 +6,7 @@ import type {
   Line,
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from "reactflow";
 
 import ReactFlow, {
@@ -37,6 +37,8 @@ export function ChartEditor({
   editMode,
   setMadeChanges,
 }: ChardEditorProps) {
+
+  const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
 
@@ -175,6 +177,14 @@ export function ChartEditor({
     [setEdges]
   );
 
+  const OnReconnectStart = useCallback(() => {
+    setIsReconnecting(true);
+  }, [setIsReconnecting]);
+
+  const OnReconnectEnd = useCallback(() => {
+    setIsReconnecting(false);
+  }, [setIsReconnecting]);
+
   const onDragOver = useCallback(
     (e: React.DragEvent) => {
       if (!editMode) return;
@@ -266,6 +276,8 @@ export function ChartEditor({
           onEdgesChange={editMode ? onEdgesChange : undefined}
           onConnect={editMode ? onConnect : undefined}
           onEdgeUpdate={editMode ? onEdgeUpdate : undefined}
+          onReconnectStart={OnReconnectStart}
+          onReconnectEnd={OnReconnectEnd}
           nodesDraggable={editMode}
           nodesConnectable={editMode}
           defaultEdgeOptions={{ type: ConnectionLineType.Step }}
