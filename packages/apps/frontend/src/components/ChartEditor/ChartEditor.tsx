@@ -51,8 +51,8 @@ export function ChartEditor({
 
 
   const usedIds = useMemo(
-    () => new Set(chart.devicesLocations.map(d => d.device.id)),
-    [chart.devicesLocations,setChart]
+    () => new Set(chart.devicesOnCharts.map(d => d.device.id)),
+    [chart.devicesOnCharts,setChart]
   );
 
   const availableDevices = availableDevicesResponse?.rows ?? [];
@@ -71,7 +71,7 @@ export function ChartEditor({
     (deviceId: string, handles: Handles) => {
       const next: Chart = {
         ...chart,
-        devicesLocations: chart.devicesLocations.map((loc) =>
+        devicesOnCharts: chart.devicesOnCharts.map((loc) =>
           loc.device.id === deviceId ? { ...loc, handles } : loc
         ),
       };
@@ -80,14 +80,14 @@ export function ChartEditor({
     },[setChart, setMadeChanges]
   );
 
-  const convertDeviceToNode = (deviceLocations: DeviceOnChart): Node => {
-    const { device, position } = deviceLocations;
+  const convertDeviceToNode = (deviceOnChart: DeviceOnChart): Node => {
+    const { device, position } = deviceOnChart;
     const node: Node = {
       id: device.id,
       type: "device",
       position,
       data: {
-        deviceOnChart: deviceLocations,
+        deviceOnChart: deviceOnChart,
         editMode,
         updateHandles: updateDeviceOnChartHandles
       } as DeviceNodeData,
@@ -96,8 +96,8 @@ export function ChartEditor({
   };
 
   const convertDevicesToNodes = (devicesLocations: DeviceOnChart[]): Node[] => {
-    const nodes: Node[] = devicesLocations.map((deviceLocation) =>
-      convertDeviceToNode(deviceLocation)
+    const nodes: Node[] = devicesLocations.map((deviceOnChart) =>
+      convertDeviceToNode(deviceOnChart)
     );
     return nodes;
   };
@@ -129,7 +129,7 @@ export function ChartEditor({
   };
 
   const [nodes, setNodes, onNodesChangeRF] = useNodesState(
-    convertDevicesToNodes(chart.devicesLocations)
+    convertDevicesToNodes(chart.devicesOnCharts)
   );
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState(
     convertLinesToEdges(chart.lines)
@@ -138,7 +138,7 @@ export function ChartEditor({
   useEffect(() => {
     setNodes((prev) => {
       const docsById = new Map(
-        chart.devicesLocations.map((doc) => [doc.device.id, doc])
+        chart.devicesOnCharts.map((doc) => [doc.device.id, doc])
       );
 
       return prev.map((prevNode) => {
@@ -155,7 +155,7 @@ export function ChartEditor({
       });
     });
     setEdges(convertLinesToEdges(chart.lines));
-  }, [setNodes, setEdges, chart.devicesLocations]);
+  }, [setNodes, setEdges, chart.devicesOnCharts]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -199,7 +199,7 @@ export function ChartEditor({
       // find the device-on-chart and update its position immutably
       const next: Chart = {
         ...chart,
-        devicesLocations: chart.devicesLocations.map((loc) =>
+        devicesOnCharts: chart.devicesOnCharts.map((loc) =>
           loc.device.id === node.id ? { ...loc, position: node.position } : loc
         ),
       };
@@ -228,8 +228,8 @@ export function ChartEditor({
 
       const nextChart: Chart = {
         ...chart,
-        devicesLocations: [
-          ...chart.devicesLocations,
+        devicesOnCharts: [
+          ...chart.devicesOnCharts,
           { chartId: chart.id, device, position } as DeviceOnChart,
         ],
       };
