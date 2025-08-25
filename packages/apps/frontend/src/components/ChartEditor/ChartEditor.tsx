@@ -51,8 +51,8 @@ export function ChartEditor({
 
 
   const usedIds = useMemo(
-    () => new Set(chart.devicesOnCharts.map(d => d.device.id)),
-    [chart.devicesOnCharts,setChart]
+    () => new Set(chart.devicesOnChart.map(d => d.device.id)),
+    [chart.devicesOnChart,setChart]
   );
 
   const availableDevices = availableDevicesResponse?.rows ?? [];
@@ -81,6 +81,8 @@ export function ChartEditor({
   );
 
   const convertDeviceToNode = (deviceOnChart: DeviceOnChart): Node => {
+    console.log(deviceOnChart)
+    console.log(deviceOnChart.handles)
     const { device, position } = deviceOnChart;
     const node: Node = {
       id: device.id,
@@ -95,8 +97,8 @@ export function ChartEditor({
     return node;
   };
 
-  const convertDevicesToNodes = (devicesLocations: DeviceOnChart[]): Node[] => {
-    const nodes: Node[] = devicesLocations.map((deviceOnChart) =>
+  const convertDevicesToNodes = (devicesOnChart: DeviceOnChart[]): Node[] => {
+    const nodes: Node[] = devicesOnChart.map((deviceOnChart) =>
       convertDeviceToNode(deviceOnChart)
     );
     return nodes;
@@ -129,7 +131,7 @@ export function ChartEditor({
   };
 
   const [nodes, setNodes, onNodesChangeRF] = useNodesState(
-    convertDevicesToNodes(chart.devicesOnCharts)
+    convertDevicesToNodes(chart.devicesOnChart)
   );
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState(
     convertLinesToEdges(chart.lines)
@@ -138,7 +140,7 @@ export function ChartEditor({
   useEffect(() => {
     setNodes((prev) => {
       const docsById = new Map(
-        chart.devicesOnCharts.map((doc) => [doc.device.id, doc])
+        chart.devicesOnChart.map((doc) => [doc.device.id, doc])
       );
 
       return prev.map((prevNode) => {
@@ -155,7 +157,7 @@ export function ChartEditor({
       });
     });
     setEdges(convertLinesToEdges(chart.lines));
-  }, [setNodes, setEdges, chart.devicesOnCharts]);
+  }, [setNodes, setEdges, chart.devicesOnChart]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {

@@ -26,7 +26,7 @@ export class DeviceOnChartEntity {
 
   @ManyToOne(
     () => ChartEntity,
-    (chart: ChartEntity) => chart.devicesLocations,
+    (chart: ChartEntity) => chart.devicesOnChart,
     {
       onDelete: "CASCADE",
     }

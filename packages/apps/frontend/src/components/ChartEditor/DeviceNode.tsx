@@ -35,7 +35,7 @@ export default function DeviceNode({
   selected,
 }: NodeProps<DeviceNodeData>) {
   const { deviceOnChart, editMode,updateHandles } = data;
-  const { device, handles} = deviceOnChart;
+  const { device,handles} = deviceOnChart;
   const { id: deviceId, name, ipAddress, model } = device;
   const { name: modelName, iconUrl, vendor } = model;
   const { name: vendorName } = vendor ?? {};
@@ -83,7 +83,7 @@ export default function DeviceNode({
       ...(handles.top ?? []),
       ...(handles.bottom ?? []),
     ];
-    return all
+    return all.map(p => p.port)
   },[handles])
   useLayoutEffect(() => {
     updateInternals(deviceId);
@@ -196,7 +196,7 @@ export default function DeviceNode({
       </option>
       
       {/* show only ports not already in use */}
-      {device.ports.filter(x => !new Set(portsInuse).has(x)) .map((p) => (
+      {device.ports.filter(d => !new Set(portsInuse).has(d)) .map((p) => (
         <option key={p.id} value={p.id}>
           {p.name} ({p.type})
         </option>
@@ -317,17 +317,17 @@ export default function DeviceNode({
 
       {leftYs.map((y, i) => (
         <Handle
-          key={handles?.left?.[i].id}
-          id={handles?.left?.[i].id}
-          type={selected}
+          key={handles?.left?.[i].port.id}
+          id={handles?.left?.[i].port.id}
+          type='target'
           position={Position.Left}
           style={{ top: `${y}%` }}
         />
       ))}
       {rightYs.map((y, i) => (
         <Handle
-          key={handles?.right?.[i].id}
-          id={handles?.right?.[i].id}
+          key={handles?.right?.[i].port.id}
+          id={handles?.right?.[i].port.id}
           type="source"
           position={Position.Right}
           style={{ top: `${y}%` }}
@@ -335,8 +335,8 @@ export default function DeviceNode({
       ))}
       {topXs.map((x, i) => (
         <Handle
-          key={handles?.top?.[i].id}
-          id={handles?.top?.[i].id}
+          key={handles?.top?.[i].port.id}
+          id={handles?.top?.[i].port.id}
           type="target"
           position={Position.Top}
           style={{ left: `${x}%` }}
@@ -344,8 +344,8 @@ export default function DeviceNode({
       ))}
       {bottomXs.map((x, i) => (
         <Handle
-          key={handles?.bottom?.[i].id}
-          id={handles?.bottom?.[i].id}
+          key={handles?.bottom?.[i].port.id}
+          id={handles?.bottom?.[i].port.id}
           type="target"
           position={Position.Bottom}
           style={{ left: `${x}%` }}

@@ -1,5 +1,6 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from "typeorm";
 import { DeviceEntity } from "./device.entity";
+import { type PortType } from "@easy-charts/easycharts-types";
 @Entity({ name: "ports" })
 @Index(['deviceId'])
 export class PortEntity {
@@ -9,8 +10,8 @@ export class PortEntity {
   @Column()
   name!: string;
 
-  @Column()
-  type!: string;
+  @Column({ type: "varchar", length: 8 })
+  type!: PortType;
 
   @Column({ name: 'device_id', type: 'uuid' })
   deviceId!: string;

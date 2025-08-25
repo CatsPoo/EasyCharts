@@ -86,10 +86,11 @@ export class ChartsService {
       convertedDeviceOnCharts.push(await this.convertDeviceOnChartEntity(dl)); 
     }
     return {
-      devicesOnCharts: convertedDeviceOnCharts,
+      devicesOnChart: convertedDeviceOnCharts,
       ...chartData,
     } as Chart;
   };
+
   async getAllCharts(): Promise<Chart[]> {
     let convertedCharts:Chart[]=[]
     const charts = await this.chartRepo.find({});
@@ -126,7 +127,7 @@ export class ChartsService {
     const chart: ChartEntity = this.chartRepo.create({
       name: dto.name,
       description: dto.description,
-      devicesOnChart: dto.devicesLocations.map((dl) => ({
+      devicesOnChart: dto.devicesOnChart.map((dl) => ({
         deviceId: dl.device.id,
         position: dl.position,
       })),
@@ -173,8 +174,8 @@ export class ChartsService {
     if (dto.description !== undefined) chart.description = dto.description ?? "";
     await chartsRepo.save(chart);
 
-    if (dto.devicesLocations !== undefined) {
-      const placements = dto.devicesLocations;
+    if (dto.devicesOnChart !== undefined) {
+      const placements = dto.devicesOnChart;
       const uniqDeviceIds = [...new Set(placements.map(d => d.device.id))];
       if (uniqDeviceIds.length) {
         const count = await deviceRepo.count({ where: { id: In(uniqDeviceIds) } });

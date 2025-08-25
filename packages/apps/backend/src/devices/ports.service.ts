@@ -1,4 +1,4 @@
-import type { Port, PortCreate, PortUpdate } from '@easy-charts/easycharts-types';
+import type { Port, PortCreate, PortType, PortUpdate } from '@easy-charts/easycharts-types';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,7 +13,10 @@ export class PortsService {
   ) {}
 
   async createPort(dto: PortCreate) : Promise<Port> {
-    const entity = this.portsRepo.create(dto);
+    const entity = this.portsRepo.create({
+      ...dto,
+      type: dto.type as PortType
+    });
     return this.portsRepo.save(entity);
   }
 
@@ -44,7 +47,7 @@ export class PortsService {
   }
 
   async updatePort(id: string, dto: PortUpdate) : Promise<Port> {
-    await this.portsRepo.update(id, dto);
+    await this.portsRepo.update(id, {...dto, type: dto.type as PortType});
     return this.getPortrById(id);
   }
 

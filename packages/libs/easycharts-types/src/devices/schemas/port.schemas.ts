@@ -12,7 +12,7 @@ export const PortCreateSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
   deviceId: z.string().uuid(),
-  type: PortTypeValues
+  type: z.enum(PortTypeValues)
 });
 
 export const PortUpdateSchema = PortBaseSchema.partial().refine(
