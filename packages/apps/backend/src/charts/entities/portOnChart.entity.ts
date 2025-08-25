@@ -9,15 +9,14 @@ import {
 } from "typeorm";
 import { DeviceOnChartEntity } from "./deviceOnChart.entityEntity";
 import { PortEntity } from "../../devices/entities/port.entity";
-
-export const PortSideValues = ["left", "right", "top", "bottom"] as const;
-export type PortSide = (typeof PortSideValues)[number];
+import { type PortSide, type ConnectionDirection } from "@easy-charts/easycharts-types";
 
 @Entity({ name: "ports_on_chart" })
 @Index(["chartId", "deviceId"]) // fast lookups per node
 @Index(["chartId", "deviceId", "side"], { unique: true }) // no dup slot
 @Index(["chartId", "deviceId", "portId"], { unique: true }) // same port once per node
 @Check(`"side" IN ('left','right','top','bottom')`)
+@Check(`"side" IN ('source','target')`)
 export class PortOnChartEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
@@ -47,4 +46,8 @@ export class PortOnChartEntity {
 
   @Column({ type: "varchar", length: 8 })
   side!: PortSide; // "left" | "right" | "top" | "bottom"
+
+  @Column({ type: "varchar", length: 8 })
+  direction !: ConnectionDirection; // "source" | "target"
+
 }

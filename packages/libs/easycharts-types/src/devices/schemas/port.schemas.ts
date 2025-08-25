@@ -1,8 +1,6 @@
 import { IdentifiableSchema } from "../../generic.schema.js";
 import z from "zod";
-
-
-export const PortTypeValues = ["rj45", "sfp","qsfp"] as const;
+import { PortTypeValues } from "../types/port.types.js";
 
 export const PortBaseSchema = z.object({
   name: z.string().min(1),
@@ -14,7 +12,7 @@ export const PortCreateSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
   deviceId: z.string().uuid(),
-  type: z.enum(PortTypeValues)
+  type: PortTypeValues
 });
 
 export const PortUpdateSchema = PortBaseSchema.partial().refine(
