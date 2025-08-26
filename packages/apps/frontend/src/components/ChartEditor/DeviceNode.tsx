@@ -79,7 +79,8 @@ const portsInUseIds = useMemo(() => {
     ...(handles.top ?? []),
     ...(handles.bottom ?? []),
   ];
-  return new Set(all.map(h => h.port.id));
+  console.log("handles",handles,all)
+  return new Set(all.map(h => h?.port?.id));
 }, [handles]);
 
 
@@ -90,7 +91,7 @@ const portsInUseIds = useMemo(() => {
   const onAddHandle =  (side: Side) => {
     if (isEditorOpen) return;
     setIsEditorOpen(true);
-   const port : Port = defaultPortValues;
+   const port : Port = {...defaultPortValues, id: uuidv4()};
     setNewPort(port);
     const newHandle: HandleInfo = { port, direction: "target" };
     updateDeviceOnChart({
@@ -134,7 +135,7 @@ const portsInUseIds = useMemo(() => {
 
   const onInlineEditorPlusClick  = (e:React.MouseEvent<HTMLButtonElement, MouseEvent>) =>{
     e.stopPropagation();
-    setNewPort(defaultPortValues);
+    setNewPort({...defaultPortValues, id: uuidv4()});
     setCreateDialogOpen(true);
   }
 
