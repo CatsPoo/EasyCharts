@@ -5,7 +5,6 @@ import {type ZodSchema } from "zod";
 export class ZodValidationPipe implements PipeTransform {
   constructor(private readonly schema: ZodSchema) {}
   transform(value: unknown) {
-    console.log(value)
     const result = this.schema.safeParse(value);
     if (!result.success) {
       const issues = result.error.issues.map(i => ({
@@ -13,6 +12,7 @@ export class ZodValidationPipe implements PipeTransform {
         message: i.message,
         code: i.code,
       }));
+      console.log('Validation failed', issues);
       throw new BadRequestException({ message: 'Validation failed', issues });
     }
     return result.data;

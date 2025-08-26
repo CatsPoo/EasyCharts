@@ -27,9 +27,9 @@ import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
 
 interface ChardEditorProps {
   chart: Chart;
-  setChart: (chart: Chart) => void;
+  setChart:  React.Dispatch<React.SetStateAction<Chart>>;
   editMode: boolean;
-  setMadeChanges: (val: boolean) => void;
+  setMadeChanges: React.Dispatch<React.SetStateAction<boolean>>;
 }
 export function ChartEditor({
   chart,
@@ -67,17 +67,20 @@ export function ChartEditor({
     [availableDevices]
   );
 
-  const updateDeviceOnChartHandles = useCallback(
-    (deviceId: string, handles: Handles) => {
-      const next: Chart = {
-        ...chart,
-        devicesOnCharts: chart.devicesOnCharts.map((loc) =>
-          loc.device.id === deviceId ? { ...loc, handles } : loc
-        ),
-      };
-      setChart(next);
+  const updateDeviceOnChart = useCallback(
+    (deviceOnChart: DeviceOnChart) => {
+      const { device, handles } = deviceOnChart;
+      setChart((prev) => {
+        return {
+          ...prev,
+          devicesOnChart: prev.devicesOnChart.map((doc) =>
+            doc.device.id === device.id ? { ...doc, handles, device } : doc
+          ),
+        };
+      });
       setMadeChanges(true);
-    },[setChart, setMadeChanges]
+    },
+    [setChart, chart, setMadeChanges]
   );
 
   const convertDeviceToNode = (deviceOnChart: DeviceOnChart): Node => {
@@ -89,7 +92,7 @@ export function ChartEditor({
       data: {
         deviceOnChart: deviceOnChart,
         editMode,
-        updateHandles: updateDeviceOnChartHandles
+        updateDeviceOnChart
       } as DeviceNodeData,
     };
     return node;
@@ -142,14 +145,13 @@ export function ChartEditor({
       );
 
       return prev.map((prevNode) => {
-        if (!prevNode.selected) return prevNode; // only touch selected
+        
         const doc = docsById.get(prevNode.id);
-        if (!doc) return prevNode; // device removed, leave as-is
+        if (!doc) return prevNode;
 
-        // PATCH: keep selection/dragging/zIndex etc., update just what changed
         return {
           ...prevNode,
-          data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData, // handles, callbacks, etc.
+          data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData, 
           selected: prevNode.selected, // preserve selection (explicit)
         };
       });
@@ -196,14 +198,16 @@ export function ChartEditor({
 
   const onNodeDragStop = useCallback(
     (_e: React.MouseEvent, node: Node) => {
-      // find the device-on-chart and update its position immutably
-      const next: Chart = {
-        ...chart,
-        devicesOnCharts: chart.devicesOnCharts.map((loc) =>
-          loc.device.id === node.id ? { ...loc, position: node.position } : loc
-        ),
-      };
-      setChart(next);
+      setChart((prev) => {
+        return {
+          ...prev,
+          devicesOnChart: prev.devicesOnChart.map((loc) =>
+            loc.device.id === node.id
+              ? { ...loc, position: node.position }
+              : loc
+          ),
+        };
+      });
       setMadeChanges(true);
     },
     [chart, setChart, setMadeChanges]
@@ -217,23 +221,39 @@ export function ChartEditor({
       if (!deviceId) return;
 
       const device: Device | undefined = devicesById.get(deviceId);
-      if(!device) return 
+      if (!device) return;
       const bounds = reactFlowWrapper.current.getBoundingClientRect();
       const position = project({
         x: e.clientX - bounds.left,
         y: e.clientY - bounds.top,
       });
-      const newNode: Node = convertDeviceToNode({device, position,handles:{left:[],right:[],top:[],bottom:[]} as Handles} as DeviceOnChart); 
+      const defaultHandles: Handles = {
+        left: [],
+        right: [],
+        top: [],
+        bottom: [],
+      };
+      const newNode: Node = convertDeviceToNode({
+        device,
+        position,
+        handles: defaultHandles,
+      } as DeviceOnChart);
       setNodes((nds) => [...nds, newNode]);
 
-      const nextChart: Chart = {
-        ...chart,
-        devicesOnChart: [
-          ...chart.devicesOnChart,
-          { chartId: chart.id, device, position } as DeviceOnChart,
-        ],
-      };
-      setChart(nextChart);
+      setChart((prev) => {
+        return {
+          ...chart,
+          devicesOnChart: [
+            ...chart.devicesOnChart,
+            {
+              chartId: chart.id,
+              device,
+              position,
+              handles: defaultHandles,
+            } as DeviceOnChart,
+          ],
+        };
+      });
       setMadeChanges(true);
     },
     [editMode, project, devicesById, setNodes, setChart, setMadeChanges, chart]

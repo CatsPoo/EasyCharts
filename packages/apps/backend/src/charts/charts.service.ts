@@ -1,6 +1,6 @@
 // src/charts/charts.service.ts
 import {
-  Handle,
+  HandleInfo,
   Port,
   SIDES,
   type Chart,
@@ -57,7 +57,7 @@ export class ChartsService {
 }
 
  rowsToHandles(placements: PortOnChartEntity[]) :Handles{
-  const bySide: Record<Side, Handle[]> = { left: [], right: [], top: [], bottom: [] };
+  const bySide: Record<Side, HandleInfo[]> = { left: [], right: [], top: [], bottom: [] };
   for (const r of placements) {
     bySide[r.side].push({port:this.convertPortEntityToPort(r.port), direction: r.direction})
   }

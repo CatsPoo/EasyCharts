@@ -1,27 +1,20 @@
 import {
   PortTypeValues,
-  type DeviceOnChart,
-  type Handles,
+  type HandleInfo,
   type Port,
-  type PortCreate,
-  type Side,
+  type Side
 } from "@easy-charts/easycharts-types";
-import {useCallback, useLayoutEffect, useMemo, useState } from "react";
-import type { NodeProps } from "reactflow";
-import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import AddIcon from "@mui/icons-material/Add";
-import RemoveIcon from "@mui/icons-material/Remove";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import RemoveIcon from "@mui/icons-material/Remove";
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, Select, TextField } from "@mui/material";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { NodeProps } from "reactflow";
+import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
-import { createPort } from "../../hooks/portsHooks";
+import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
 
-type DeviceNodeData = {
-  deviceOnChart: DeviceOnChart;
-  editMode: boolean;
-  updateHandles:  (deviceId:string,handles: Handles) => void; 
-};
 
 function initials(text?: string) {
   if (!text) return "Unknow";
@@ -34,7 +27,7 @@ export default function DeviceNode({
   data,
   selected,
 }: NodeProps<DeviceNodeData>) {
-  const { deviceOnChart, editMode,updateHandles } = data;
+  const { deviceOnChart, editMode,updateDeviceOnChart } = data;
   const { device,handles} = deviceOnChart;
   const { id: deviceId, name, ipAddress, model } = device;
   const { name: modelName, iconUrl, vendor } = model;
@@ -54,6 +47,7 @@ export default function DeviceNode({
   const [newPortType, setNewPortType] = useState<string>(
     portTypeOptions[0] ?? ""
   );
+  const [newPort, setNewPort] = useState<Port | null>(null);
 
   function spread(count: number, pad = 10) {
     if (count <= 0) return [];
@@ -76,42 +70,45 @@ export default function DeviceNode({
   const topXs    = useMemo(() => spread(handles.top.length),    [handles.top]);
   const bottomXs = useMemo(() => spread(handles.bottom.length), [handles.bottom]);
 
-  const portsInuse = useMemo(() => {
-    const all = [
-      ...(handles.left ?? []),
-      ...(handles.right ?? []),
-      ...(handles.top ?? []),
-      ...(handles.bottom ?? []),
-    ];
-    return all.map(p => p.port)
-  },[handles])
+const portsInUseIds = useMemo(() => {
+  const all: HandleInfo[] = [
+    ...(handles.left ?? []),
+    ...(handles.right ?? []),
+    ...(handles.top ?? []),
+    ...(handles.bottom ?? []),
+  ];
+  return new Set(all.map(h => h.port.id));
+}, [handles]);
+
+
   useLayoutEffect(() => {
     updateInternals(deviceId);
   }, [deviceId,editMode, deviceOnChart, updateInternals]);
 
-  const onAddHandle = (side: Side) => {
+  const onAddHandle =  (side: Side) => {
     if (isEditorOpen) return;
     setIsEditorOpen(true);
-    let newport: Port ={ id: uuidv4(), name: draftValue,type:'rj45', deviceId };
-    updateHandles(deviceId,{
-      ...handles,
-      [side]: [...(handles[side] ?? []), newport],
+   const port : Port = { id: uuidv4(), name: draftValue, type: "rj45", deviceId };
+    setNewPort(port);
+    const newHandle: HandleInfo = { port, direction: "target" };
+    updateDeviceOnChart({
+      ...deviceOnChart,
+      handles: {
+        ...handles,
+        [side]: [...(handles[side] ?? []), newHandle],
+      },
     });
     setPendingSide(side);
   };
 
-  const addPortToHandle =async  (side: Side,port:Port) => {
-    try{
-      updateHandles(deviceId,{
+  const addPortToHandle = async (side: Side, port: Port) => {
+    updateDeviceOnChart({
+      ...deviceOnChart,
+      handles: {
         ...handles,
-        [side]: [...(handles[side]?? []).slice(0, -1), port]
-      })
-    }
-    catch(err){
-      console.error(err)
-      cancelInlineEditor()
-      return
-    }
+        [side]: [...(handles[side] ?? []).slice(0, -1), port],
+      },
+    });
     setIsEditorOpen(false);
     setDraftValue("");
   };
@@ -122,13 +119,16 @@ export default function DeviceNode({
  
 
   const cancelInlineEditor = () => {
-    if(!pendingSide) return;
+    if (!pendingSide) return;
     setDraftValue("");
     setIsEditorOpen(false);
-    updateHandles(deviceId,{
-          ...handles,
-          [pendingSide]: (handles[pendingSide] ?? []).slice(0, -1),
-        });
+    updateDeviceOnChart({
+      ...deviceOnChart,
+      handles: {
+        ...handles,
+        [pendingSide]: (handles[pendingSide] ?? []).slice(0, -1),
+      },
+    });
     setPendingSide(null);
   };
 
@@ -148,24 +148,20 @@ export default function DeviceNode({
     setSelectedPortId("");
   }
 
-  const onCreatePort = async (name: string, type: string) => {
-    if(!pendingSide) return;
-    const id: string = uuidv4();
-    try{
-      const newPort = await createPort({id,deviceId,name,type} as PortCreate)
-       updateHandles(deviceId,{
-          ...handles,
-          [pendingSide]: [(handles[pendingSide] ?? []).slice(0, -1),newPort],
-        });
-      setCreateDialogOpen(false);
-    }catch(err){
-      console.error(err)
-      return
-    }
+  const onCreatePort = () => {
+    if (!pendingSide) return;
+    if (!newPort) return;
+
+    updateDeviceOnChart({
+      ...deviceOnChart,
+      device: { ...device, ports: [...device.ports, newPort] }
+    })
+    setNewPort(null);
+    setCreateDialogOpen(false);
   };
 
   const onDialogCreateButtonClick = async  () =>{
-    await onCreatePort(newPortName.trim(), newPortType);
+    onCreatePort();
     setCreateDialogOpen(false);
     setNewPortName("");
   }
@@ -196,7 +192,7 @@ export default function DeviceNode({
       </option>
       
       {/* show only ports not already in use */}
-      {device.ports.filter(d => !new Set(portsInuse).has(d)) .map((p) => (
+      {device.ports.filter(p => !portsInUseIds.has(p.id)).map(p => (
         <option key={p.id} value={p.id}>
           {p.name} ({p.type})
         </option>
@@ -317,8 +313,8 @@ export default function DeviceNode({
 
       {leftYs.map((y, i) => (
         <Handle
-          key={handles?.left?.[i].port.id}
-          id={handles?.left?.[i].port.id}
+          key={handles?.left?.[i]?.port?.id}
+          id={handles?.left?.[i].port?.id}
           type='target'
           position={Position.Left}
           style={{ top: `${y}%` }}
@@ -326,8 +322,8 @@ export default function DeviceNode({
       ))}
       {rightYs.map((y, i) => (
         <Handle
-          key={handles?.right?.[i].port.id}
-          id={handles?.right?.[i].port.id}
+          key={handles?.right?.[i].port?.id}
+          id={handles?.right?.[i].port?.id}
           type="source"
           position={Position.Right}
           style={{ top: `${y}%` }}
@@ -335,8 +331,8 @@ export default function DeviceNode({
       ))}
       {topXs.map((x, i) => (
         <Handle
-          key={handles?.top?.[i].port.id}
-          id={handles?.top?.[i].port.id}
+          key={handles?.top?.[i].port?.id}
+          id={handles?.top?.[i].port?.id}
           type="target"
           position={Position.Top}
           style={{ left: `${x}%` }}
@@ -344,8 +340,8 @@ export default function DeviceNode({
       ))}
       {bottomXs.map((x, i) => (
         <Handle
-          key={handles?.bottom?.[i].port.id}
-          id={handles?.bottom?.[i].port.id}
+          key={handles?.bottom?.[i].port?.id}
+          id={handles?.bottom?.[i].port?.id}
           type="target"
           position={Position.Bottom}
           style={{ left: `${x}%` }}

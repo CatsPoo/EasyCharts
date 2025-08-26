@@ -1,10 +1,11 @@
 import AppBar from '@mui/material/AppBar';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
+import type { Dispatch, SetStateAction } from 'react';
 
 interface NavBarProps {
   value: Number;
-  onChange: (newValue: Number) => void;
+  onChange: Dispatch<SetStateAction<number>>;
 }
 
 export function NavBar({ value, onChange }: NavBarProps) {
