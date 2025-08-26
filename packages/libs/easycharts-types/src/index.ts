@@ -1,5 +1,5 @@
-export * from './generic.interface.js'
-export * from './topology/index.js'
+export * from './generic.schema.js'
+export * from './generic.types.js'
 export * from './assets/index.js'
 export * from './devices/index.js'
 export * from './charts/index.js'

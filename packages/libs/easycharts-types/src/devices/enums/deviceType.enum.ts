@@ -1,5 +1,3 @@
-export enum DeviceType{
-    SERVER = "Server",
-    Switch = "Switch",
-    ROUTER = "Router"
-}
+import z from "zod";
+
+export const deviceTypeEnum = z.enum(["Router", "Switch", "Computer", "Server","Phone"]);

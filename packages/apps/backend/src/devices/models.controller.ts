@@ -1,4 +1,10 @@
 import {
+  ModelCreateSchema,
+  type ModelUpdate,
+  ModelUpdateSchema,
+  type ModelCreate,
+} from "@easy-charts/easycharts-types";
+import {
   Body,
   Controller,
   Delete,
@@ -7,21 +13,22 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
-  Put,
   Post,
+  Put,
   Query,
-} from '@nestjs/common';
-import type { CreateModelDto, UpdateModelDto } from '@easy-charts/easycharts-types';
-import { ModelsService } from './model.service';
-import { ListModelsQueryDto } from '../query/dto/query.dto';
-
-@Controller('models')
+  UsePipes,
+} from "@nestjs/common";
+import { ListModelsQueryDto } from "../query/dto/query.dto";
+import { ModelsService } from "./model.service";
+import { ZodValidationPipe } from "../common/zodValidation.pipe";
+@Controller("models")
 export class ModelsController {
   constructor(private readonly modelsService: ModelsService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() payload: CreateModelDto) {
+  create(
+    @Body(new ZodValidationPipe(ModelCreateSchema)) payload: ModelCreate) {
     return this.modelsService.createModel(payload);
   }
 
@@ -31,22 +38,22 @@ export class ModelsController {
     return this.modelsService.listModels(q);
   }
 
-  @Get(':id')
-  getById(@Param('id', new ParseUUIDPipe()) id: string) {
+  @Get(":id")
+  getById(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.modelsService.getModelById(id);
   }
 
-  @Put(':id')
+  @Put(":id")
   update(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() payload: UpdateModelDto,
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(ModelUpdateSchema)) payload: ModelUpdate
   ) {
     return this.modelsService.updateModel(id, payload);
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', new ParseUUIDPipe()) id: string) {
+  remove(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.modelsService.removeModel(id);
   }
 }

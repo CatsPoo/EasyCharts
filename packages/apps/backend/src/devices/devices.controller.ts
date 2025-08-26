@@ -7,22 +7,29 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
-  Put,
   Post,
+  Put,
   Query,
+  UsePipes,
 } from '@nestjs/common';
-import { DevicesService } from './devices.service';
-import type  {CreateDeviceDto, UpdateDeviceDto } from '@easy-charts/easycharts-types';
 import { QueryDto } from '../query/dto/query.dto';
+import { DevicesService } from './devices.service';
+import { ZodValidationPipe } from '../common/zodValidation.pipe';
+import {
+  type DeviceCreate,
+  DeviceCreateSchema,
+  type DeviceUpdate,
+  DeviceUpdateSchema,
+} from "@easy-charts/easycharts-types";
 
-@Controller('devices')
+@Controller("devices")
 export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() payload: CreateDeviceDto) {
-    return this.devicesService.createDevice(payload);
+  create(@Body(new ZodValidationPipe(DeviceCreateSchema)) dto: DeviceCreate) {
+    return this.devicesService.createDevice(dto);
   }
 
   // GET /devices?page=&pageSize=&search=&sortBy=&sortDir=
@@ -31,22 +38,22 @@ export class DevicesController {
     return this.devicesService.listDevices(q);
   }
 
-  @Get(':id')
-  getById(@Param('id', new ParseUUIDPipe()) id: string) {
+  @Get(":id")
+  getById(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.devicesService.getDeviceById(id);
   }
 
-  @Put(':id')
+  @Put(":id")
   update(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() payload: UpdateDeviceDto,
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(DeviceUpdateSchema)) payload: DeviceUpdate
   ) {
     return this.devicesService.updateDevice(id, payload);
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', new ParseUUIDPipe()) id: string) {
+  remove(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.devicesService.removeDevice(id);
   }
 }
