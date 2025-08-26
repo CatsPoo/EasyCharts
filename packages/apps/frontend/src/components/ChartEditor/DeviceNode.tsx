@@ -1,5 +1,6 @@
 import {
   PortTypeValues,
+  type DeviceOnChart,
   type HandleInfo,
   type Port,
   type PortType,
@@ -88,12 +89,26 @@ const portsInUseIds = useMemo(() => {
     updateInternals(deviceId);
   }, [deviceId,editMode, deviceOnChart, updateInternals]);
 
+  useLayoutEffect(() => {
+    for (const side in handles) {
+      for (const handle of handles[side as Side]) {
+        if (!handle.inUse && selected) handle.direction = "source";
+        else if (!handle.inUse && !selected) handle.direction = "target";
+      }
+    }
+
+    updateDeviceOnChart({
+      ...deviceOnChart,
+      handles,
+    });
+  }, [selected]);
+
   const onAddHandle =  (side: Side) => {
     if (isEditorOpen) return;
     setIsEditorOpen(true);
    const port : Port = {...defaultPortValues, id: uuidv4()};
     setNewPort(port);
-    const newHandle: HandleInfo = { port, direction: "target" };
+    const newHandle: HandleInfo = { port, direction: "source", inUse: false };
     updateDeviceOnChart({
       ...deviceOnChart,
       handles: {
@@ -109,7 +124,7 @@ const portsInUseIds = useMemo(() => {
       ...deviceOnChart,
       handles: {
         ...handles,
-        [side]: [...(handles[side] ?? []).slice(0, -1), port],
+        [side]: [...(handles[side] ?? []).slice(0, -1), { port, direction: 'source' } as HandleInfo],
       },
     });
     setIsEditorOpen(false);
@@ -168,10 +183,6 @@ const portsInUseIds = useMemo(() => {
     setCreateDialogOpen(false);
     setNewPortName("");
   }
-
-  const getHandleType = useCallback((portId:string)=>{
-
-  },[])
 
   const inlineEditor = (() => {
   if (!pendingSide) return null;
@@ -318,7 +329,7 @@ const portsInUseIds = useMemo(() => {
         <Handle
           key={handles?.left?.[i]?.port?.id}
           id={handles?.left?.[i].port?.id}
-          type='target'
+          type={handles?.left?.[i].direction}
           position={Position.Left}
           style={{ top: `${y}%` }}
         />
@@ -327,7 +338,7 @@ const portsInUseIds = useMemo(() => {
         <Handle
           key={handles?.right?.[i].port?.id}
           id={handles?.right?.[i].port?.id}
-          type="source"
+          type={handles?.right?.[i].direction}
           position={Position.Right}
           style={{ top: `${y}%` }}
         />
@@ -336,7 +347,7 @@ const portsInUseIds = useMemo(() => {
         <Handle
           key={handles?.top?.[i].port?.id}
           id={handles?.top?.[i].port?.id}
-          type="target"
+          type={handles?.top?.[i].direction}
           position={Position.Top}
           style={{ left: `${x}%` }}
         />
@@ -345,7 +356,7 @@ const portsInUseIds = useMemo(() => {
         <Handle
           key={handles?.bottom?.[i].port?.id}
           id={handles?.bottom?.[i].port?.id}
-          type="target"
+          type={handles?.bottom?.[i].direction}
           position={Position.Bottom}
           style={{ left: `${x}%` }}
         />

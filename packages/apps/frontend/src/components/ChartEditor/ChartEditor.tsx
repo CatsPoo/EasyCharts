@@ -1,9 +1,11 @@
-import type {
-  Chart,
-  Device,
-  DeviceOnChart,
-  Handles,
-  Line,
+import {
+  DirectionsValues,
+  type Chart,
+  type Device,
+  type DeviceOnChart,
+  type HandleInfo,
+  type Handles,
+  type Line,
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -66,6 +68,14 @@ export function ChartEditor({
       new Map(availableDevices.map((d: Device): [string, Device] => [d.id, d])),
     [availableDevices]
   );
+
+  const countLinesForHandle =(handle: HandleInfo): number => {
+  const pid = handle.port.id;
+  return chart.lines.filter(
+    (line) => line.sourcePorteId === pid || line.targetPortId === pid
+  ).length;
+}
+
 
   const updateDeviceOnChart = useCallback(
     (deviceOnChart: DeviceOnChart) => {
@@ -174,17 +184,21 @@ export function ChartEditor({
 
   const onConnect = useCallback(
     (c: Connection) => {
+      console.log("onConnect",c);
       setEdges((eds) => addEdge(c, eds));
     },
     [setEdges]
   );
-
+  
   const OnReconnectStart = useCallback(() => {
     setIsReconnecting(true);
+    
+    setMadeChanges(true);
   }, [setIsReconnecting]);
 
   const OnReconnectEnd = useCallback(() => {
     setIsReconnecting(false);
+    
   }, [setIsReconnecting]);
 
   const onDragOver = useCallback(

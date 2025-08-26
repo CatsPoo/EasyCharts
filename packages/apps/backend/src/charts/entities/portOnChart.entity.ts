@@ -50,4 +50,7 @@ export class PortOnChartEntity {
   @Column({ type: "varchar", length: 8 })
   direction !: ConnectionDirection; // "source" | "target"
 
+  @Column({ type: "boolean", default: false })
+  inUse!: boolean; 
+
 }
