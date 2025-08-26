@@ -6,13 +6,15 @@ export const PortBaseSchema = z.object({
   name: z.string().min(1),
   deviceId: z.string().uuid(),
   type: z.enum(PortTypeValues),
+  inUse: z.boolean().default(false),
 });
 
 export const PortCreateSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
   deviceId: z.string().uuid(),
-  type: z.enum(PortTypeValues)
+  type: z.enum(PortTypeValues),
+  inUse: z.boolean().default(false),
 });
 
 export const PortUpdateSchema = PortBaseSchema.partial().refine(

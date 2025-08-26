@@ -92,8 +92,8 @@ const portsInUseIds = useMemo(() => {
   useLayoutEffect(() => {
     for (const side in handles) {
       for (const handle of handles[side as Side]) {
-        if (!handle.inUse && selected) handle.direction = "source";
-        else if (!handle.inUse && !selected) handle.direction = "target";
+        if (!handle.port.inUse && selected) handle.direction = "source";
+        else if (!handle.port.inUse && !selected) handle.direction = "target";
       }
     }
 
@@ -108,7 +108,7 @@ const portsInUseIds = useMemo(() => {
     setIsEditorOpen(true);
    const port : Port = {...defaultPortValues, id: uuidv4()};
     setNewPort(port);
-    const newHandle: HandleInfo = { port, direction: "source", inUse: false };
+    const newHandle: HandleInfo = { port, direction: "source" };
     updateDeviceOnChart({
       ...deviceOnChart,
       handles: {

@@ -16,6 +16,9 @@ export class PortEntity {
   @Column({ name: 'device_id', type: 'uuid' })
   deviceId!: string;
 
+  @Column({ type: "boolean", default: false })
+    inUse!: boolean; 
+
   @ManyToOne(() => DeviceEntity, (device) => device.ports, {
     onDelete: 'CASCADE',
   })
