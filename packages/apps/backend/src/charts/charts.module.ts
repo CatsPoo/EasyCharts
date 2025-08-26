@@ -6,7 +6,10 @@ import { ChartEntity } from './entities/chart.entity';
 import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
 import { DevicesModule } from '../devices/devices.module';
 import { DeviceEntity } from '../devices/entities/device.entity';
-import { LineEntity } from './entities/line.entity';
+import { LineEntity } from '../lines/entities/line.entity';
+import { PortEntity } from '../devices/entities/port.entity';
+import { LinesModule } from '../lines/lines.module';
+import { PortOnChartEntity } from './entities/portOnChart.entity';
 
 @Module({
     imports: [
@@ -15,9 +18,12 @@ import { LineEntity } from './entities/line.entity';
            ChartEntity,
            DeviceOnChartEntity,
            DeviceEntity,
-           LineEntity       
+           LineEntity,
+           PortEntity,
+           PortOnChartEntity       
         ]),
         DevicesModule,
+        LinesModule
     ],
     controllers: [ChartsController],
     providers: [ChartsService],

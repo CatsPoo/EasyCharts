@@ -4,7 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { VendorEntity } from '../devices/entities/vendor.entity';
 import { QueryDto } from "../query/dto/query.dto";
-import { promises } from 'dns';
 
 @Injectable()
 export class VendorsService {

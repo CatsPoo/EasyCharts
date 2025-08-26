@@ -1,12 +1,16 @@
-import type {
-  Chart,
-  Device,
-  DeviceOnChart,
-  Line,
+import {
+  DirectionsValues,
+  type Chart,
+  type Device,
+  type DeviceOnChart,
+  type HandleInfo,
+  type Handles,
+  type Line,
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from "reactflow";
+
 import ReactFlow, {
   addEdge,
   Background,
@@ -18,14 +22,16 @@ import ReactFlow, {
   useReactFlow,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { DevicesSidebar } from "./DevicesSideBar";
+import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import { useListAssets } from "../../hooks/assetsHooks";
+import DeviceNode from "./DeviceNode";
+import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
 
 interface ChardEditorProps {
   chart: Chart;
-  setChart: (chart: Chart) => void;
+  setChart:  React.Dispatch<React.SetStateAction<Chart>>;
   editMode: boolean;
-  setMadeChanges: (val: boolean) => void;
+  setMadeChanges: React.Dispatch<React.SetStateAction<boolean>>;
 }
 export function ChartEditor({
   chart,
@@ -33,7 +39,11 @@ export function ChartEditor({
   editMode,
   setMadeChanges,
 }: ChardEditorProps) {
+
+  const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
+
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
   const { data: availableDevicesResponse } = useListAssets("devices", {
@@ -43,8 +53,8 @@ export function ChartEditor({
 
 
   const usedIds = useMemo(
-    () => new Set(chart.devicesLocations.map(d => d.device.id)),
-    [chart.devicesLocations,setChart]
+    () => new Set(chart.devicesOnChart.map(d => d.device.id)),
+    [chart.devicesOnChart,setChart]
   );
 
   const availableDevices = availableDevicesResponse?.rows ?? [];
@@ -59,37 +69,57 @@ export function ChartEditor({
     [availableDevices]
   );
 
-  const convertDeviceToNode = (deviceLocations: DeviceOnChart): Node => {
-    const { device, position } = deviceLocations;
+  const countLinesForHandle =(handle: HandleInfo): number => {
+  const pid = handle.port.id;
+  return chart.lines.filter(
+    (line) => line.sourcePorteId === pid || line.targetPortId === pid
+  ).length;
+}
+
+
+  const updateDeviceOnChart = useCallback(
+    (deviceOnChart: DeviceOnChart) => {
+      const { device, handles } = deviceOnChart;
+      setChart((prev) => {
+        return {
+          ...prev,
+          devicesOnChart: prev.devicesOnChart.map((doc) =>
+            doc.device.id === device.id ? { ...doc, handles, device } : doc
+          ),
+        };
+      });
+      setMadeChanges(true);
+    },
+    [setChart, chart, setMadeChanges]
+  );
+
+  const convertDeviceToNode = (deviceOnChart: DeviceOnChart): Node => {
+    const { device, position } = deviceOnChart;
     const node: Node = {
       id: device.id,
-      type: "default",
+      type: "device",
       position,
-      data: { label: device.name },
+      data: {
+        deviceOnChart: deviceOnChart,
+        editMode,
+        updateDeviceOnChart
+      } as DeviceNodeData,
     };
     return node;
   };
 
-  const convertDevicesToNodes = (devicesLocations: DeviceOnChart[]): Node[] => {
-    const nodes: Node[] = devicesLocations.map((deviceLocation) =>
-      convertDeviceToNode(deviceLocation)
+  const convertDevicesToNodes = (devicesOnChart: DeviceOnChart[]): Node[] => {
+    const nodes: Node[] = devicesOnChart.map((deviceOnChart) =>
+      convertDeviceToNode(deviceOnChart)
     );
     return nodes;
-  };
-
-  const convertNodeToDeviceOnChart = (node: Node): DeviceOnChart => {
-    return {
-      chartId: chart.id,
-      device: devicesById.get(node.id),
-      position: node.position,
-    } as DeviceOnChart;
   };
 
   const convertLineToEdge = (line: Line): Edge => {
     return {
       id: line.id,
-      source: line.sourceDeviceId,
-      target: line.targetDeviceId,
+      source: line.sourcePorteId,
+      target: line.targetPortId,
       label: line.label,
       type: "step",
       animated: false, // optional: makes the edge animate
@@ -97,21 +127,47 @@ export function ChartEditor({
     };
   };
 
+  const convertEdgeToLine = (edge: Edge): Line => {
+    return {
+      id: edge.id,
+      sourcePorteId: edge.source,
+      targetPortId: edge.target,
+      label: edge.label,
+      type: edge.type
+    } as Line;
+  }
+
   const convertLinesToEdges = (lines: Line[]): Edge[] => {
     return lines ? lines.map((l) => convertLineToEdge(l)) : [];
   };
 
   const [nodes, setNodes, onNodesChangeRF] = useNodesState(
-    convertDevicesToNodes(chart.devicesLocations)
+    convertDevicesToNodes(chart.devicesOnChart)
   );
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState(
     convertLinesToEdges(chart.lines)
   );
 
   useEffect(() => {
-    setNodes(convertDevicesToNodes(chart.devicesLocations));
+    setNodes((prev) => {
+      const docsById = new Map(
+        chart.devicesOnChart.map((doc) => [doc.device.id, doc])
+      );
+
+      return prev.map((prevNode) => {
+        
+        const doc = docsById.get(prevNode.id);
+        if (!doc) return prevNode;
+
+        return {
+          ...prevNode,
+          data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData, 
+          selected: prevNode.selected, // preserve selection (explicit)
+        };
+      });
+    });
     setEdges(convertLinesToEdges(chart.lines));
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, chart.devicesOnChart]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -128,10 +184,22 @@ export function ChartEditor({
 
   const onConnect = useCallback(
     (c: Connection) => {
+      console.log("onConnect",c);
       setEdges((eds) => addEdge(c, eds));
     },
     [setEdges]
   );
+  
+  const OnReconnectStart = useCallback(() => {
+    setIsReconnecting(true);
+    
+    setMadeChanges(true);
+  }, [setIsReconnecting]);
+
+  const OnReconnectEnd = useCallback(() => {
+    setIsReconnecting(false);
+    
+  }, [setIsReconnecting]);
 
   const onDragOver = useCallback(
     (e: React.DragEvent) => {
@@ -143,19 +211,21 @@ export function ChartEditor({
   );
 
   const onNodeDragStop = useCallback(
-  (_e: React.MouseEvent, node: Node) => {
-    // find the device-on-chart and update its position immutably
-    const next: Chart = {
-      ...chart,
-      devicesLocations: chart.devicesLocations.map((loc) =>
-        loc.device.id === node.id ? { ...loc, position: node.position } : loc
-      ),
-    };
-    setChart(next);
-    setMadeChanges(true);
-  },
-  [chart, setChart, setMadeChanges]
-);
+    (_e: React.MouseEvent, node: Node) => {
+      setChart((prev) => {
+        return {
+          ...prev,
+          devicesOnChart: prev.devicesOnChart.map((loc) =>
+            loc.device.id === node.id
+              ? { ...loc, position: node.position }
+              : loc
+          ),
+        };
+      });
+      setMadeChanges(true);
+    },
+    [chart, setChart, setMadeChanges]
+  );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -165,28 +235,39 @@ export function ChartEditor({
       if (!deviceId) return;
 
       const device: Device | undefined = devicesById.get(deviceId);
-      if(!device) return 
+      if (!device) return;
       const bounds = reactFlowWrapper.current.getBoundingClientRect();
       const position = project({
         x: e.clientX - bounds.left,
         y: e.clientY - bounds.top,
       });
-      const newNode = {
-        id: `${deviceId}`,
-        type: "default",
-        position,
-        data: { label: device.name },
+      const defaultHandles: Handles = {
+        left: [],
+        right: [],
+        top: [],
+        bottom: [],
       };
+      const newNode: Node = convertDeviceToNode({
+        device,
+        position,
+        handles: defaultHandles,
+      } as DeviceOnChart);
       setNodes((nds) => [...nds, newNode]);
 
-      const nextChart: Chart = {
-        ...chart,
-        devicesLocations: [
-          ...chart.devicesLocations,
-          { chartId: chart.id, device, position } as DeviceOnChart,
-        ],
-      };
-      setChart(nextChart);
+      setChart((prev) => {
+        return {
+          ...chart,
+          devicesOnChart: [
+            ...chart.devicesOnChart,
+            {
+              chartId: chart.id,
+              device,
+              position,
+              handles: defaultHandles,
+            } as DeviceOnChart,
+          ],
+        };
+      });
       setMadeChanges(true);
     },
     [editMode, project, devicesById, setNodes, setChart, setMadeChanges, chart]
@@ -221,6 +302,7 @@ export function ChartEditor({
         className="flex-1"
       >
         <ReactFlow
+          nodeTypes={nodeTypes}
           nodes={nodes}
           edges={edges}
           onNodesChange={editMode ? onNodesChange : undefined}
@@ -228,6 +310,8 @@ export function ChartEditor({
           onEdgesChange={editMode ? onEdgesChange : undefined}
           onConnect={editMode ? onConnect : undefined}
           onEdgeUpdate={editMode ? onEdgeUpdate : undefined}
+          onReconnectStart={OnReconnectStart}
+          onReconnectEnd={OnReconnectEnd}
           nodesDraggable={editMode}
           nodesConnectable={editMode}
           defaultEdgeOptions={{ type: ConnectionLineType.Step }}

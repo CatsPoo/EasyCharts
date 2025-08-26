@@ -6,7 +6,7 @@ import { LineSchema } from "./line.schemas.js";
 export const ChartCreateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  devicesLocations: z.array(DeviceOnChartSchema),
+  devicesOnChart: z.array(DeviceOnChartSchema),
   lines: z.array(LineSchema).optional()
 });
 
@@ -15,11 +15,11 @@ export const ChartUpdateSchema = ChartCreateSchema.partial();
 export const ChartSchema = IdentifiableSchema.extend({
   name: z.string(),
   description: z.string(),
-  devicesLocations: z.array(DeviceOnChartSchema),
+  devicesOnChart: z.array(DeviceOnChartSchema),
   lines: z.array(LineSchema)
 });
 
 export const ChartMetadataSchema = ChartSchema.omit({
-  devicesLocations: true,
+  devicesOnChart: true,
   lines: true,
 });
