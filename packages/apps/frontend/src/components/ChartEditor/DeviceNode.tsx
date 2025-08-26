@@ -66,7 +66,7 @@ export default function DeviceNode({
     return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
   };
 
-  const defaultPortValues: Port = { id: uuidv4(), name: '', type: 'rj45', deviceId };
+  const defaultPortValues: Port = { id: uuidv4(), name: '', type: 'rj45', deviceId, inUse: false };
 
   const leftYs   = useMemo(() => spread(handles.left.length),   [handles.left]);
   const rightYs  = useMemo(() => spread(handles.right.length),  [handles.right]);
@@ -74,15 +74,19 @@ export default function DeviceNode({
   const bottomXs = useMemo(() => spread(handles.bottom.length), [handles.bottom]);
 
 const portsInUseIds = useMemo(() => {
-  const all: HandleInfo[] = [
-    ...(handles.left ?? []),
-    ...(handles.right ?? []),
-    ...(handles.top ?? []),
-    ...(handles.bottom ?? []),
+  const list: HandleInfo[] = [
+    ...(deviceOnChart.handles.left ?? []),
+    ...(deviceOnChart.handles.right ?? []),
+    ...(deviceOnChart.handles.top ?? []),
+    ...(deviceOnChart.handles.bottom ?? []),
   ];
-  console.log("handles",handles,all)
-  return new Set(all.map(h => h?.port?.id));
-}, [handles]);
+  return new Set(list.map(h => h.port.id));
+}, [
+  deviceOnChart.handles.left,
+  deviceOnChart.handles.right,
+  deviceOnChart.handles.top,
+  deviceOnChart.handles.bottom,
+]);
 
 
   useLayoutEffect(() => {
