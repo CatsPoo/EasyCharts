@@ -2,6 +2,7 @@ import {
   PortTypeValues,
   type HandleInfo,
   type Port,
+  type PortType,
   type Side
 } from "@easy-charts/easycharts-types";
 import AddIcon from "@mui/icons-material/Add";
@@ -34,7 +35,6 @@ export default function DeviceNode({
   const { name: vendorName } = vendor ?? {};
 
   const [pendingSide, setPendingSide] = useState<Side | null>(null);
-  const [draftValue, setDraftValue] = useState("");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   const updateInternals = useUpdateNodeInternals();
@@ -65,6 +65,8 @@ export default function DeviceNode({
     return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
   };
 
+  const defaultPortValues: Port = { id: uuidv4(), name: '', type: 'rj45', deviceId };
+
   const leftYs   = useMemo(() => spread(handles.left.length),   [handles.left]);
   const rightYs  = useMemo(() => spread(handles.right.length),  [handles.right]);
   const topXs    = useMemo(() => spread(handles.top.length),    [handles.top]);
@@ -88,7 +90,7 @@ const portsInUseIds = useMemo(() => {
   const onAddHandle =  (side: Side) => {
     if (isEditorOpen) return;
     setIsEditorOpen(true);
-   const port : Port = { id: uuidv4(), name: draftValue, type: "rj45", deviceId };
+   const port : Port = defaultPortValues;
     setNewPort(port);
     const newHandle: HandleInfo = { port, direction: "target" };
     updateDeviceOnChart({
@@ -110,7 +112,6 @@ const portsInUseIds = useMemo(() => {
       },
     });
     setIsEditorOpen(false);
-    setDraftValue("");
   };
   const onRemoveHandle = (side:Side) => {
     // TODO: implement remove handle for `side`
@@ -120,7 +121,6 @@ const portsInUseIds = useMemo(() => {
 
   const cancelInlineEditor = () => {
     if (!pendingSide) return;
-    setDraftValue("");
     setIsEditorOpen(false);
     updateDeviceOnChart({
       ...deviceOnChart,
@@ -134,6 +134,7 @@ const portsInUseIds = useMemo(() => {
 
   const onInlineEditorPlusClick  = (e:React.MouseEvent<HTMLButtonElement, MouseEvent>) =>{
     e.stopPropagation();
+    setNewPort(defaultPortValues);
     setCreateDialogOpen(true);
   }
 
@@ -152,9 +153,10 @@ const portsInUseIds = useMemo(() => {
     if (!pendingSide) return;
     if (!newPort) return;
 
+    const portToUse: Port = { ...newPort, name: newPortName, type: newPortType as PortType };
     updateDeviceOnChart({
       ...deviceOnChart,
-      device: { ...device, ports: [...device.ports, newPort] }
+      device: { ...device, ports: [...device.ports, portToUse] }
     })
     setNewPort(null);
     setCreateDialogOpen(false);
