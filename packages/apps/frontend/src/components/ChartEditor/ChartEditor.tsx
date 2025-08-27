@@ -69,14 +69,6 @@ export function ChartEditor({
     [availableDevices]
   );
 
-  const countLinesForHandle =(handle: HandleInfo): number => {
-  const pid = handle.port.id;
-  return chart.lines.filter(
-    (line) => line.sourcePorteId === pid || line.targetPortId === pid
-  ).length;
-}
-
-
   const updateDeviceOnChart = useCallback(
     (deviceOnChart: DeviceOnChart) => {
       const { device, handles } = deviceOnChart;
@@ -159,6 +151,20 @@ export function ChartEditor({
         const doc = docsById.get(prevNode.id);
         if (!doc) return prevNode;
 
+        const handles = doc.handles;
+        for (const side of Object.keys(handles) as Array<keyof Handles>)
+        {
+          for(const handle of handles[side]){
+            if(handle.port.inUse) continue
+            if(prevNode.selected){
+              handle.direction='source'
+            }
+            else{
+              handle.direction='target'
+            }
+          }
+        }
+        console.log("handles",handles);
         return {
           ...prevNode,
           data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData, 
@@ -166,7 +172,7 @@ export function ChartEditor({
         };
       });
     });
-    setEdges(convertLinesToEdges(chart.lines));
+    //setEdges(chart.lines.map(convertLineToEdge));
   }, [setNodes, setEdges, chart.devicesOnChart]);
 
   const onNodesChange = useCallback(
@@ -184,7 +190,9 @@ export function ChartEditor({
 
   const onConnect = useCallback(
     (c: Connection) => {
-      console.log("onConnect",c);
+      console.log("onConnect", c);
+      console.log(nodes.find(n=>n.id===c.source)?.data.deviceOnChart)
+      console.log(nodes.find(n=>n.id===c.target)?.data.deviceOnChart);
       setEdges((eds) => addEdge(c, eds));
     },
     [setEdges]
