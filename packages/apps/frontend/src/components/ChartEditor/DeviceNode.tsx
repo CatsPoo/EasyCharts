@@ -93,20 +93,6 @@ const portsInUseIds = useMemo(() => {
     updateInternals(deviceId);
   }, [deviceId,editMode, deviceOnChart, updateInternals]);
 
-  useLayoutEffect(() => {
-    for (const side in handles) {
-      for (const handle of handles[side as Side]) {
-        if (!handle.port.inUse && selected) handle.direction = "source";
-        else if (!handle.port.inUse && !selected) handle.direction = "target";
-      }
-    }
-
-    updateDeviceOnChart({
-      ...deviceOnChart,
-      handles,
-    });
-  }, [selected]);
-
   const onAddHandle =  (side: Side) => {
     if (isEditorOpen) return;
     setIsEditorOpen(true);
@@ -124,13 +110,13 @@ const portsInUseIds = useMemo(() => {
   };
 
   const addPortToHandle = async (side: Side, port: Port) => {
-    updateDeviceOnChart({
-      ...deviceOnChart,
-      handles: {
-        ...handles,
-        [side]: [...(handles[side] ?? []).slice(0, -1), { port, direction: 'source' } as HandleInfo],
-      },
-    });
+    // updateDeviceOnChart({
+    //   ...deviceOnChart,
+    //   handles: {
+    //     ...handles,
+    //     [side]: [...(handles[side] ?? []).slice(0, -1), { port, direction: 'source' } as HandleInfo],
+    //   },
+    // });
     setIsEditorOpen(false);
   };
   const onRemoveHandle = (side:Side) => {

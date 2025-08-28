@@ -10,6 +10,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from "reactflow";
+import { v4 as uuidv4 } from "uuid";
 
 import ReactFlow, {
   addEdge,
@@ -68,14 +69,6 @@ export function ChartEditor({
       new Map(availableDevices.map((d: Device): [string, Device] => [d.id, d])),
     [availableDevices]
   );
-
-  const countLinesForHandle =(handle: HandleInfo): number => {
-  const pid = handle.port.id;
-  return chart.lines.filter(
-    (line) => line.sourcePorteId === pid || line.targetPortId === pid
-  ).length;
-}
-
 
   const updateDeviceOnChart = useCallback(
     (deviceOnChart: DeviceOnChart) => {
@@ -159,14 +152,26 @@ export function ChartEditor({
         const doc = docsById.get(prevNode.id);
         if (!doc) return prevNode;
 
+        const handles = doc.handles;
+        for (const side of Object.keys(handles) as Array<keyof Handles>)
+        {
+          for(const handle of handles[side]){
+            if(handle.port.inUse) continue
+            if(prevNode.selected){
+              handle.direction='source'
+            }
+            else{
+              handle.direction='target'
+            }
+          }
+        }
         return {
           ...prevNode,
-          data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData, 
-          selected: prevNode.selected, // preserve selection (explicit)
+          data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData,  
         };
       });
     });
-    setEdges(convertLinesToEdges(chart.lines));
+    setEdges(chart.lines.map(convertLineToEdge));
   }, [setNodes, setEdges, chart.devicesOnChart]);
 
   const onNodesChange = useCallback(
@@ -184,10 +189,21 @@ export function ChartEditor({
 
   const onConnect = useCallback(
     (c: Connection) => {
-      console.log("onConnect",c);
-      setEdges((eds) => addEdge(c, eds));
+      const newLine: Line = {
+        id: uuidv4(),
+        sourcePorteId: c.sourceHandle!,
+        targetPortId: c.targetHandle!,
+        type: 'step',
+        label: "",
+      }
+      setChart((prev) => {
+        return {
+          ...prev,
+          lines: [...prev.lines, newLine],
+        };
+      });
     },
-    [setEdges]
+    [setEdges, nodes]
   );
   
   const OnReconnectStart = useCallback(() => {
