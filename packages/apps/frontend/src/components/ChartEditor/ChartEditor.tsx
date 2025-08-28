@@ -120,16 +120,6 @@ export function ChartEditor({
     };
   };
 
-  const convertEdgeToLine = (edge: Edge): Line => {
-    return {
-      id: edge.id,
-      sourcePorteId: edge.source,
-      targetPortId: edge.target,
-      label: edge.label,
-      type: edge.type
-    } as Line;
-  }
-
   const convertLinesToEdges = (lines: Line[]): Edge[] => {
     return lines ? lines.map((l) => convertLineToEdge(l)) : [];
   };
