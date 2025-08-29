@@ -6,6 +6,7 @@ import {
   type HandleInfo,
   type Handles,
   type Line,
+  type LineOnChart,
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -108,19 +109,18 @@ export function ChartEditor({
     return nodes;
   };
 
-  const convertLineToEdge = (line: Line): Edge => {
+  const convertLineToEdge = (lineonChart: LineOnChart): Edge => {
     return {
-      id: line.id,
-      source: line.sourcePorteId,
-      target: line.targetPortId,
-      label: line.label,
-      type: "step",
-      animated: false, // optional: makes the edge animate
-      //style: { strokeDasharray: l.type === 'rj45' ? '5 5' : undefined },
+      id: lineonChart.line.id,
+      source: lineonChart.line.sourcePortId,
+      target: lineonChart.line.targetPortId,
+      label: lineonChart.label,
+      type: lineonChart.type,
+      animated: false,
     };
   };
 
-  const convertLinesToEdges = (lines: Line[]): Edge[] => {
+  const convertLinesToEdges = (lines: LineOnChart[]): Edge[] => {
     return lines ? lines.map((l) => convertLineToEdge(l)) : [];
   };
 
@@ -128,7 +128,7 @@ export function ChartEditor({
     convertDevicesToNodes(chart.devicesOnChart)
   );
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState(
-    convertLinesToEdges(chart.lines)
+    convertLinesToEdges(chart.linesOnChart)
   );
 
   useEffect(() => {
@@ -161,7 +161,7 @@ export function ChartEditor({
         };
       });
     });
-    setEdges(chart.lines.map(convertLineToEdge));
+    setEdges(chart.linesOnChart.map(convertLineToEdge));
   }, [setNodes, setEdges, chart.devicesOnChart]);
 
   const onNodesChange = useCallback(
@@ -179,17 +179,22 @@ export function ChartEditor({
 
   const onConnect = useCallback(
     (c: Connection) => {
-      const newLine: Line = {
-        id: uuidv4(),
-        sourcePorteId: c.sourceHandle!,
-        targetPortId: c.targetHandle!,
+      const newId:string = uuidv4();
+      const newLine: LineOnChart = {
+        chartId: chart.id,
+        id: newId,
+        line: {
+          id:newId,
+          sourcePortId:c.sourceHandle,
+          targetPortId:c.targetHandle
+        } as Line,
         type: 'step',
         label: "",
       }
       setChart((prev) => {
         return {
           ...prev,
-          lines: [...prev.lines, newLine],
+          lines: [...prev.linesOnChart, newLine],
         };
       });
     },
