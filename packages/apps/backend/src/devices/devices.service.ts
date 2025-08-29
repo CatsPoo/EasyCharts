@@ -17,7 +17,6 @@ export class DevicesService {
 
   convertDeviceEntity(deviceEntity: DeviceEntity): Device {
     const { id, model, name, type, ipAddress,ports } = deviceEntity;
-    console.log("convertDeviceEntity",deviceEntity)
     return {
       id,
       name,

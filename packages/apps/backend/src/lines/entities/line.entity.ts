@@ -1,13 +1,13 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
+  Check,
   Column,
-  ManyToOne,
+  Entity,
+  Index,
   JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
   type Relation,
 } from "typeorm";
-import { ChartEntity } from "../../charts/entities/chart.entity";
-import { DeviceEntity } from "../../devices/entities/device.entity";
 import { PortEntity } from "../../devices/entities/port.entity";
 
 /** Keep enum as strings for cross-DB portability (MariaDB/SQLite/Postgres). */
@@ -22,21 +22,25 @@ export const LineTypeValues = [
 export type LineType = (typeof LineTypeValues)[number];
 
 @Entity({ name: "lines" })
+@Check("CHK_line_source_target_diff", `"source_port_id" <> "target_port_id"`)
 export class LineEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @ManyToOne(() => PortEntity, { onDelete: "CASCADE" })
+  @ManyToOne(() => PortEntity, { onDelete: "CASCADE", eager: false })
   @JoinColumn({ name: "source_port_id" })
   sourcePort!: Relation<PortEntity>;
 
-  @ManyToOne(() => PortEntity, { onDelete: "CASCADE" })
+  @Column({ name: "source_port_id" })
+  @Index()
+  sourcePortId!: string;
+
+  @ManyToOne(() => PortEntity, { onDelete: "CASCADE", eager: false })
   @JoinColumn({ name: "target_port_id" })
   targetPort!: Relation<PortEntity>;
 
-  @Column({ type: "varchar", length: 20 })
-  type!: LineType;
+  @Column({ name: "target_port_id" })
+  @Index()
+  targetPortId!: string;
 
-  @Column({ type: "varchar", length: 255, nullable: true })
-  label?: string | null;
 }
