@@ -171,7 +171,6 @@ export function ChartEditor({
       const newId:string = uuidv4();
       const sourcePort : Port = chart.devicesOnChart.find(d=>d.device.id===c.source)!.device.ports.find(p=>p.id===c.sourceHandle)!;
       const targetPort: Port = chart.devicesOnChart.find(d=>d.device.id===c.target)!.device.ports.find(p=>p.id===c.targetHandle)!;
-      console.log("sourcePort,targetPort",sourcePort,targetPort)
       const newLine: LineOnChart = {
         chartId: chart.id,
         id: newId,
@@ -183,6 +182,9 @@ export function ChartEditor({
         type: 'step',
         label: "",
       }
+      sourcePort.inUse=true;
+      targetPort.inUse=true;
+      
       setEdges((eds) => [...eds, convertLineToEdge(newLine)]);
       setMadeChanges(true);
       setChart((prev) => {
