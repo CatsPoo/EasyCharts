@@ -1,6 +1,5 @@
 import {
   PortTypeValues,
-  type DeviceOnChart,
   type HandleInfo,
   type Port,
   type PortType,
@@ -11,7 +10,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, Select, TextField } from "@mui/material";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
@@ -91,14 +90,14 @@ const portsInUseIds = useMemo(() => {
 
   useLayoutEffect(() => {
     updateInternals(deviceId);
-  }, [deviceId,editMode, deviceOnChart, updateInternals]);
+  }, [deviceId,editMode, deviceOnChart,updateDeviceOnChart, updateInternals]);
 
   const onAddHandle =  (side: Side) => {
     if (isEditorOpen) return;
     setIsEditorOpen(true);
    const port : Port = {...defaultPortValues, id: uuidv4()};
     setNewPort(port);
-    const newHandle: HandleInfo = { port, direction: "source" };
+    const newHandle: HandleInfo = { port};
     updateDeviceOnChart({
       ...deviceOnChart,
       handles: {
@@ -110,20 +109,19 @@ const portsInUseIds = useMemo(() => {
   };
 
   const addPortToHandle = async (side: Side, port: Port) => {
-    // updateDeviceOnChart({
-    //   ...deviceOnChart,
-    //   handles: {
-    //     ...handles,
-    //     [side]: [...(handles[side] ?? []).slice(0, -1), { port, direction: 'source' } as HandleInfo],
-    //   },
-    // });
+    updateDeviceOnChart({
+      ...deviceOnChart,
+      handles: {
+        ...handles,
+        [side]: handles[side].slice(0, -1).concat({ port}), 
+      },
+    })
     setIsEditorOpen(false);
+    updateInternals(deviceId);
   };
   const onRemoveHandle = (side:Side) => {
     // TODO: implement remove handle for `side`
   };
-
- 
 
   const cancelInlineEditor = () => {
     if (!pendingSide) return;
@@ -315,42 +313,102 @@ const portsInUseIds = useMemo(() => {
         </div>
       </div>
 
-      {leftYs.map((y, i) => (
-        <Handle
-          key={handles?.left?.[i]?.port?.id}
-          id={handles?.left?.[i].port?.id}
-          type={handles?.left?.[i].direction}
-          position={Position.Left}
-          style={{ top: `${y}%` }}
-        />
-      ))}
-      {rightYs.map((y, i) => (
-        <Handle
-          key={handles?.right?.[i].port?.id}
-          id={handles?.right?.[i].port?.id}
-          type={handles?.right?.[i].direction}
-          position={Position.Right}
-          style={{ top: `${y}%` }}
-        />
-      ))}
-      {topXs.map((x, i) => (
-        <Handle
-          key={handles?.top?.[i].port?.id}
-          id={handles?.top?.[i].port?.id}
-          type={handles?.top?.[i].direction}
-          position={Position.Top}
-          style={{ left: `${x}%` }}
-        />
-      ))}
-      {bottomXs.map((x, i) => (
-        <Handle
-          key={handles?.bottom?.[i].port?.id}
-          id={handles?.bottom?.[i].port?.id}
-          type={handles?.bottom?.[i].direction}
-          position={Position.Bottom}
-          style={{ left: `${x}%` }}
-        />
-      ))}
+      {leftYs.map((y, i) => {
+        const pid = handles.left?.[i]?.port?.id;
+        if (!pid) return null;
+        return (
+          <>
+            <Handle
+              key={`${pid}-s`}
+              id={pid}
+              type="source"
+              position={Position.Left}
+              style={{ top: `${y}%` }}
+              isConnectableEnd={false} // can start here, not end here
+            />
+            <Handle
+              key={`${pid}-t`}
+              id={pid}
+              type="target"
+              position={Position.Left}
+              style={{ top: `${y}%` }}
+              isConnectableStart={false} // can end here, not start here
+            />
+          </>
+        );
+      })}
+      {rightYs.map((y, i) => {
+        const pid = handles.right?.[i]?.port?.id;
+        if (!pid) return null;
+        return (
+          <>
+            <Handle
+              key={`${pid}-s`}
+              id={pid}
+              type="source"
+              position={Position.Right}
+              style={{ top: `${y}%` }}
+              isConnectableEnd={false} 
+            />
+            <Handle
+              key={`${pid}-t`}
+              id={pid}
+              type="target"
+              position={Position.Right}
+              style={{ top: `${y}%` }}
+              isConnectableStart={false} // can end here, not start here
+            />
+          </>
+        );
+      })}
+      {topXs.map((x, i) => {
+        const pid = handles.top?.[i]?.port?.id;
+        if (!pid) return null;
+        return (
+          <>
+            <Handle
+              key={`${pid}-s`}
+              id={pid}
+              type="source"
+              position={Position.Top}
+              style={{ left: `${x}%` }}
+              isConnectableEnd={false} 
+            />
+            <Handle
+              key={`${pid}-t`}
+              id={pid}
+              type="target"
+              position={Position.Top}
+              style={{ left: `${x}%` }}
+              isConnectableStart={false} 
+            />
+          </>
+        );
+      })}
+      {bottomXs.map((x, i) => {
+        const pid = handles.bottom?.[i]?.port?.id;
+        if (!pid) return null;
+        return (
+          <>
+            <Handle
+              key={`${pid}-s`}
+              id={pid}
+              type="source"
+              position={Position.Bottom}
+              style={{ left: `${x}%` }}
+              isConnectableEnd={false} 
+            />
+            <Handle
+              key={`${pid}-t`}
+              id={pid}
+              type="target"
+              position={Position.Bottom}
+              style={{ left: `${x}%` }}
+              isConnectableStart={false}
+            />
+          </>
+        );
+      })}
 
       {editMode && isEditorOpen && inlineEditor}
 

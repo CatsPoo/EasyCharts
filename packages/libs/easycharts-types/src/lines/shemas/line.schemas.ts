@@ -1,3 +1,4 @@
+import { PortSchema } from "../../devices/index.js";
 import z from "zod";
 
 
@@ -11,7 +12,7 @@ export const LineUpdateSchema = LineCreateSchema.partial();
 
 export const LineSchema = z.object({
   id: z.string().uuid(),
-  sourcePortId: z.string().uuid(),
-  targetPortId: z.string().uuid(),
+  sourcePort: PortSchema,
+  targetPort: PortSchema,
 
 });
