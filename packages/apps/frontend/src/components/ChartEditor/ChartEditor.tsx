@@ -144,20 +144,6 @@ export function ChartEditor({
         
         const doc = docsById.get(prevNode.id);
         if (!doc) return prevNode;
-
-        const handles = doc.handles;
-        for (const side of Object.keys(handles) as Array<keyof Handles>)
-        {
-          for(const handle of handles[side]){
-            if(handle.port.inUse) continue
-            if(prevNode.selected){
-              handle.direction='source'
-            }
-            else{
-              handle.direction='target'
-            }
-          }
-        }
         return {
           ...prevNode,
           data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData,  
@@ -182,8 +168,6 @@ export function ChartEditor({
 
   const onConnect = useCallback(
     (c: Connection) => {
-      console.log("onConnect", c);
-      console.log("source ports", chart.devicesOnChart.find(d=>d.device.id===c.source)!.device.ports)
       const newId:string = uuidv4();
       const sourcePort : Port = chart.devicesOnChart.find(d=>d.device.id===c.source)!.device.ports.find(p=>p.id===c.sourceHandle)!;
       const targetPort: Port = chart.devicesOnChart.find(d=>d.device.id===c.target)!.device.ports.find(p=>p.id===c.targetHandle)!;
@@ -199,6 +183,8 @@ export function ChartEditor({
         type: 'step',
         label: "",
       }
+      setEdges((eds) => [...eds, convertLineToEdge(newLine)]);
+      setMadeChanges(true);
       setChart((prev) => {
         return {
           ...prev,

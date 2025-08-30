@@ -65,7 +65,7 @@ export class ChartsService {
  rowsToHandles(placements: PortOnChartEntity[]) :Handles{
   const bySide: Record<Side, HandleInfo[]> = { left: [], right: [], top: [], bottom: [] };
   for (const r of placements) {
-    bySide[r.side].push({port:this.convertPortEntityToPort(r.port), direction: r.direction});
+    bySide[r.side].push({port:this.convertPortEntityToPort(r.port)});
   }
   return bySide;
 }
