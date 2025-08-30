@@ -267,14 +267,14 @@ export class ChartsService {
 
       // a) Validate source != target (DB CHECK also enforces)
       for (const l of desired) {
-        if (l.line.sourcePortId === l.line.targetPortId) {
+        if (l.line.sourcePort.id === l.line.targetPort.id) {
           throw new BadRequestException("sourcePortId and targetPortId must be different");
         }
       }
 
       // b) Validate ports exist & devices are placed on this chart
       const wantedPortIds = [
-        ...new Set(desired.flatMap((l) => [l.line.sourcePortId, l.line.targetPortId])),
+        ...new Set(desired.flatMap((l) => [l.line.sourcePort.id, l.line.targetPort.id])),
       ];
       const ports = wantedPortIds.length
         ? await portRepo.find({
@@ -284,8 +284,8 @@ export class ChartsService {
         : [];
       const portsById = new Map(ports.map((p) => [p.id, p]));
       for (const l of desired) {
-        const sp = portsById.get(l.line.sourcePortId);
-        const tp = portsById.get(l.line.targetPortId);
+        const sp = portsById.get(l.line.sourcePort.id);
+        const tp = portsById.get(l.line.targetPort.id);
         if (!sp || !tp) {
           throw new BadRequestException("One or more ports do not exist");
         }
@@ -302,8 +302,8 @@ export class ChartsService {
       // c) Upsert global Line rows (unique on (sourcePortId, targetPortId))
       //    Seed defaults from DTO overrides; per-chart overrides will live in LOC.
       const linesToUpsert = desired.map((l) => ({
-        sourcePortId: l.line.sourcePortId,
-        targetPortId: l.line.targetPortId,
+        sourcePortId: l.line.sourcePort.id,
+        targetPortId: l.line.targetPort.id,
         type: l.type,
         label: l.label,
       }));
@@ -328,9 +328,9 @@ export class ChartsService {
       // e) Upsert LineOnChart (unique on (chartId, lineId))
       const locRows = desired.map((l) => ({
         chartId,
-        lineId: lineIdByPair.get(`${l.line.sourcePortId}→${l.line.targetPortId}`)!,
-        sourcePortId: l.line.sourcePortId,
-        targetPortId: l.line.targetPortId,
+        lineId: lineIdByPair.get(`${l.line.sourcePort.id}→${l.line.targetPort.id}`)!,
+        sourcePortId: l.line.sourcePort.id,
+        targetPortId: l.line.targetPort.id,
       }));
       if (locRows.length) {
         await locRepo.upsert(locRows, ["chartId", "lineId"]);

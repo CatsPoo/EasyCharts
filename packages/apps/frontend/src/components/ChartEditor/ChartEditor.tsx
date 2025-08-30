@@ -7,6 +7,7 @@ import {
   type Handles,
   type Line,
   type LineOnChart,
+  type Port,
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -14,7 +15,6 @@ import type { Connection, Edge, EdgeChange, Node, NodeChange } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
 
 import ReactFlow, {
-  addEdge,
   Background,
   ConnectionLineType,
   Controls,
@@ -68,7 +68,7 @@ export function ChartEditor({
   const devicesById = useMemo<Map<string, Device>>(
     () =>
       new Map(availableDevices.map((d: Device): [string, Device] => [d.id, d])),
-    [availableDevices]
+    [availableDevices, setChart,chart]
   );
 
   const updateDeviceOnChart = useCallback(
@@ -110,10 +110,13 @@ export function ChartEditor({
   };
 
   const convertLineToEdge = (lineonChart: LineOnChart): Edge => {
+    console.log("lineOnchat",lineonChart)
     return {
       id: lineonChart.line.id,
-      source: lineonChart.line.sourcePortId,
-      target: lineonChart.line.targetPortId,
+      source: lineonChart.line.sourcePort.deviceId,
+      target: lineonChart.line.targetPort.deviceId,
+      sourceHandle: lineonChart.line.sourcePort.id,
+      targetHandle: lineonChart.line.targetPort.id,
       label: lineonChart.label,
       type: lineonChart.type,
       animated: false,
@@ -179,14 +182,19 @@ export function ChartEditor({
 
   const onConnect = useCallback(
     (c: Connection) => {
+      console.log("onConnect", c);
+      console.log("source ports", chart.devicesOnChart.find(d=>d.device.id===c.source)!.device.ports)
       const newId:string = uuidv4();
+      const sourcePort : Port = chart.devicesOnChart.find(d=>d.device.id===c.source)!.device.ports.find(p=>p.id===c.sourceHandle)!;
+      const targetPort: Port = chart.devicesOnChart.find(d=>d.device.id===c.target)!.device.ports.find(p=>p.id===c.targetHandle)!;
+      console.log("sourcePort,targetPort",sourcePort,targetPort)
       const newLine: LineOnChart = {
         chartId: chart.id,
         id: newId,
         line: {
           id:newId,
-          sourcePortId:c.sourceHandle,
-          targetPortId:c.targetHandle
+          sourcePort:sourcePort,
+          targetPort:targetPort
         } as Line,
         type: 'step',
         label: "",
@@ -194,11 +202,11 @@ export function ChartEditor({
       setChart((prev) => {
         return {
           ...prev,
-          lines: [...prev.linesOnChart, newLine],
-        };
+          linesOnChart: [...prev.linesOnChart, newLine],
+        } as Chart;
       });
     },
-    [setEdges, nodes]
+    [setChart, nodes]
   );
   
   const OnReconnectStart = useCallback(() => {

@@ -49,7 +49,8 @@ export class DevicesService {
     const qb = this.devicesRepo
       .createQueryBuilder("d")
       .leftJoinAndSelect("d.model", "m")
-      .leftJoinAndSelect("m.vendor", "v");
+      .leftJoinAndSelect("m.vendor", "v")
+      .leftJoinAndSelect("d.ports", "p");
 
     if (q.search?.trim()) {
       qb.andWhere("LOWER(d.name) LIKE :s", {
@@ -90,7 +91,7 @@ export class DevicesService {
          model: {
            vendor: true 
           },
-          ports:true 
+          ports: true 
         },
     });
     return Promise.all(rows.map((e) => this.convertDeviceEntity(e)));

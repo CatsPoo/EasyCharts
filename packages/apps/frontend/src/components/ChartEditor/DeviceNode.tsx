@@ -1,6 +1,5 @@
 import {
   PortTypeValues,
-  type DeviceOnChart,
   type HandleInfo,
   type Port,
   type PortType,
@@ -11,7 +10,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, Select, TextField } from "@mui/material";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
@@ -110,13 +109,6 @@ const portsInUseIds = useMemo(() => {
   };
 
   const addPortToHandle = async (side: Side, port: Port) => {
-    // updateDeviceOnChart({
-    //   ...deviceOnChart,
-    //   handles: {
-    //     ...handles,
-    //     [side]: [...(handles[side] ?? []).slice(0, -1), { port, direction: 'source' } as HandleInfo],
-    //   },
-    // });
     setIsEditorOpen(false);
   };
   const onRemoveHandle = (side:Side) => {
