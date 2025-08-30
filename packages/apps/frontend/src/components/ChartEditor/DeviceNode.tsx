@@ -109,6 +109,13 @@ const portsInUseIds = useMemo(() => {
   };
 
   const addPortToHandle = async (side: Side, port: Port) => {
+    updateDeviceOnChart({
+      ...deviceOnChart,
+      handles: {
+        ...handles,
+        [side]: handles[side].slice(0, -1).concat({ port, direction: "source" }), 
+      },
+    })
     setIsEditorOpen(false);
   };
   const onRemoveHandle = (side:Side) => {
@@ -309,36 +316,36 @@ const portsInUseIds = useMemo(() => {
 
       {leftYs.map((y, i) => (
         <Handle
-          key={handles?.left?.[i]?.port?.id}
-          id={handles?.left?.[i].port?.id}
-          type={handles?.left?.[i].direction}
+          key={handles.left[i].port.id}
+          id={handles.left[i].port.id}
+          type={handles.left[i].direction}
           position={Position.Left}
           style={{ top: `${y}%` }}
         />
       ))}
       {rightYs.map((y, i) => (
         <Handle
-          key={handles?.right?.[i].port?.id}
-          id={handles?.right?.[i].port?.id}
-          type={handles?.right?.[i].direction}
+          key={handles.right[i].port.id}
+          id={handles.right[i].port.id}
+          type={handles.right[i].direction}
           position={Position.Right}
           style={{ top: `${y}%` }}
         />
       ))}
       {topXs.map((x, i) => (
         <Handle
-          key={handles?.top?.[i].port?.id}
-          id={handles?.top?.[i].port?.id}
-          type={handles?.top?.[i].direction}
+          key={handles.top[i].port.id}
+          id={handles.top[i].port.id}
+          type={handles.top[i].direction}
           position={Position.Top}
           style={{ left: `${x}%` }}
         />
       ))}
       {bottomXs.map((x, i) => (
         <Handle
-          key={handles?.bottom?.[i].port?.id}
-          id={handles?.bottom?.[i].port?.id}
-          type={handles?.bottom?.[i].direction}
+          key={handles.bottom[i].port.id}
+          id={handles.bottom[i].port.id}
+          type={handles.bottom[i].direction}
           position={Position.Bottom}
           style={{ left: `${x}%` }}
         />
