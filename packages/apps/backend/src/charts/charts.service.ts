@@ -105,12 +105,7 @@ export class ChartsService {
     for(const ll of linesOnChart ?? []){
       convertedLinesOnChart.push(await this.convertLineonChartEntity(ll));
     }
-
-    console.log({
-      devicesOnChart: convertedDeviceOnCharts,
-      linesOnChart: convertedLinesOnChart,
-      ...chartData,
-    })
+    console.log("convertedLinesOnChart",convertedLinesOnChart);
     return {
       devicesOnChart: convertedDeviceOnCharts,
       linesOnChart: convertedLinesOnChart,
@@ -210,7 +205,7 @@ export class ChartsService {
       await chartsRepo.save(chart);
     }
 
-    // ---- 2) Devices & Port placements (handles)
+    // ---- 2) Devices, Ports, Handles (placements)
     if (dto.devicesOnChart !== undefined) {
       const placements = dto.devicesOnChart;
 
@@ -223,6 +218,42 @@ export class ChartsService {
         }
       }
 
+      // a.1) **UPSERT PORTS** coming from editor (new or edited)
+      // Collect all ports from the payload's devices
+      const incomingPorts = [];
+      for (const d of placements) {
+        const devId = d.device.id;
+        for (const p of (d.device.ports ?? [])) {
+          // enforce device binding here
+          incomingPorts.push({
+            id: p.id,
+            name: p.name,
+            type: p.type,
+            deviceId: devId,
+          } as Partial<PortEntity>);
+        }
+      }
+
+      if (incomingPorts.length) {
+        // Check for deviceId conflicts on existing ports before upserting
+        const ids = [...new Set(incomingPorts.map(p => p.id!))];
+        const existing = await portRepo.find({ where: { id: In(ids) }, select: ['id','deviceId'] });
+        const existingById = new Map(existing.map(e => [e.id, e]));
+        const conflicts = incomingPorts.filter(p => {
+          const ex = existingById.get(p.id!);
+          return ex && ex.deviceId !== p.deviceId;
+        });
+        if (conflicts.length) {
+          throw new BadRequestException(`Port(s) belong to a different device: ${conflicts.map(c => c.id).join(', ')}`);
+        }
+
+        // Upsert ports (idempotent)
+        await portRepo.upsert(incomingPorts, {
+          conflictPaths: ['id'],
+          skipUpdateIfNoValuesChanged: true,
+        });
+      }
+
       // b) Upsert device placements
       await docRepo.upsert(
         placements.map((d) => ({
@@ -230,7 +261,7 @@ export class ChartsService {
           deviceId: d.device.id,
           position: d.position,
         })),
-        ["chartId", "deviceId"]
+        ['chartId', 'deviceId']
       );
 
       // c) Remove device placements not present anymore
@@ -239,13 +270,13 @@ export class ChartsService {
       const toRemove = existingDocs.filter((e) => !desiredIds.has(e.deviceId));
       if (toRemove.length) await docRepo.remove(toRemove);
 
-      // d) For each device, replace its port placements (delete+bulk insert)
+      // d) Replace port placements (handles) per device
       for (const d of placements) {
-        if (!("handles" in d) || d.handles == null) continue;
+        if (!('handles' in d) || d.handles == null) continue;
 
         const desiredRows = this.handlesToRows(chartId, d.device.id, d.handles);
 
-        // Validate each port belongs to this device
+        // Validate each port belongs to this device (now that ports exist)
         if (desiredRows.length) {
           const distinctPortIds = [...new Set(desiredRows.map((r) => r.portId))];
           const cnt = await portRepo.count({
@@ -265,7 +296,7 @@ export class ChartsService {
     if (dto.linesOnChart !== undefined) {
       const desired = dto.linesOnChart;
 
-      // a) Validate source != target (DB CHECK also enforces)
+      // a) Validate source != target
       for (const l of desired) {
         if (l.line.sourcePort.id === l.line.targetPort.id) {
           throw new BadRequestException("sourcePortId and targetPortId must be different");
@@ -276,31 +307,31 @@ export class ChartsService {
       const wantedPortIds = [
         ...new Set(desired.flatMap((l) => [l.line.sourcePort.id, l.line.targetPort.id])),
       ];
+
       const ports = wantedPortIds.length
         ? await portRepo.find({
             where: { id: In(wantedPortIds) },
-            select: ["id", "deviceId"],
+            select: ['id', 'deviceId'],
           })
         : [];
       const portsById = new Map(ports.map((p) => [p.id, p]));
+
+      // load placed devices once (avoid per-line count queries)
+      const placed = await docRepo.find({ where: { chartId }, select: ['deviceId'] });
+      const placedSet = new Set(placed.map(p => p.deviceId));
+
       for (const l of desired) {
         const sp = portsById.get(l.line.sourcePort.id);
         const tp = portsById.get(l.line.targetPort.id);
         if (!sp || !tp) {
           throw new BadRequestException("One or more ports do not exist");
         }
-        const placedCnt = await docRepo.count({
-          where: { chartId, deviceId: In([sp.deviceId, tp.deviceId]) },
-        });
-        if (placedCnt !== 2) {
-          throw new BadRequestException(
-            "Both ports must belong to devices placed on this chart"
-          );
+        if (!placedSet.has(sp.deviceId) || !placedSet.has(tp.deviceId)) {
+          throw new BadRequestException("Both ports must belong to devices placed on this chart");
         }
       }
 
       // c) Upsert global Line rows (unique on (sourcePortId, targetPortId))
-      //    Seed defaults from DTO overrides; per-chart overrides will live in LOC.
       const linesToUpsert = desired.map((l) => ({
         sourcePortId: l.line.sourcePort.id,
         targetPortId: l.line.targetPort.id,
@@ -308,7 +339,7 @@ export class ChartsService {
         label: l.label,
       }));
       if (linesToUpsert.length) {
-        await lineRepo.upsert(linesToUpsert, ["sourcePortId", "targetPortId"]);
+        await lineRepo.upsert(linesToUpsert, ['sourcePortId', 'targetPortId']);
       }
 
       // d) Fetch ids to create LineOnChart rows
@@ -318,7 +349,7 @@ export class ChartsService {
               sourcePortId: In(linesToUpsert.map((x) => x.sourcePortId)),
               targetPortId: In(linesToUpsert.map((x) => x.targetPortId)),
             },
-            select: ["id", "sourcePortId", "targetPortId"],
+            select: ['id', 'sourcePortId', 'targetPortId'],
           })
         : [];
       const lineIdByPair = new Map(
@@ -333,14 +364,14 @@ export class ChartsService {
         targetPortId: l.line.targetPort.id,
       }));
       if (locRows.length) {
-        await locRepo.upsert(locRows, ["chartId", "lineId"]);
+        await locRepo.upsert(locRows, ['chartId', 'lineId']);
       }
 
-      // f) Remove LineOnChart not present anymore for this chart
+      // f) Remove LineOnChart that are not present anymore for this chart
       const keep = new Set(locRows.map((r) => `${r.chartId}:${r.lineId}`));
       const existingLOC = await locRepo.find({
         where: { chartId },
-        select: ["id", "chartId", "lineId"],
+        select: ['id', 'chartId', 'lineId'],
       });
       const toDelete = existingLOC.filter((x) => !keep.has(`${x.chartId}:${x.lineId}`));
       if (toDelete.length) await locRepo.remove(toDelete);
@@ -361,6 +392,7 @@ export class ChartsService {
 
   return this.convertChartEntityToChart(updated);
 }
+
 
   async removeChart(id: string): Promise<void> {
     const chart = await this.chartRepo.findOne({ where: { id } });
