@@ -1,8 +1,8 @@
 // src/charts/charts.service.ts
 import {
   HandleInfo,
+  Line,
   LineOnChart,
-  LineType,
   Port,
   SIDES,
   type Chart,
@@ -19,16 +19,16 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, In, Repository } from "typeorm";
+import { DataSource, In, Not, Repository } from "typeorm";
 import { DevicesService } from "../devices/devices.service";
 import { DeviceEntity } from "../devices/entities/device.entity";
 import { PortEntity } from "../devices/entities/port.entity";
+import { LineEntity } from "../lines/entities/line.entity";
+import { LinessService } from "../lines/lines.service";
 import { ChartEntity } from "./entities/chart.entity";
 import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
-import { PortOnChartEntity } from "./entities/portOnChart.entity";
 import { LineOnChartEntity } from "./entities/lineonChart.emtity";
-import { LinessService } from "../lines/lines.service";
-import { LineEntity } from "../lines/entities/line.entity";
+import { PortOnChartEntity } from "./entities/portOnChart.entity";
 @Injectable()
 export class ChartsService {
   constructor(
@@ -83,9 +83,8 @@ export class ChartsService {
   };
 
   convertLineonChartEntity = async (lineOnChartEntity:LineOnChartEntity) :Promise<LineOnChart>=>{
-    const {id, line:lineEntity, label,type,chartId } = lineOnChartEntity;
+    const {line:lineEntity, label,type,chartId } = lineOnChartEntity;
     return {
-      id,
       label,
       type,
       chartId,
@@ -96,21 +95,16 @@ export class ChartsService {
   //TODO all lines to convertion function
   convertChartEntityToChart = async (chartEnrity: ChartEntity): Promise<Chart> => {
     const { devicesOnChart,linesOnChart, ...chartData } = chartEnrity;
-    let convertedDeviceOnCharts : DeviceOnChart[] = []
+    const convertedDeviceOnCharts : DeviceOnChart[] = []
     for(const dl of devicesOnChart){
       convertedDeviceOnCharts.push(await this.convertDeviceOnChartEntity(dl)); 
     }
 
-    let convertedLinesOnChart:LineOnChart[] =[]
+    const convertedLinesOnChart:LineOnChart[] =[]
     for(const ll of linesOnChart ?? []){
       convertedLinesOnChart.push(await this.convertLineonChartEntity(ll));
     }
-
-    console.log({
-      devicesOnChart: convertedDeviceOnCharts,
-      linesOnChart: convertedLinesOnChart,
-      ...chartData,
-    })
+    console.log("convertedLinesOnChart",convertedLinesOnChart);
     return {
       devicesOnChart: convertedDeviceOnCharts,
       linesOnChart: convertedLinesOnChart,
@@ -119,7 +113,7 @@ export class ChartsService {
   };
 
   async getAllCharts(): Promise<Chart[]> {
-    let convertedCharts:Chart[]=[]
+    const convertedCharts:Chart[]=[]
     const charts = await this.chartRepo.find({});
     for(const c of charts){
       convertedCharts.push(await this.convertChartEntityToChart(c));
@@ -143,9 +137,10 @@ export class ChartsService {
           },
           position:true
         },
-        linesOnChart:{
-          line:true 
-        }
+        linesOnChart: { line:{
+          sourcePort:true,
+          targetPort:true
+        } },
       },
     });
     if (!chart) throw new NotFoundException("chart not found");
@@ -189,12 +184,12 @@ export class ChartsService {
   async updateChart(chartId: string, dto: ChartUpdate): Promise<Chart> {
   const updated = await this.dataSource.transaction(async (manager) => {
     const chartsRepo = manager.getRepository(ChartEntity);
-    const docRepo    = manager.getRepository(DeviceOnChartEntity);
-    const pocRepo    = manager.getRepository(PortOnChartEntity);
+    const docRepo = manager.getRepository(DeviceOnChartEntity);
+    const pocRepo = manager.getRepository(PortOnChartEntity);
     const deviceRepo = manager.getRepository(DeviceEntity);
-    const portRepo   = manager.getRepository(PortEntity);
-    const lineRepo   = manager.getRepository(LineEntity);
-    const locRepo    = manager.getRepository(LineOnChartEntity);
+    const portRepo = manager.getRepository(PortEntity);
+    const lineRepo = manager.getRepository(LineEntity);
+    const locRepo = manager.getRepository(LineOnChartEntity);
 
     // ---- 0) Load chart
     const chart = await chartsRepo.findOne({
@@ -205,22 +200,68 @@ export class ChartsService {
 
     // ---- 1) Meta
     if (dto.name !== undefined) chart.name = dto.name;
-    if (dto.description !== undefined) chart.description = dto.description ?? "";
+    if (dto.description !== undefined)
+      chart.description = dto.description ?? "";
     if (dto.name !== undefined || dto.description !== undefined) {
       await chartsRepo.save(chart);
     }
 
-    // ---- 2) Devices & Port placements (handles)
+    // ---- 2) Devices, Ports, Handles (placements)
     if (dto.devicesOnChart !== undefined) {
       const placements = dto.devicesOnChart;
 
       // a) Validate devices exist
       const uniqDeviceIds = [...new Set(placements.map((d) => d.device.id))];
       if (uniqDeviceIds.length) {
-        const count = await deviceRepo.count({ where: { id: In(uniqDeviceIds) } });
+        const count = await deviceRepo.count({
+          where: { id: In(uniqDeviceIds) },
+        });
         if (count !== uniqDeviceIds.length) {
           throw new BadRequestException("One or more devices do not exist");
         }
+      }
+
+      // a.1) **UPSERT PORTS** coming from editor (new or edited)
+      // Collect all ports from the payload's devices
+      const incomingPorts = [];
+      for (const d of placements) {
+        const devId = d.device.id;
+        for (const p of d.device.ports ?? []) {
+          // enforce device binding here
+          incomingPorts.push({
+            id: p.id,
+            name: p.name,
+            type: p.type,
+            deviceId: devId,
+          } as Partial<PortEntity>);
+        }
+      }
+
+      if (incomingPorts.length) {
+        // Check for deviceId conflicts on existing ports before upserting
+        const ids = [...new Set(incomingPorts.map((p) => p.id!))];
+        const existing = await portRepo.find({
+          where: { id: In(ids) },
+          select: ["id", "deviceId"],
+        });
+        const existingById = new Map(existing.map((e) => [e.id, e]));
+        const conflicts = incomingPorts.filter((p) => {
+          const ex = existingById.get(p.id!);
+          return ex && ex.deviceId !== p.deviceId;
+        });
+        if (conflicts.length) {
+          throw new BadRequestException(
+            `Port(s) belong to a different device: ${conflicts
+              .map((c) => c.id)
+              .join(", ")}`
+          );
+        }
+
+        // Upsert ports (idempotent)
+        await portRepo.upsert(incomingPorts, {
+          conflictPaths: ["id"],
+          skipUpdateIfNoValuesChanged: true,
+        });
       }
 
       // b) Upsert device placements
@@ -239,20 +280,24 @@ export class ChartsService {
       const toRemove = existingDocs.filter((e) => !desiredIds.has(e.deviceId));
       if (toRemove.length) await docRepo.remove(toRemove);
 
-      // d) For each device, replace its port placements (delete+bulk insert)
+      // d) Replace port placements (handles) per device
       for (const d of placements) {
         if (!("handles" in d) || d.handles == null) continue;
 
         const desiredRows = this.handlesToRows(chartId, d.device.id, d.handles);
 
-        // Validate each port belongs to this device
+        // Validate each port belongs to this device (now that ports exist)
         if (desiredRows.length) {
-          const distinctPortIds = [...new Set(desiredRows.map((r) => r.portId))];
+          const distinctPortIds = [
+            ...new Set(desiredRows.map((r) => r.portId)),
+          ];
           const cnt = await portRepo.count({
             where: { id: In(distinctPortIds), deviceId: d.device.id },
           });
           if (cnt !== distinctPortIds.length) {
-            throw new BadRequestException("One or more ports do not belong to this device");
+            throw new BadRequestException(
+              "One or more ports do not belong to this device"
+            );
           }
         }
 
@@ -260,90 +305,47 @@ export class ChartsService {
         if (desiredRows.length) await pocRepo.insert(desiredRows);
       }
     }
-
     // ---- 3) Lines (global + per-chart instance)
     if (dto.linesOnChart !== undefined) {
-      const desired = dto.linesOnChart;
-
-      // a) Validate source != target (DB CHECK also enforces)
-      for (const l of desired) {
-        if (l.line.sourcePort.id === l.line.targetPort.id) {
-          throw new BadRequestException("sourcePortId and targetPortId must be different");
-        }
-      }
-
-      // b) Validate ports exist & devices are placed on this chart
-      const wantedPortIds = [
-        ...new Set(desired.flatMap((l) => [l.line.sourcePort.id, l.line.targetPort.id])),
-      ];
-      const ports = wantedPortIds.length
-        ? await portRepo.find({
-            where: { id: In(wantedPortIds) },
-            select: ["id", "deviceId"],
-          })
-        : [];
-      const portsById = new Map(ports.map((p) => [p.id, p]));
-      for (const l of desired) {
-        const sp = portsById.get(l.line.sourcePort.id);
-        const tp = portsById.get(l.line.targetPort.id);
-        if (!sp || !tp) {
-          throw new BadRequestException("One or more ports do not exist");
-        }
-        const placedCnt = await docRepo.count({
-          where: { chartId, deviceId: In([sp.deviceId, tp.deviceId]) },
-        });
-        if (placedCnt !== 2) {
+      const linesOnChart: LineOnChart[] = dto.linesOnChart;
+      for (const loc of linesOnChart) {
+        if (!loc?.line?.id)
+          throw new BadRequestException("LineEntity.id is required");
+        const spid = loc.line.sourcePort.id;
+        const tpid = loc.line.targetPort.id;
+        if (!spid || !tpid)
           throw new BadRequestException(
-            "Both ports must belong to devices placed on this chart"
+            "sourcePortId/targetPortId are required"
           );
-        }
+        if (spid === tpid)
+          throw new BadRequestException(
+            "sourcePortId and targetPortId must be different"
+          );
       }
 
-      // c) Upsert global Line rows (unique on (sourcePortId, targetPortId))
-      //    Seed defaults from DTO overrides; per-chart overrides will live in LOC.
-      const linesToUpsert = desired.map((l) => ({
-        sourcePortId: l.line.sourcePort.id,
-        targetPortId: l.line.targetPort.id,
-        type: l.type,
-        label: l.label,
-      }));
-      if (linesToUpsert.length) {
-        await lineRepo.upsert(linesToUpsert, ["sourcePortId", "targetPortId"]);
-      }
-
-      // d) Fetch ids to create LineOnChart rows
-      const persistedLines = linesToUpsert.length
-        ? await lineRepo.find({
-            where: {
-              sourcePortId: In(linesToUpsert.map((x) => x.sourcePortId)),
-              targetPortId: In(linesToUpsert.map((x) => x.targetPortId)),
-            },
-            select: ["id", "sourcePortId", "targetPortId"],
-          })
-        : [];
-      const lineIdByPair = new Map(
-        persistedLines.map((p) => [`${p.sourcePortId}→${p.targetPortId}`, p.id])
-      );
-
-      // e) Upsert LineOnChart (unique on (chartId, lineId))
-      const locRows = desired.map((l) => ({
-        chartId,
-        lineId: lineIdByPair.get(`${l.line.sourcePort.id}→${l.line.targetPort.id}`)!,
-        sourcePortId: l.line.sourcePort.id,
-        targetPortId: l.line.targetPort.id,
-      }));
-      if (locRows.length) {
-        await locRepo.upsert(locRows, ["chartId", "lineId"]);
-      }
-
-      // f) Remove LineOnChart not present anymore for this chart
-      const keep = new Set(locRows.map((r) => `${r.chartId}:${r.lineId}`));
-      const existingLOC = await locRepo.find({
-        where: { chartId },
-        select: ["id", "chartId", "lineId"],
+      const wantedLines: Line[] = dto.linesOnChart.map((loc) => loc.line);
+      await lineRepo.upsert(wantedLines.map(l=>this.linesService.convertLineToEntity(l)), {
+        conflictPaths: ["id"],
+        skipUpdateIfNoValuesChanged: true,
       });
-      const toDelete = existingLOC.filter((x) => !keep.has(`${x.chartId}:${x.lineId}`));
-      if (toDelete.length) await locRepo.remove(toDelete);
+
+      await locRepo.upsert(dto.linesOnChart.map(l=>{
+        return {
+          chartId:l.chartId,
+          lineId:l.line.id,
+          label:l.label,
+          type:l.type
+
+        } as LineOnChartEntity
+      }),{
+        conflictPaths: ["chartId","lineId"],
+        skipUpdateIfNoValuesChanged: true,
+      })
+
+      await locRepo.delete({
+        chartId:chartId,
+        lineId:Not(In(dto.linesOnChart.map(loc=>loc.line.id)))
+      })
     }
 
     // ---- 4) Return fresh chart with full relations
@@ -354,13 +356,17 @@ export class ChartsService {
           device: { model: { vendor: true }, ports: true },
           portPlacements: { port: true },
         },
-        linesOnChart: { line: true },
+        linesOnChart: { line:{
+          sourcePort:true,
+          targetPort:true
+        } },
       },
     });
   });
 
   return this.convertChartEntityToChart(updated);
 }
+
 
   async removeChart(id: string): Promise<void> {
     const chart = await this.chartRepo.findOne({ where: { id } });

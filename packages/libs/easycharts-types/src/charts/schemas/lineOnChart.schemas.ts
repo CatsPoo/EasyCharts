@@ -11,7 +11,6 @@ export const LineTypeEnum = z.enum([
 ]);
 
 export const LineOnChartSchema = z.object({
-  id: z.string().uuid(),
   chartId: z.string().uuid(),
   line: LineSchema,
   type:LineTypeEnum,

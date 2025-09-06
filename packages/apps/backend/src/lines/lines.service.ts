@@ -12,11 +12,22 @@ export class LinessService {
         private readonly linesrepo: Repository<LineEntity>,
     ) {}
     convertLineEntity(lineEntity: LineEntity): Line {
-        const { id,sourcePort,targetPort } = lineEntity;
-        return {
-          id,
-          sourcePort,
-          targetPort
-        } as Line;
-      }
+      const { id, sourcePort, targetPort } = lineEntity;
+      return {
+        id,
+        sourcePort,
+        targetPort,
+      } as Line;
+    }
+
+    convertLineToEntity(line:Line) :LineEntity {
+      const {id,sourcePort,targetPort} = line
+      return {
+        id,
+        sourcePort,
+        sourcePortId:sourcePort.id,
+        targetPortId:targetPort.id,
+        targetPort
+      } as LineEntity
+    }
 }
