@@ -1,12 +1,17 @@
 // src/charts/charts.service.ts
-import type {
-  Chart,
-  ChartCreate,
-  ChartMetadata,
-  ChartUpdate,
-  Device,
-  DeviceOnChart,
+import {
+  HandleInfo,
   Line,
+  LineOnChart,
+  Port,
+  SIDES,
+  type Chart,
+  type ChartCreate,
+  type ChartMetadata,
+  type ChartUpdate,
+  type DeviceOnChart,
+  type Handles,
+  type Side
 } from "@Easy-charts/easycharts-types";
 import {
   BadRequestException,
@@ -14,12 +19,16 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, In, Repository } from "typeorm";
-import { ChartEntity } from "./entities/chart.entity";
-import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
-import { LineEntity } from "./entities/line.entity";
+import { DataSource, In, Not, Repository } from "typeorm";
 import { DevicesService } from "../devices/devices.service";
 import { DeviceEntity } from "../devices/entities/device.entity";
+import { PortEntity } from "../devices/entities/port.entity";
+import { LineEntity } from "../lines/entities/line.entity";
+import { LinessService } from "../lines/lines.service";
+import { ChartEntity } from "./entities/chart.entity";
+import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
+import { LineOnChartEntity } from "./entities/lineonChart.emtity";
+import { PortOnChartEntity } from "./entities/portOnChart.entity";
 @Injectable()
 export class ChartsService {
   constructor(
@@ -28,66 +37,110 @@ export class ChartsService {
     @InjectRepository(ChartEntity)
     private readonly chartRepo: Repository<ChartEntity>,
 
-    @InjectRepository(DeviceOnChartEntity)
-    private readonly docRepo: Repository<DeviceOnChartEntity>,
-
-    @InjectRepository(LineEntity)
-    private readonly lineRepo: Repository<LineEntity>,
-
-    private readonly devicesService: DevicesService
+    private readonly devicesService: DevicesService,
+    private readonly linesService:LinessService
   ) {}
 
-  convertDeviceOnChartEntity = (
+  convertPortEntityToPort(portEntity: PortEntity): Port {
+    const { id, name, type, deviceId} = portEntity; 
+    return { id, name, type, deviceId } as Port;
+  }
+
+  handlesToRows(
+  chartId: string,
+  deviceId: string,
+  handles?:Handles,
+) {
+  const rows: Array<Pick<PortOnChartEntity, "chartId"|"deviceId"|"portId"|"side">> = [];
+  if (!handles) return rows;
+  SIDES.forEach((side: Side) => {
+    const arr = handles[side] ?? [];
+    arr.forEach((p, idx) => {
+      rows.push({ chartId, deviceId, portId: p.port.id, side });
+    });
+  });
+  return rows;
+}
+
+ rowsToHandles(placements: PortOnChartEntity[]) :Handles{
+  const bySide: Record<Side, HandleInfo[]> = { left: [], right: [], top: [], bottom: [] };
+  for (const r of placements) {
+    bySide[r.side].push({port:this.convertPortEntityToPort(r.port)});
+  }
+  return bySide;
+}
+
+  convertDeviceOnChartEntity = async (
     deviceonChartEntity: DeviceOnChartEntity
-  ): DeviceOnChart => {
-    const { chartId, position, device } = deviceonChartEntity;
+  ): Promise<DeviceOnChart> => {
+    const { chartId, position, device, portPlacements } = deviceonChartEntity;
     return {
       chartId,
       device: this.devicesService.convertDeviceEntity(device),
       position,
-    };
+      handles: this.rowsToHandles(portPlacements ?? []) 
+    } as DeviceOnChart;
   };
 
-  //TODO all lines to convertion function
-  convertChartEntityToChart = (chartEnrity: ChartEntity): Chart => {
-    const { devicesLocations, lines, ...chartData } = chartEnrity;
+  convertLineonChartEntity = async (lineOnChartEntity:LineOnChartEntity) :Promise<LineOnChart>=>{
+    const {line:lineEntity, label,type,chartId } = lineOnChartEntity;
     return {
-      devicesLocations: devicesLocations.map((dl) =>
-        this.convertDeviceOnChartEntity(dl)
-      ),
+      label,
+      type,
+      chartId,
+      line: this.linesService.convertLineEntity(lineEntity)
+    } as LineOnChart;
+  }
+
+  //TODO all lines to convertion function
+  convertChartEntityToChart = async (chartEnrity: ChartEntity): Promise<Chart> => {
+    const { devicesOnChart,linesOnChart, ...chartData } = chartEnrity;
+    const convertedDeviceOnCharts : DeviceOnChart[] = []
+    for(const dl of devicesOnChart){
+      convertedDeviceOnCharts.push(await this.convertDeviceOnChartEntity(dl)); 
+    }
+
+    const convertedLinesOnChart:LineOnChart[] =[]
+    for(const ll of linesOnChart ?? []){
+      convertedLinesOnChart.push(await this.convertLineonChartEntity(ll));
+    }
+    console.log("convertedLinesOnChart",convertedLinesOnChart);
+    return {
+      devicesOnChart: convertedDeviceOnCharts,
+      linesOnChart: convertedLinesOnChart,
       ...chartData,
     } as Chart;
   };
+
   async getAllCharts(): Promise<Chart[]> {
-    return (await this.chartRepo.find({})).map((chartEntity) =>
-      this.convertChartEntityToChart(chartEntity)
-    );
+    const convertedCharts:Chart[]=[]
+    const charts = await this.chartRepo.find({});
+    for(const c of charts){
+      convertedCharts.push(await this.convertChartEntityToChart(c));
+    }
+    return convertedCharts
   }
 
   async getChartById(id: string): Promise<Chart> {
     const chart: ChartEntity | null = await this.chartRepo.findOne({
       where: { id },
       relations: {
-        devicesLocations:{
-          device:{
-            model:{
-              vendor:true
-            }
+        devicesOnChart:{
+          device: {
+             model: {
+               vendor: true 
+              },
+              ports: true,
+            },
+          portPlacements: {
+             port: true,
           },
           position:true
         },
-        lines:{
-          sourceDevice:{
-            model:{
-              vendor:true
-            }
-          },
-          targetDevice:{
-            model:{
-              vendor:true
-            }
-          }
-        }
+        linesOnChart: { line:{
+          sourcePort:true,
+          targetPort:true
+        } },
       },
     });
     if (!chart) throw new NotFoundException("chart not found");
@@ -98,11 +151,11 @@ export class ChartsService {
   async createChart(dto: ChartCreate): Promise<Chart> {
     const chart: ChartEntity = this.chartRepo.create({
       name: dto.name,
-      devicesLocations: dto.devicesLocations.map((dl) => ({
+      description: dto.description,
+      devicesOnChart: dto.devicesOnChart.map((dl) => ({
         deviceId: dl.device.id,
         position: dl.position,
       })),
-      lines: [],
     });
     const newChart: ChartEntity = await this.chartRepo.save(chart);
     return this.convertChartEntityToChart(newChart);
@@ -129,160 +182,191 @@ export class ChartsService {
   }
 
   async updateChart(chartId: string, dto: ChartUpdate): Promise<Chart> {
-    const updatedchartentity: ChartEntity = await this.dataSource.transaction(
-      async (manager) => {
-        const chartsRepo = manager.getRepository(ChartEntity);
-        const docRepo = manager.getRepository(DeviceOnChartEntity);
-        const lineRepo = manager.getRepository(LineEntity);
-        const deviceRepo = manager.getRepository(DeviceEntity);
-        const chart = await chartsRepo.findOne({
-          where: { id: chartId },
-          relations: {
-            devicesLocations: { device: true }, // <-- critical change
-            lines: true,
-          },
+  const updated = await this.dataSource.transaction(async (manager) => {
+    const chartsRepo = manager.getRepository(ChartEntity);
+    const docRepo = manager.getRepository(DeviceOnChartEntity);
+    const pocRepo = manager.getRepository(PortOnChartEntity);
+    const deviceRepo = manager.getRepository(DeviceEntity);
+    const portRepo = manager.getRepository(PortEntity);
+    const lineRepo = manager.getRepository(LineEntity);
+    const locRepo = manager.getRepository(LineOnChartEntity);
+
+    // ---- 0) Load chart
+    const chart = await chartsRepo.findOne({
+      where: { id: chartId },
+      relations: { devicesOnChart: true },
+    });
+    if (!chart) throw new NotFoundException(`Chart ${chartId} not found`);
+
+    // ---- 1) Meta
+    if (dto.name !== undefined) chart.name = dto.name;
+    if (dto.description !== undefined)
+      chart.description = dto.description ?? "";
+    if (dto.name !== undefined || dto.description !== undefined) {
+      await chartsRepo.save(chart);
+    }
+
+    // ---- 2) Devices, Ports, Handles (placements)
+    if (dto.devicesOnChart !== undefined) {
+      const placements = dto.devicesOnChart;
+
+      // a) Validate devices exist
+      const uniqDeviceIds = [...new Set(placements.map((d) => d.device.id))];
+      if (uniqDeviceIds.length) {
+        const count = await deviceRepo.count({
+          where: { id: In(uniqDeviceIds) },
         });
-        if (!chart) throw new NotFoundException(`Chart ${chartId} not found`);
+        if (count !== uniqDeviceIds.length) {
+          throw new BadRequestException("One or more devices do not exist");
+        }
+      }
 
-        // ---- Scalars ---------------------------------------------------------
-        if (dto.name !== undefined) chart.name = dto.name;
-        if (dto.description !== undefined)
-          chart.description = dto.description ?? "";
-        await chartsRepo.save(chart);
+      // a.1) **UPSERT PORTS** coming from editor (new or edited)
+      // Collect all ports from the payload's devices
+      const incomingPorts = [];
+      for (const d of placements) {
+        const devId = d.device.id;
+        for (const p of d.device.ports ?? []) {
+          // enforce device binding here
+          incomingPorts.push({
+            id: p.id,
+            name: p.name,
+            type: p.type,
+            deviceId: devId,
+          } as Partial<PortEntity>);
+        }
+      }
 
-        // ---- Devices on chart (placements) ----------------------------------
-        // Only touch if provided; if omitted, keep as-is
-        if (dto.devicesLocations !== undefined) {
-          const placements = dto.devicesLocations;
-
-          if (!placements.length) {
-            // Client sent an empty array => remove all placements for this chart
-            await docRepo.delete({ chartId });
-          } else {
-            // Validate devices exist
-            const uniqDeviceIds = [
-              ...new Set(placements.map((d) => d.device.id)),
-            ];
-            const existingCount = await deviceRepo.count({
-              where: { id: In(uniqDeviceIds) },
-            });
-            if (existingCount !== uniqDeviceIds.length) {
-              throw new BadRequestException("One or more devices do not exist");
-            }
-
-            // Save (insert or update) each (chartId, deviceId) row
-            for (const d of placements) {
-              await docRepo.save({
-                chartId,
-                deviceId: d.device.id,
-                position: d.position,
-              });
-            }
-
-            // Remove rows no longer present
-            const desiredDeviceIds = new Set(
-              placements.map((d) => d.device.id)
-            );
-            const existingDocs = await docRepo.find({ where: { chartId } });
-            const toRemove = existingDocs.filter(
-              (e) => !desiredDeviceIds.has(e.deviceId)
-            );
-            if (toRemove.length) {
-              await docRepo.remove(toRemove);
-            }
-          }
+      if (incomingPorts.length) {
+        // Check for deviceId conflicts on existing ports before upserting
+        const ids = [...new Set(incomingPorts.map((p) => p.id!))];
+        const existing = await portRepo.find({
+          where: { id: In(ids) },
+          select: ["id", "deviceId"],
+        });
+        const existingById = new Map(existing.map((e) => [e.id, e]));
+        const conflicts = incomingPorts.filter((p) => {
+          const ex = existingById.get(p.id!);
+          return ex && ex.deviceId !== p.deviceId;
+        });
+        if (conflicts.length) {
+          throw new BadRequestException(
+            `Port(s) belong to a different device: ${conflicts
+              .map((c) => c.id)
+              .join(", ")}`
+          );
         }
 
-        // ---- Lines -----------------------------------------------------------
-        // Only touch if provided; if omitted, keep as-is
-        if (dto.lines !== undefined) {
-          const incoming = dto.lines ?? [];
-
-          if (!incoming.length) {
-            // Client sent empty array => remove all lines for this chart
-            await lineRepo
-              .createQueryBuilder()
-              .delete()
-              .where("chart_id = :chartId", { chartId })
-              .execute();
-          } else {
-            // Validate endpoints exist
-            const endpointIds = new Set<string>();
-            for (const l of incoming) {
-              endpointIds.add(l.sourceDeviceId);
-              endpointIds.add(l.targetDeviceId);
-            }
-            if (endpointIds.size) {
-              const endpointsCount = await deviceRepo.count({
-                where: { id: In(Array.from(endpointIds)) },
-              });
-              if (endpointsCount !== endpointIds.size) {
-                throw new BadRequestException(
-                  "One or more line endpoints reference non-existing devices"
-                );
-              }
-            }
-
-            // Delete lines not included in payload (keep those with same id)
-            const incomingIds = new Set(
-              incoming.filter((l) => !!l.id).map((l) => l.id!)
-            );
-
-            if (incomingIds.size) {
-              await lineRepo
-                .createQueryBuilder()
-                .delete()
-                .where("chart_id = :chartId", { chartId })
-                .andWhere("id NOT IN (:...ids)", {
-                  ids: Array.from(incomingIds),
-                })
-                .execute();
-            } else {
-              // No IDs supplied => replace all lines for this chart
-              await lineRepo
-                .createQueryBuilder()
-                .delete()
-                .where("chart_id = :chartId", { chartId })
-                .execute();
-            }
-
-            // Save each line (id present => update; id missing => insert)
-            for (const l of incoming) {
-              const line = lineRepo.create({
-                id: l.id, // undefined inserts
-                chart: { id: chartId } as ChartEntity,
-                sourceDevice: { id: l.sourceDeviceId } as DeviceEntity,
-                targetDevice: { id: l.targetDeviceId } as DeviceEntity,
-                type: l.type,
-                label: l.label ?? null,
-              });
-              await lineRepo.save(line);
-            }
-          }
-        }
-
-        // Return a fresh snapshot (include device objects for convenience)
-        return chartsRepo.findOneOrFail({
-          where: { id: chartId },
-          relations: {
-            devicesLocations: {
-              device: {
-                model: {
-                  vendor: true,
-                },
-              },
-            },
-            lines: {
-              sourceDevice: { model: { vendor: true } },
-              targetDevice: { model: { vendor: true } },
-            },
-          },
+        // Upsert ports (idempotent)
+        await portRepo.upsert(incomingPorts, {
+          conflictPaths: ["id"],
+          skipUpdateIfNoValuesChanged: true,
         });
       }
-    );
 
-    return this.convertChartEntityToChart(updatedchartentity);
-  }
+      // b) Upsert device placements
+      await docRepo.upsert(
+        placements.map((d) => ({
+          chartId,
+          deviceId: d.device.id,
+          position: d.position,
+        })),
+        ["chartId", "deviceId"]
+      );
+
+      // c) Remove device placements not present anymore
+      const desiredIds = new Set(placements.map((d) => d.device.id));
+      const existingDocs = await docRepo.find({ where: { chartId } });
+      const toRemove = existingDocs.filter((e) => !desiredIds.has(e.deviceId));
+      if (toRemove.length) await docRepo.remove(toRemove);
+
+      // d) Replace port placements (handles) per device
+      for (const d of placements) {
+        if (!("handles" in d) || d.handles == null) continue;
+
+        const desiredRows = this.handlesToRows(chartId, d.device.id, d.handles);
+
+        // Validate each port belongs to this device (now that ports exist)
+        if (desiredRows.length) {
+          const distinctPortIds = [
+            ...new Set(desiredRows.map((r) => r.portId)),
+          ];
+          const cnt = await portRepo.count({
+            where: { id: In(distinctPortIds), deviceId: d.device.id },
+          });
+          if (cnt !== distinctPortIds.length) {
+            throw new BadRequestException(
+              "One or more ports do not belong to this device"
+            );
+          }
+        }
+
+        await pocRepo.delete({ chartId, deviceId: d.device.id });
+        if (desiredRows.length) await pocRepo.insert(desiredRows);
+      }
+    }
+    // ---- 3) Lines (global + per-chart instance)
+    if (dto.linesOnChart !== undefined) {
+      const linesOnChart: LineOnChart[] = dto.linesOnChart;
+      for (const loc of linesOnChart) {
+        if (!loc?.line?.id)
+          throw new BadRequestException("LineEntity.id is required");
+        const spid = loc.line.sourcePort.id;
+        const tpid = loc.line.targetPort.id;
+        if (!spid || !tpid)
+          throw new BadRequestException(
+            "sourcePortId/targetPortId are required"
+          );
+        if (spid === tpid)
+          throw new BadRequestException(
+            "sourcePortId and targetPortId must be different"
+          );
+      }
+
+      const wantedLines: Line[] = dto.linesOnChart.map((loc) => loc.line);
+      await lineRepo.upsert(wantedLines.map(l=>this.linesService.convertLineToEntity(l)), {
+        conflictPaths: ["id"],
+        skipUpdateIfNoValuesChanged: true,
+      });
+
+      await locRepo.upsert(dto.linesOnChart.map(l=>{
+        return {
+          chartId:l.chartId,
+          lineId:l.line.id,
+          label:l.label,
+          type:l.type
+
+        } as LineOnChartEntity
+      }),{
+        conflictPaths: ["chartId","lineId"],
+        skipUpdateIfNoValuesChanged: true,
+      })
+
+      await locRepo.delete({
+        chartId:chartId,
+        lineId:Not(In(dto.linesOnChart.map(loc=>loc.line.id)))
+      })
+    }
+
+    // ---- 4) Return fresh chart with full relations
+    return chartsRepo.findOneOrFail({
+      where: { id: chartId },
+      relations: {
+        devicesOnChart: {
+          device: { model: { vendor: true }, ports: true },
+          portPlacements: { port: true },
+        },
+        linesOnChart: { line:{
+          sourcePort:true,
+          targetPort:true
+        } },
+      },
+    });
+  });
+
+  return this.convertChartEntityToChart(updated);
+}
+
 
   async removeChart(id: string): Promise<void> {
     const chart = await this.chartRepo.findOne({ where: { id } });

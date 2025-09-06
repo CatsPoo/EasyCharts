@@ -9,29 +9,36 @@ import { ModelsService } from './model.service';
 import { ModelsController } from './models.controller';
 import { VendorsController } from './vendors.controller';
 import { VendorsService } from './vendors.service';
+import { PortEntity } from './entities/port.entity';
+import { PortsController } from './ports.controller';
+import { PortsService } from './ports.service';
 
 @Module({
     imports:[
         TypeOrmModule.forFeature([
             DeviceEntity,
             VendorEntity,
-            ModelEntity
+            ModelEntity,
+            PortEntity
         ]),
     ],
     controllers:[
         DevicesController,
         VendorsController,
-        ModelsController
+        ModelsController,
+        PortsController
     ],
     providers:[
         DevicesService,
         VendorsService,
-        ModelsService
+        ModelsService,
+        PortsService
     ],
     exports:[
         DevicesService,
         VendorsService,
-        ModelsService
+        ModelsService,
+        PortsService
     ]
 })
 export class DevicesModule {}

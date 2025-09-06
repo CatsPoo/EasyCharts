@@ -22,7 +22,7 @@ export function useCreateChartMutation() {
     mutationFn: (dto: ChartCreate) => createChart(dto),
     onSuccess: () => {
       // refresh list
-      qc.invalidateQueries({ queryKey: ['chartsMetadata'] });
+      qc.invalidateQueries({ queryKey: ['chartsMetadata','chart'] });
     },
   });
 }

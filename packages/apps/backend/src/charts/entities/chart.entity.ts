@@ -3,10 +3,10 @@ import {
   Entity,
   OneToMany,
   PrimaryGeneratedColumn,
-  type Relation,
+  type Relation
 } from "typeorm";
 import { DeviceOnChartEntity } from "./deviceOnChart.entityEntity";
-import { LineEntity } from "./line.entity";
+import { LineOnChartEntity } from "./lineonChart.emtity";
 
 @Entity({ name: "charts" })
 export class ChartEntity {
@@ -19,17 +19,15 @@ export class ChartEntity {
   @Column({ nullable: false, default: "" })
   description!: string;
 
-  @OneToMany(
-    () => DeviceOnChartEntity,
-    (doc: DeviceOnChartEntity) => doc.chart,
-    {
-      cascade: true,
-    }
-  )
-  devicesLocations!: DeviceOnChartEntity[];
-
-  @OneToMany(() => LineEntity, (line) => line.chart, {
-    cascade: true, // allows saving via parent; keep if you use replace-on-update
+  @OneToMany(() => DeviceOnChartEntity, (doc) => doc.chart, {
+    cascade: ["insert", "update"],
+    orphanedRowAction: "delete",
   })
-  lines!: Relation<LineEntity[]>;
+  devicesOnChart!: Relation<DeviceOnChartEntity[]>;
+
+  @OneToMany(() => LineOnChartEntity, (loc) => loc.chart, {
+    cascade: ["insert", "update"],
+    orphanedRowAction: "delete",
+  })
+  linesOnChart!: Relation<LineOnChartEntity[]>;
 }

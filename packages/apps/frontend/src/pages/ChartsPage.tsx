@@ -1,4 +1,4 @@
-import { type Chart } from "@easy-charts/easycharts-types";
+import { type Chart, type ChartCreate } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   AppBar,
@@ -14,7 +14,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 import AssetPage from "../components/AssetsList/AssetsPage";
-import { ChartEditor } from "../components/ChartsViewer/ChartEditor";
+import { ChartEditor } from "../components/ChartEditor/ChartEditor"; 
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
 import { updateChart, useChartById } from "../hooks/chartsHooks";
@@ -79,14 +79,13 @@ export function ChartsPage() {
     async (e?: React.MouseEvent<HTMLButtonElement>) => {
       // prevent form submit refresh if inside a <form>
       e?.preventDefault();
-
       if (!editChart) return;
 
-      const payload = {
+      const payload :ChartCreate = {
         name: editChart.name,
         description: editChart.description ?? "",
-        devicesLocations: editChart.devicesLocations, // [{deviceId, position:{x,y}}, ...]
-        lines: editChart.lines, // [{id?, sourceDeviceId, targetDeviceId, type, label?}, ...]
+        devicesOnChart: editChart.devicesOnChart,
+        linesOnChart:editChart.linesOnChart
       };
 
       setSaving(true);
