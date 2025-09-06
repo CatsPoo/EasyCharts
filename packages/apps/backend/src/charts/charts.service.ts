@@ -19,7 +19,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, In, Repository } from "typeorm";
+import { DataSource, In, Not, Repository } from "typeorm";
 import { DevicesService } from "../devices/devices.service";
 import { DeviceEntity } from "../devices/entities/device.entity";
 import { PortEntity } from "../devices/entities/port.entity";
@@ -340,6 +340,11 @@ export class ChartsService {
       }),{
         conflictPaths: ["chartId","lineId"],
         skipUpdateIfNoValuesChanged: true,
+      })
+
+      await locRepo.delete({
+        chartId:chartId,
+        lineId:Not(In(dto.linesOnChart.map(loc=>loc.line.id)))
       })
     }
 
