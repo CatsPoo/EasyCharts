@@ -1,9 +1,7 @@
 import {
-  DirectionsValues,
   type Chart,
   type Device,
   type DeviceOnChart,
-  type HandleInfo,
   type Handles,
   type Line,
   type LineOnChart,
@@ -24,14 +22,14 @@ import ReactFlow, {
   useReactFlow,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import { useListAssets } from "../../hooks/assetsHooks";
+import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import DeviceNode from "./DeviceNode";
 import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
 
 interface ChardEditorProps {
   chart: Chart;
-  setChart:  React.Dispatch<React.SetStateAction<Chart>>;
+  setChart: React.Dispatch<React.SetStateAction<Chart>>;
   editMode: boolean;
   setMadeChanges: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -41,76 +39,13 @@ export function ChartEditor({
   editMode,
   setMadeChanges,
 }: ChardEditorProps) {
-
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
 
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
-  const { data: availableDevicesResponse } = useListAssets("devices", {
-    page: 0,
-    pageSize: 100000,
-  });
-
-
-  const usedIds = useMemo(
-    () => new Set(chart.devicesOnChart.map(d => d.device.id)),
-    [chart.devicesOnChart,setChart]
-  );
-
-  const availableDevices = availableDevicesResponse?.rows ?? [];
-  // Devices not yet placed
-  const unusedDevices = useMemo(() => {
-    return availableDevices.filter((dev) => !usedIds.has(dev.id));
-  }, [availableDevicesResponse, usedIds]);
-
-  const devicesById = useMemo<Map<string, Device>>(
-    () =>
-      new Map(availableDevices.map((d: Device): [string, Device] => [d.id, d])),
-    [availableDevices, setChart,chart]
-  );
-
-  const updateDeviceOnChart = useCallback(
-    (deviceOnChart: DeviceOnChart) => {
-      const { device, handles } = deviceOnChart;
-      setChart((prev) => {
-        return {
-          ...prev,
-          devicesOnChart: prev.devicesOnChart.map((doc) =>
-            doc.device.id === device.id ? { ...doc, handles, device } : doc
-          ),
-        };
-      });
-      setMadeChanges(true);
-    },
-    [setChart, chart, setMadeChanges]
-  );
-
-  const convertDeviceToNode = (deviceOnChart: DeviceOnChart): Node => {
-    const { device, position } = deviceOnChart;
-    const node: Node = {
-      id: device.id,
-      type: "device",
-      position,
-      data: {
-        deviceOnChart: deviceOnChart,
-        editMode,
-        updateDeviceOnChart
-      } as DeviceNodeData,
-    };
-    return node;
-  };
-
-  const convertDevicesToNodes = (devicesOnChart: DeviceOnChart[]): Node[] => {
-    const nodes: Node[] = devicesOnChart.map((deviceOnChart) =>
-      convertDeviceToNode(deviceOnChart)
-    );
-    return nodes;
-  };
-
   const convertLineToEdge = (lineonChart: LineOnChart): Edge => {
-    console.log("lineOnchat",lineonChart)
     return {
       id: lineonChart.line.id,
       source: lineonChart.line.sourcePort.deviceId,
@@ -123,35 +58,105 @@ export function ChartEditor({
     };
   };
 
-  const convertLinesToEdges = (lines: LineOnChart[]): Edge[] => {
-    return lines ? lines.map((l) => convertLineToEdge(l)) : [];
-  };
+  const [nodes, setNodes, onNodesChangeRF] = useNodesState<Node[]>([]);
+  const [edges, setEdges, onEdgesChangeRF] = useEdgesState<Edge[]>([]);
 
-  const [nodes, setNodes, onNodesChangeRF] = useNodesState(
-    convertDevicesToNodes(chart.devicesOnChart)
+  const onRemoveNode = useCallback(
+  (deviceId: string) => {
+    setChart(prev => ({
+      ...prev,
+      devicesOnChart: prev.devicesOnChart.filter(doc => doc.device.id !== deviceId),
+      // optional: also drop edges touching this device in chart state
+      linesOnChart: prev.linesOnChart.filter(
+        l =>
+          l.line.sourcePort.deviceId !== deviceId &&
+          l.line.targetPort.deviceId !== deviceId
+      ),
+    }));
+    setNodes(ns => ns.filter(n => n.id !== deviceId));
+    setEdges(es => es.filter(e => e.source !== deviceId && e.target !== deviceId));
+  },
+  [setChart, setNodes, setEdges]
+);
+
+const updateDeviceOnChart = useCallback(
+    (deviceOnChart: DeviceOnChart) => {
+      const { device, handles } = deviceOnChart;
+      setChart((prev) => {
+        return {
+          ...prev,
+          devicesOnChart: prev.devicesOnChart.map((doc) =>
+            doc.device.id === device.id ? { ...doc, handles, device } : doc
+          ),
+        };
+      });
+      setMadeChanges(true);
+    },
+    [setChart, setMadeChanges]
   );
-  const [edges, setEdges, onEdgesChangeRF] = useEdgesState(
-    convertLinesToEdges(chart.linesOnChart)
+
+  const convertDeviceToNode = useCallback(
+    (deviceOnChart: DeviceOnChart): Node => {
+      const { device, position } = deviceOnChart;
+      const node: Node = {
+        id: device.id,
+        type: "device",
+        position,
+        data: {
+          deviceOnChart: deviceOnChart,
+          editMode,
+          updateDeviceOnChart,
+          onRemoveNode,
+        } as DeviceNodeData,
+      };
+      return node;
+    },
+    [editMode,onRemoveNode,updateDeviceOnChart]
+  );
+
+  const { data: availableDevicesResponse } = useListAssets("devices", {
+    page: 0,
+    pageSize: 100000,
+  });
+
+  const usedIds = useMemo(
+    () => new Set(chart.devicesOnChart.map((d) => d.device.id)),
+    [chart.devicesOnChart]
+  );
+
+  const availableDevices = useMemo(
+    () => availableDevicesResponse?.rows ?? [],
+    [availableDevicesResponse]
+  );
+
+  // Devices not yet placed
+  const unusedDevices = useMemo(() => {
+    return availableDevices.filter((dev) => !usedIds.has(dev.id));
+  }, [usedIds, availableDevices]);
+
+  const devicesById = useMemo<Map<string, Device>>(
+    () =>
+      new Map(availableDevices.map((d: Device): [string, Device] => [d.id, d])),
+    [availableDevices]
   );
 
   useEffect(() => {
-    setNodes((prev) => {
+    setNodes((prev:Node[]) => {
       const docsById = new Map(
         chart.devicesOnChart.map((doc) => [doc.device.id, doc])
       );
 
       return prev.map((prevNode) => {
-        
         const doc = docsById.get(prevNode.id);
         if (!doc) return prevNode;
         return {
           ...prevNode,
-          data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData,  
+          data: { ...prevNode.data, deviceOnChart: doc } as DeviceNodeData,
         };
       });
     });
     setEdges(chart.linesOnChart.map(convertLineToEdge));
-  }, [setNodes, setEdges, chart.devicesOnChart]);
+  }, [setNodes, setEdges, chart.devicesOnChart, chart.linesOnChart]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -163,27 +168,31 @@ export function ChartEditor({
     (changes: EdgeChange[]) => {
       onEdgesChangeRF(changes);
     },
-    [onEdgesChangeRF, setEdges]
+    [onEdgesChangeRF]
   );
 
   const onConnect = useCallback(
     (c: Connection) => {
-      const newId:string = uuidv4();
-      const sourcePort : Port = chart.devicesOnChart.find(d=>d.device.id===c.source)!.device.ports.find(p=>p.id===c.sourceHandle)!;
-      const targetPort: Port = chart.devicesOnChart.find(d=>d.device.id===c.target)!.device.ports.find(p=>p.id===c.targetHandle)!;
+      const newId: string = uuidv4();
+      const sourcePort: Port = chart.devicesOnChart
+        .find((d) => d.device.id === c.source)!
+        .device.ports.find((p) => p.id === c.sourceHandle)!;
+      const targetPort: Port = chart.devicesOnChart
+        .find((d) => d.device.id === c.target)!
+        .device.ports.find((p) => p.id === c.targetHandle)!;
       const newLine: LineOnChart = {
         chartId: chart.id,
         line: {
-          id:newId,
-          sourcePort:sourcePort,
-          targetPort:targetPort
+          id: newId,
+          sourcePort: sourcePort,
+          targetPort: targetPort,
         } as Line,
-        type: 'step',
+        type: "step",
         label: "",
-      }
-      sourcePort.inUse=true;
-      targetPort.inUse=true;
-      
+      };
+      sourcePort.inUse = true;
+      targetPort.inUse = true;
+
       setEdges((eds) => [...eds, convertLineToEdge(newLine)]);
       setMadeChanges(true);
       setChart((prev) => {
@@ -193,18 +202,17 @@ export function ChartEditor({
         } as Chart;
       });
     },
-    [setChart, nodes]
+    [setChart, chart.devicesOnChart, setEdges, setMadeChanges, chart.id]
   );
-  
+
   const OnReconnectStart = useCallback(() => {
     setIsReconnecting(true);
-    
+
     setMadeChanges(true);
-  }, [setIsReconnecting]);
+  }, [setIsReconnecting, setMadeChanges]);
 
   const OnReconnectEnd = useCallback(() => {
     setIsReconnecting(false);
-    
   }, [setIsReconnecting]);
 
   const onDragOver = useCallback(
@@ -230,7 +238,7 @@ export function ChartEditor({
       });
       setMadeChanges(true);
     },
-    [chart, setChart, setMadeChanges]
+    [setChart, setMadeChanges]
   );
 
   const onDrop = useCallback(
@@ -276,7 +284,16 @@ export function ChartEditor({
       });
       setMadeChanges(true);
     },
-    [editMode, project, devicesById, setNodes, setChart, setMadeChanges, chart]
+    [
+      editMode,
+      project,
+      devicesById,
+      setNodes,
+      setChart,
+      setMadeChanges,
+      chart,
+      convertDeviceToNode,
+    ]
   );
   const onEdgeUpdate = useCallback(
     (oldE: Edge, conn: Connection) => {
@@ -284,6 +301,14 @@ export function ChartEditor({
     },
     [setEdges]
   );
+
+  useEffect(() => {
+    setNodes(chart.devicesOnChart.map(convertDeviceToNode));
+  }, []);
+
+  useEffect(() => {
+    setEdges(chart.linesOnChart.map(convertLineToEdge));
+  }, []);
 
   return (
     <div className="flex flex-1 h-full">
