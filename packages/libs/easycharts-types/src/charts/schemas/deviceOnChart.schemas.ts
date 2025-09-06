@@ -4,7 +4,6 @@ import { DeviceSchema, PortSchema } from "../../devices/index.js";
 
 export const handleSchema = z.object({
   port: PortSchema,
-  direction: z.enum(["source", "target"]),
 });
 
   export const HandlesSchema = z.object({

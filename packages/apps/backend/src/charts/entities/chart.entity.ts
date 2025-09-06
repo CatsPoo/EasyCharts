@@ -2,9 +2,11 @@ import {
   Column,
   Entity,
   OneToMany,
-  PrimaryGeneratedColumn
+  PrimaryGeneratedColumn,
+  type Relation
 } from "typeorm";
 import { DeviceOnChartEntity } from "./deviceOnChart.entityEntity";
+import { LineOnChartEntity } from "./lineonChart.emtity";
 
 @Entity({ name: "charts" })
 export class ChartEntity {
@@ -17,12 +19,15 @@ export class ChartEntity {
   @Column({ nullable: false, default: "" })
   description!: string;
 
-  @OneToMany(
-    () => DeviceOnChartEntity,
-    (doc: DeviceOnChartEntity) => doc.chart,
-    {
-      cascade: true,
-    }
-  )
-  devicesOnChart!: DeviceOnChartEntity[];
+  @OneToMany(() => DeviceOnChartEntity, (doc) => doc.chart, {
+    cascade: ["insert", "update"],
+    orphanedRowAction: "delete",
+  })
+  devicesOnChart!: Relation<DeviceOnChartEntity[]>;
+
+  @OneToMany(() => LineOnChartEntity, (loc) => loc.chart, {
+    cascade: ["insert", "update"],
+    orphanedRowAction: "delete",
+  })
+  linesOnChart!: Relation<LineOnChartEntity[]>;
 }

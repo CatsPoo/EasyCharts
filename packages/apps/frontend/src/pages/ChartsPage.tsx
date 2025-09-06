@@ -84,8 +84,8 @@ export function ChartsPage() {
       const payload :ChartCreate = {
         name: editChart.name,
         description: editChart.description ?? "",
-        devicesOnChart: editChart.devicesOnChart, // [{deviceId, position:{x,y}}, ...]
-        lines: editChart.lines, // [{id?, sourceDeviceId, targetDeviceId, type, label?}, ...]
+        devicesOnChart: editChart.devicesOnChart,
+        linesOnChart:editChart.linesOnChart
       };
 
       setSaving(true);

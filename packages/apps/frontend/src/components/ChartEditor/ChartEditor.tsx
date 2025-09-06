@@ -6,13 +6,15 @@ import {
   type HandleInfo,
   type Handles,
   type Line,
+  type LineOnChart,
+  type Port,
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from "reactflow";
+import { v4 as uuidv4 } from "uuid";
 
 import ReactFlow, {
-  addEdge,
   Background,
   ConnectionLineType,
   Controls,
@@ -66,16 +68,8 @@ export function ChartEditor({
   const devicesById = useMemo<Map<string, Device>>(
     () =>
       new Map(availableDevices.map((d: Device): [string, Device] => [d.id, d])),
-    [availableDevices]
+    [availableDevices, setChart,chart]
   );
-
-  const countLinesForHandle =(handle: HandleInfo): number => {
-  const pid = handle.port.id;
-  return chart.lines.filter(
-    (line) => line.sourcePorteId === pid || line.targetPortId === pid
-  ).length;
-}
-
 
   const updateDeviceOnChart = useCallback(
     (deviceOnChart: DeviceOnChart) => {
@@ -115,29 +109,21 @@ export function ChartEditor({
     return nodes;
   };
 
-  const convertLineToEdge = (line: Line): Edge => {
+  const convertLineToEdge = (lineonChart: LineOnChart): Edge => {
+    console.log("lineOnchat",lineonChart)
     return {
-      id: line.id,
-      source: line.sourcePorteId,
-      target: line.targetPortId,
-      label: line.label,
-      type: "step",
-      animated: false, // optional: makes the edge animate
-      //style: { strokeDasharray: l.type === 'rj45' ? '5 5' : undefined },
+      id: lineonChart.line.id,
+      source: lineonChart.line.sourcePort.deviceId,
+      target: lineonChart.line.targetPort.deviceId,
+      sourceHandle: lineonChart.line.sourcePort.id,
+      targetHandle: lineonChart.line.targetPort.id,
+      label: lineonChart.label,
+      type: lineonChart.type,
+      animated: false,
     };
   };
 
-  const convertEdgeToLine = (edge: Edge): Line => {
-    return {
-      id: edge.id,
-      sourcePorteId: edge.source,
-      targetPortId: edge.target,
-      label: edge.label,
-      type: edge.type
-    } as Line;
-  }
-
-  const convertLinesToEdges = (lines: Line[]): Edge[] => {
+  const convertLinesToEdges = (lines: LineOnChart[]): Edge[] => {
     return lines ? lines.map((l) => convertLineToEdge(l)) : [];
   };
 
@@ -145,7 +131,7 @@ export function ChartEditor({
     convertDevicesToNodes(chart.devicesOnChart)
   );
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState(
-    convertLinesToEdges(chart.lines)
+    convertLinesToEdges(chart.linesOnChart)
   );
 
   useEffect(() => {
@@ -158,15 +144,13 @@ export function ChartEditor({
         
         const doc = docsById.get(prevNode.id);
         if (!doc) return prevNode;
-
         return {
           ...prevNode,
-          data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData, 
-          selected: prevNode.selected, // preserve selection (explicit)
+          data: { ...prevNode.data,deviceOnChart:doc} as DeviceNodeData,  
         };
       });
     });
-    setEdges(convertLinesToEdges(chart.lines));
+    setEdges(chart.linesOnChart.map(convertLineToEdge));
   }, [setNodes, setEdges, chart.devicesOnChart]);
 
   const onNodesChange = useCallback(
@@ -184,10 +168,32 @@ export function ChartEditor({
 
   const onConnect = useCallback(
     (c: Connection) => {
-      console.log("onConnect",c);
-      setEdges((eds) => addEdge(c, eds));
+      const newId:string = uuidv4();
+      const sourcePort : Port = chart.devicesOnChart.find(d=>d.device.id===c.source)!.device.ports.find(p=>p.id===c.sourceHandle)!;
+      const targetPort: Port = chart.devicesOnChart.find(d=>d.device.id===c.target)!.device.ports.find(p=>p.id===c.targetHandle)!;
+      const newLine: LineOnChart = {
+        chartId: chart.id,
+        line: {
+          id:newId,
+          sourcePort:sourcePort,
+          targetPort:targetPort
+        } as Line,
+        type: 'step',
+        label: "",
+      }
+      sourcePort.inUse=true;
+      targetPort.inUse=true;
+      
+      setEdges((eds) => [...eds, convertLineToEdge(newLine)]);
+      setMadeChanges(true);
+      setChart((prev) => {
+        return {
+          ...prev,
+          linesOnChart: [...prev.linesOnChart, newLine],
+        } as Chart;
+      });
     },
-    [setEdges]
+    [setChart, nodes]
   );
   
   const OnReconnectStart = useCallback(() => {
