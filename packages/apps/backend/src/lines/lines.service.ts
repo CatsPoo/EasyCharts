@@ -25,6 +25,8 @@ export class LinessService {
       return {
         id,
         sourcePort,
+        sourcePortId:sourcePort.id,
+        targetPortId:targetPort.id,
         targetPort
       } as LineEntity
     }

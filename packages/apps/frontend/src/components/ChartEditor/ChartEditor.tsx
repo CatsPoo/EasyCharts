@@ -173,7 +173,6 @@ export function ChartEditor({
       const targetPort: Port = chart.devicesOnChart.find(d=>d.device.id===c.target)!.device.ports.find(p=>p.id===c.targetHandle)!;
       const newLine: LineOnChart = {
         chartId: chart.id,
-        id: newId,
         line: {
           id:newId,
           sourcePort:sourcePort,
