@@ -1,23 +1,23 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  JoinColumn,
-  Column,
-  type Relation,
-  Index,
-  Unique,
-} from "typeorm";
-import { ChartEntity } from "./chart.entity";
-import { LineEntity } from "../../lines/entities/line.entity";
 import type { LineType } from "@easy-charts/easycharts-types";
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+  Unique,
+  type Relation
+} from "typeorm";
+import { LineEntity } from "../../lines/entities/line.entity";
+import { ChartEntity } from "./chart.entity";
 
 
 
 @Entity({ name: "lines_on_chart" })
 @Unique("uniq_line_per_chart", ["chartId", "lineId"])
 export class LineOnChartEntity {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryColumn("uuid")
   id!: string;
 
   @ManyToOne(() => ChartEntity, (chart) => chart.linesOnChart, {

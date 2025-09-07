@@ -1,6 +1,7 @@
 // src/charts/charts.service.ts
 import {
   HandleInfo,
+  Line,
   LineOnChart,
   LineType,
   Port,
@@ -96,12 +97,12 @@ export class ChartsService {
   //TODO all lines to convertion function
   convertChartEntityToChart = async (chartEnrity: ChartEntity): Promise<Chart> => {
     const { devicesOnChart,linesOnChart, ...chartData } = chartEnrity;
-    let convertedDeviceOnCharts : DeviceOnChart[] = []
+    const convertedDeviceOnCharts : DeviceOnChart[] = []
     for(const dl of devicesOnChart){
       convertedDeviceOnCharts.push(await this.convertDeviceOnChartEntity(dl)); 
     }
 
-    let convertedLinesOnChart:LineOnChart[] =[]
+    const convertedLinesOnChart:LineOnChart[] =[]
     for(const ll of linesOnChart ?? []){
       convertedLinesOnChart.push(await this.convertLineonChartEntity(ll));
     }
@@ -114,7 +115,7 @@ export class ChartsService {
   };
 
   async getAllCharts(): Promise<Chart[]> {
-    let convertedCharts:Chart[]=[]
+    const convertedCharts:Chart[]=[]
     const charts = await this.chartRepo.find({});
     for(const c of charts){
       convertedCharts.push(await this.convertChartEntityToChart(c));
@@ -291,90 +292,9 @@ export class ChartsService {
         if (desiredRows.length) await pocRepo.insert(desiredRows);
       }
     }
-
     // ---- 3) Lines (global + per-chart instance)
     if (dto.linesOnChart !== undefined) {
-      const desired = dto.linesOnChart;
-
-      // a) Validate source != target
-      for (const l of desired) {
-        if (l.line.sourcePort.id === l.line.targetPort.id) {
-          throw new BadRequestException("sourcePortId and targetPortId must be different");
-        }
-      }
-
-      // b) Validate ports exist & devices are placed on this chart
-      const wantedPortIds = [
-        ...new Set(desired.flatMap((l) => [l.line.sourcePort.id, l.line.targetPort.id])),
-      ];
-
-      const ports = wantedPortIds.length
-        ? await portRepo.find({
-            where: { id: In(wantedPortIds) },
-            select: ['id', 'deviceId'],
-          })
-        : [];
-      const portsById = new Map(ports.map((p) => [p.id, p]));
-
-      // load placed devices once (avoid per-line count queries)
-      const placed = await docRepo.find({ where: { chartId }, select: ['deviceId'] });
-      const placedSet = new Set(placed.map(p => p.deviceId));
-
-      for (const l of desired) {
-        const sp = portsById.get(l.line.sourcePort.id);
-        const tp = portsById.get(l.line.targetPort.id);
-        if (!sp || !tp) {
-          throw new BadRequestException("One or more ports do not exist");
-        }
-        if (!placedSet.has(sp.deviceId) || !placedSet.has(tp.deviceId)) {
-          throw new BadRequestException("Both ports must belong to devices placed on this chart");
-        }
-      }
-
-      // c) Upsert global Line rows (unique on (sourcePortId, targetPortId))
-      const linesToUpsert = desired.map((l) => ({
-        sourcePortId: l.line.sourcePort.id,
-        targetPortId: l.line.targetPort.id,
-        type: l.type,
-        label: l.label,
-      }));
-      if (linesToUpsert.length) {
-        await lineRepo.upsert(linesToUpsert, ['sourcePortId', 'targetPortId']);
-      }
-
-      // d) Fetch ids to create LineOnChart rows
-      const persistedLines = linesToUpsert.length
-        ? await lineRepo.find({
-            where: {
-              sourcePortId: In(linesToUpsert.map((x) => x.sourcePortId)),
-              targetPortId: In(linesToUpsert.map((x) => x.targetPortId)),
-            },
-            select: ['id', 'sourcePortId', 'targetPortId'],
-          })
-        : [];
-      const lineIdByPair = new Map(
-        persistedLines.map((p) => [`${p.sourcePortId}→${p.targetPortId}`, p.id])
-      );
-
-      // e) Upsert LineOnChart (unique on (chartId, lineId))
-      const locRows = desired.map((l) => ({
-        chartId,
-        lineId: lineIdByPair.get(`${l.line.sourcePort.id}→${l.line.targetPort.id}`)!,
-        sourcePortId: l.line.sourcePort.id,
-        targetPortId: l.line.targetPort.id,
-      }));
-      if (locRows.length) {
-        await locRepo.upsert(locRows, ['chartId', 'lineId']);
-      }
-
-      // f) Remove LineOnChart that are not present anymore for this chart
-      const keep = new Set(locRows.map((r) => `${r.chartId}:${r.lineId}`));
-      const existingLOC = await locRepo.find({
-        where: { chartId },
-        select: ['id', 'chartId', 'lineId'],
-      });
-      const toDelete = existingLOC.filter((x) => !keep.has(`${x.chartId}:${x.lineId}`));
-      if (toDelete.length) await locRepo.remove(toDelete);
+      
     }
 
     // ---- 4) Return fresh chart with full relations
