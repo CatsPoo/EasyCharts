@@ -8,7 +8,7 @@ interface assetsSidebarProps {
 
 export function AssetSidebar({ assets,selectedAsset, onSelect}: assetsSidebarProps) {
   return (
-    <Box sx={{ width:250, flexShrink: 0, borderRight: '1px solid #ddd', height: '100%' }}>
+    <Box sx={{ width:250, flexShrink: 0, borderRight: '1px solid', height: '100%' }}>
       <List>
         {assets.map((asset) => (
           <ListItem disablePadding>
