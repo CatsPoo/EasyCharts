@@ -7,7 +7,7 @@ import { useListAssets, useCreateAsset, useUpdateAsset, useDeleteAsset } from '.
 import type { AssetKind, AnyAsset } from '@easy-charts/easycharts-types';
 import { AssetForm } from './AssetsForm';
 
-export default function AssetPage() {
+export default function AssetTab() {
   const [kind, setKind] = useState<AssetKind>('devices');
   const [pagination, setPagination] = useState<GridPaginationModel>({ page: 0, pageSize: 25 });
   const [sortModel, setSortModel] = useState<GridSortModel>([]);

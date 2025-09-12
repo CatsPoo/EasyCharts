@@ -13,13 +13,12 @@ import Box from "@mui/material/Box";
 import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
-import AssetPage from "../components/AssetsList/AssetsPage";
-import { ChartEditor } from "../components/ChartEditor/ChartEditor"; 
+import AssetTab from "../components/AssetsList/AssetTab";
+import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
-import { updateChart, useChartById } from "../hooks/chartsHooks";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
-import { Background } from "reactflow";
+import { updateChart, useChartById } from "../hooks/chartsHooks";
 
 export function ChartsPage() {
   const [tab, setTab] = React.useState(0);
@@ -155,7 +154,7 @@ export function ChartsPage() {
           </Box>
         ) : (
           <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex" }}>
-            <AssetPage />
+            <AssetTab />
           </Box>
         )}
       </Box>
