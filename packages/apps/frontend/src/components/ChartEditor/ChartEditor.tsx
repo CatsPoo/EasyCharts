@@ -26,6 +26,7 @@ import { useListAssets } from "../../hooks/assetsHooks";
 import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import DeviceNode from "./DeviceNode";
 import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
+import MenuList from "./MenueList";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -42,6 +43,86 @@ export function ChartEditor({
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
+
+  const [ctx, setCtx] = useState<CtxState>({
+    open: false,
+    x: 0,
+    y: 0,
+    kind: "pane",
+  });
+
+  const closeCtx = useCallback(
+    () => setCtx((c) => ({ ...c, open: false })),
+    []
+  );
+
+  const moveMenuTo = useCallback((e: React.MouseEvent) => {
+  e.preventDefault();   // block browser context menu
+  e.stopPropagation();
+  setCtx(prev => ({
+    ...prev,
+    open: true,
+    x: e.clientX,
+    y: e.clientY,
+    kind:ctx.kind
+  }));
+}, [setCtx]);
+
+  const onPaneContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setCtx({
+      open: true,
+      x: e.clientX,
+      y: e.clientY,
+      kind: "pane",
+      payload: null,
+    });
+  }, []);
+
+  const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
+    e.preventDefault();
+    setCtx({
+      open: true,
+      x: e.clientX,
+      y: e.clientY,
+      kind: "node",
+      payload: { node },
+    });
+  }, []);
+
+  const onEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
+    e.preventDefault();
+    setCtx({
+      open: true,
+      x: e.clientX,
+      y: e.clientY,
+      kind: "edge",
+      payload: { edge },
+    });
+  }, []);
+
+  // this one will be passed down to DeviceNode and called from each <Handle>
+  const onHandleContextMenu = useCallback(
+    (
+      e: React.MouseEvent,
+      info: {
+        deviceId: string;
+        portId: string;
+        role: "source" | "target";
+        side?: "left" | "right" | "top" | "bottom";
+      }
+    ) => {
+      e.preventDefault();
+      setCtx({
+        open: true,
+        x: e.clientX,
+        y: e.clientY,
+        kind: "handle",
+        payload: info,
+      });
+    },
+    []
+  );
 
   const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
@@ -62,24 +143,28 @@ export function ChartEditor({
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState<Edge[]>([]);
 
   const onRemoveNode = useCallback(
-  (deviceId: string) => {
-    setChart(prev => ({
-      ...prev,
-      devicesOnChart: prev.devicesOnChart.filter(doc => doc.device.id !== deviceId),
-      // optional: also drop edges touching this device in chart state
-      linesOnChart: prev.linesOnChart.filter(
-        l =>
-          l.line.sourcePort.deviceId !== deviceId &&
-          l.line.targetPort.deviceId !== deviceId
-      ),
-    }));
-    setNodes(ns => ns.filter(n => n.id !== deviceId));
-    setEdges(es => es.filter(e => e.source !== deviceId && e.target !== deviceId));
-  },
-  [setChart, setNodes, setEdges]
-);
+    (deviceId: string) => {
+      setChart((prev) => ({
+        ...prev,
+        devicesOnChart: prev.devicesOnChart.filter(
+          (doc) => doc.device.id !== deviceId
+        ),
+        // optional: also drop edges touching this device in chart state
+        linesOnChart: prev.linesOnChart.filter(
+          (l) =>
+            l.line.sourcePort.deviceId !== deviceId &&
+            l.line.targetPort.deviceId !== deviceId
+        ),
+      }));
+      setNodes((ns) => ns.filter((n) => n.id !== deviceId));
+      setEdges((es) =>
+        es.filter((e) => e.source !== deviceId && e.target !== deviceId)
+      );
+    },
+    [setChart, setNodes, setEdges]
+  );
 
-const updateDeviceOnChart = useCallback(
+  const updateDeviceOnChart = useCallback(
     (deviceOnChart: DeviceOnChart) => {
       const { device, handles } = deviceOnChart;
       setChart((prev) => {
@@ -107,11 +192,12 @@ const updateDeviceOnChart = useCallback(
           editMode,
           updateDeviceOnChart,
           onRemoveNode,
+          onHandleContextMenu
         } as DeviceNodeData,
       };
       return node;
     },
-    [editMode,onRemoveNode,updateDeviceOnChart]
+    [editMode, onRemoveNode, updateDeviceOnChart]
   );
 
   const { data: availableDevicesResponse } = useListAssets("devices", {
@@ -141,7 +227,7 @@ const updateDeviceOnChart = useCallback(
   );
 
   useEffect(() => {
-    setNodes((prev:Node[]) => {
+    setNodes((prev: Node[]) => {
       const docsById = new Map(
         chart.devicesOnChart.map((doc) => [doc.device.id, doc])
       );
@@ -302,6 +388,22 @@ const updateDeviceOnChart = useCallback(
     [setEdges]
   );
 
+  const onCtxAction = useCallback((action: string) => {
+  const { kind, payload } = ctx;
+  // TODO: implement per-action
+  // examples:
+  if (kind === 'node' && action === 'delete_node') {
+    const id = payload.node.id as string;
+    onRemoveNode(id);
+  }
+  if (kind === 'edge' && action === 'delete_edge') {
+    const id = payload.edge.id as string;
+    setEdges(es => es.filter(e => e.id !== id));
+    setChart(prev => ({ ...prev, linesOnChart: prev.linesOnChart.filter(l => l.line.id !== id) }));
+  }
+  closeCtx();
+}, [ctx, onRemoveNode, setEdges, setChart, closeCtx]);
+
   useEffect(() => {
     setNodes(chart.devicesOnChart.map(convertDeviceToNode));
   }, []);
@@ -332,6 +434,23 @@ const updateDeviceOnChart = useCallback(
         onDrop={onDrop}
         className="flex-1"
       >
+        {ctx.open && (
+          <>
+            {/* click-away overlay */}
+            <div
+              onClick={closeCtx}
+              onContextMenu={moveMenuTo}
+              className="fixed inset-0 z-[9998] bg-transparent"
+            />
+            <div
+              className="fixed z-[9999] min-w-[180px] rounded-md border border-slate-200 bg-white shadow-lg"
+              style={{ left: ctx.x, top: ctx.y }}
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              <MenuList kind={ctx.kind} onAction={onCtxAction} />
+            </div>
+          </>
+        )}
         <ReactFlow
           nodeTypes={nodeTypes}
           nodes={nodes}
@@ -347,6 +466,9 @@ const updateDeviceOnChart = useCallback(
           nodesConnectable={editMode}
           defaultEdgeOptions={{ type: ConnectionLineType.Step }}
           connectionLineType={ConnectionLineType.Step}
+          onPaneContextMenu={onPaneContextMenu}
+          onNodeContextMenu={onNodeContextMenu}
+          onEdgeContextMenu={onEdgeContextMenu}
           fitView
           style={{ width: "100%", height: "100%" }}
         >
