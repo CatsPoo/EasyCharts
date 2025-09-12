@@ -26,7 +26,7 @@ import { useListAssets } from "../../hooks/assetsHooks";
 import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import DeviceNode from "./DeviceNode";
 import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
-import MenuList from "./menueList";
+import MenuList from "./MenueList";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -50,10 +50,23 @@ export function ChartEditor({
     y: 0,
     kind: "pane",
   });
+
   const closeCtx = useCallback(
     () => setCtx((c) => ({ ...c, open: false })),
     []
   );
+
+  const moveMenuTo = useCallback((e: React.MouseEvent) => {
+  e.preventDefault();   // block browser context menu
+  e.stopPropagation();
+  setCtx(prev => ({
+    ...prev,
+    open: true,
+    x: e.clientX,
+    y: e.clientY,
+    kind:ctx.kind
+  }));
+}, [setCtx]);
 
   const onPaneContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -426,6 +439,7 @@ export function ChartEditor({
             {/* click-away overlay */}
             <div
               onClick={closeCtx}
+              onContextMenu={moveMenuTo}
               className="fixed inset-0 z-[9998] bg-transparent"
             />
             <div
