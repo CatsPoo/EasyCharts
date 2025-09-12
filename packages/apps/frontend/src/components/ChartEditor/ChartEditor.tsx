@@ -424,8 +424,8 @@ export function ChartEditor({
             animate={{ width: 192, opacity: 1 }} // 192px = 12rem
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="flex-none overflow-hidden border-r bg-gray-100
-             border-slate-200 dark:bg-slate-900 dark:border-slate-700"
+            className="flex-none overflow-hidden border-r
+             border-slate-200"
           >
             <DevicesSidebar devicesList={unusedDevices} />
           </motion.div>

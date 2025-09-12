@@ -17,7 +17,7 @@ export function DevicesSidebar(
         {devicesList.map((device) => (
           <li
             key={device.id}
-            className="px-3 py-2 rounded bg-white shadow text-center text-sm capitalize"
+            className="px-3 py-2 rounded shadow text-center text-sm capitalize"
             draggable
             onDragStart={(event) => {
               event.dataTransfer.setData("application/reactflow", device.id);

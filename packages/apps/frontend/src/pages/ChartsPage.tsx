@@ -18,6 +18,8 @@ import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
 import { updateChart, useChartById } from "../hooks/chartsHooks";
+import { ThemeToggleButton } from "../components/ThemeToggleButton";
+import { Background } from "reactflow";
 
 export function ChartsPage() {
   const [tab, setTab] = React.useState(0);
@@ -174,7 +176,6 @@ export function ChartsPage() {
                 top: 14,
                 right: 16,
                 zIndex: 10,
-                background: "#7676c4",
                 padding: 6,
                 borderRadius: 4,
                 height: 41,
@@ -182,6 +183,7 @@ export function ChartsPage() {
             >
               {!readonly ? (
                 <FormControlLabel
+                style={{background: "#7676c4"}}
                   control={
                     <Switch
                       checked={editMode}
@@ -191,7 +193,8 @@ export function ChartsPage() {
                   }
                   label={editMode ? "Edit Mode" : "View Mode"}
                 />
-              ) : null}
+                ) : null}
+              <ThemeToggleButton />
             </div>
             {editMode && (
               <Button
@@ -204,6 +207,7 @@ export function ChartsPage() {
               </Button>
             )}
           </Toolbar>
+          
         </AppBar>
 
         {editChart && (
