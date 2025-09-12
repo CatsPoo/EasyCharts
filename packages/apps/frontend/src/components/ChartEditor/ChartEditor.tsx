@@ -26,8 +26,9 @@ import { useListAssets } from "../../hooks/assetsHooks";
 import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import DeviceNode from "../DeviceNode/DeviceNode";
 import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";
-import MenuList from "./MenueList";
+import MenuList from "./EditoroMenuList";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
+import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -68,7 +69,7 @@ export function ChartEditor({
     y: e.clientY,
     kind:ctx.kind
   }));
-}, [setCtx]);
+}, [ctx.kind]);
 
   const onPaneContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -165,6 +166,11 @@ export function ChartEditor({
     },
     [setChart, setNodes, setEdges]
   );
+
+  const onRemoveEdge = useCallback((edgeId:string)=>{
+    setEdges((es) => es.filter((e) => e.id !== edgeId));
+    setChart(prev => ({ ...prev, linesOnChart: prev.linesOnChart.filter(l => l.line.id !== edgeId) }));
+  },[setChart, setEdges])
 
   const updateDeviceOnChart = useCallback(
     (deviceOnChart: DeviceOnChart) => {
@@ -390,19 +396,46 @@ export function ChartEditor({
     [setEdges]
   );
 
-  const onCtxAction = useCallback((action: string) => {
-  const { kind, payload } = ctx;
-  // TODO: implement per-action
-  // examples:
-  if (kind === 'node' && action === 'delete_node') {
-    const id = payload.node.id as string;
-    onRemoveNode(id);
+  const onCtxAction = useCallback((action: EditorMenuListKeys) => {
+  const { payload } = ctx;
+
+  setMadeChanges(true)
+  switch(action){
+    case EditorMenuListKeys.Add_DDEVICE_TO_CHART:
+      break;
+
+    case EditorMenuListKeys.DELETE_DEVICE:
+      break;
+
+    case EditorMenuListKeys.EDIT_DEVICE:
+      
+      break;
+
+    case EditorMenuListKeys.REMOVE_DEVICE_FROM_CHART:;
+      onRemoveNode(payload.node.id);
+      break;
+
+    case EditorMenuListKeys.EDIT_LINE:
+      break;
+    
+    case EditorMenuListKeys.REMOVE_LINE_FROM_CHART:
+      onRemoveEdge(payload.edge.id)
+      break;
+
+    case EditorMenuListKeys.DELETE_LINE:
+      break;
+
+    case EditorMenuListKeys.EDIT_PORT:
+      break;
+
+    case EditorMenuListKeys.REMOVE_PORT:
+      break;
+
+    case EditorMenuListKeys.FIT:
+      break;
+    
   }
-  if (kind === 'edge' && action === 'delete_edge') {
-    const id = payload.edge.id as string;
-    setEdges(es => es.filter(e => e.id !== id));
-    setChart(prev => ({ ...prev, linesOnChart: prev.linesOnChart.filter(l => l.line.id !== id) }));
-  }
+
   closeCtx();
 }, [ctx, onRemoveNode, setEdges, setChart, closeCtx]);
 
@@ -469,9 +502,9 @@ export function ChartEditor({
           nodesConnectable={editMode}
           defaultEdgeOptions={{ type: ConnectionLineType.Step }}
           connectionLineType={ConnectionLineType.Step}
-          onPaneContextMenu={onPaneContextMenu}
-          onNodeContextMenu={onNodeContextMenu}
-          onEdgeContextMenu={onEdgeContextMenu}
+          onPaneContextMenu={editMode ? onPaneContextMenu : undefined}
+          onNodeContextMenu={editMode ? onNodeContextMenu : undefined}
+          onEdgeContextMenu={editMode ?  onEdgeContextMenu : undefined}
           fitView
           style={{ width: "100%", height: "100%" }}
         >
