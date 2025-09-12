@@ -10,7 +10,7 @@ export function DevicesSidebar(
 ) {
   
   return (
-    <aside className="bg-gray-100 p-3 border-r">
+    <aside className="p-3 border-r">
       <h2 className="text-sm font-semibold mb-3">Devices</h2>
 
       <ul className="space-y-2">

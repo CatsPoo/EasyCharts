@@ -297,10 +297,12 @@ export default function DeviceNode({
   return (
     <div
       className={[
-        "relative",
-        "w-[220px] rounded-2xl border bg-white shadow-sm",
-        "border-slate-200 text-slate-800",
-        selected ? "ring-2 ring-indigo-400 ring-offset-2" : "",
+        "relative w-[220px] rounded-2xl border shadow-sm",
+        "bg-white border-slate-200 text-slate-800",
+        "dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100",
+        selected
+          ? "ring-2 ring-indigo-400 ring-offset-2 dark:ring-offset-slate-900"
+          : "",
       ].join(" ")}
     >
       {editMode && selected && (
@@ -381,7 +383,14 @@ export default function DeviceNode({
               position={Position.Left}
               style={{ top: `${y}%` }}
               isConnectableEnd={false}
-              onContextMenu={(e) => onHandleContextMenu?.(e, { deviceId, portId: pid, role: 'source', side: 'left' })}
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "source",
+                  side: "left",
+                })
+              }
             />
             <Handle
               key={`${pid}-t`}
@@ -390,7 +399,14 @@ export default function DeviceNode({
               position={Position.Left}
               style={{ top: `${y}%` }}
               isConnectableStart={false} // can end here, not start here
-              onContextMenu={(e) => onHandleContextMenu?.(e, { deviceId, portId: pid, role: 'target', side: 'left' })}
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "target",
+                  side: "left",
+                })
+              }
             />
           </>
         );
@@ -407,7 +423,14 @@ export default function DeviceNode({
               position={Position.Right}
               style={{ top: `${y}%` }}
               isConnectableEnd={false}
-              onContextMenu={(e) => onHandleContextMenu?.(e, { deviceId, portId: pid, role: 'source', side: 'right' })}
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "source",
+                  side: "right",
+                })
+              }
             />
             <Handle
               key={`${pid}-t`}
@@ -416,7 +439,14 @@ export default function DeviceNode({
               position={Position.Right}
               style={{ top: `${y}%` }}
               isConnectableStart={false}
-              onContextMenu={(e) => onHandleContextMenu?.(e, { deviceId, portId: pid, role: 'target', side: 'right' })}
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "target",
+                  side: "right",
+                })
+              }
             />
           </>
         );
@@ -433,7 +463,14 @@ export default function DeviceNode({
               position={Position.Top}
               style={{ left: `${x}%` }}
               isConnectableEnd={false}
-              onContextMenu={(e) => onHandleContextMenu?.(e, { deviceId, portId: pid, role: 'source', side: 'top' })}
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "source",
+                  side: "top",
+                })
+              }
             />
             <Handle
               key={`${pid}-t`}
@@ -442,7 +479,14 @@ export default function DeviceNode({
               position={Position.Top}
               style={{ left: `${x}%` }}
               isConnectableStart={false}
-              onContextMenu={(e) => onHandleContextMenu?.(e, { deviceId, portId: pid, role: 'target', side: 'top' })}
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "target",
+                  side: "top",
+                })
+              }
             />
           </>
         );
@@ -459,7 +503,14 @@ export default function DeviceNode({
               position={Position.Bottom}
               style={{ left: `${x}%` }}
               isConnectableEnd={false}
-              onContextMenu={(e) => onHandleContextMenu?.(e, { deviceId, portId: pid, role: 'source', side: 'bottom' })}
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "source",
+                  side: "bottom",
+                })
+              }
             />
             <Handle
               key={`${pid}-t`}
@@ -468,7 +519,14 @@ export default function DeviceNode({
               position={Position.Bottom}
               style={{ left: `${x}%` }}
               isConnectableStart={false}
-              onContextMenu={(e) => onHandleContextMenu?.(e, { deviceId, portId: pid, role: 'target', side: 'bottom' })}
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "target",
+                  side: "bottom",
+                })
+              }
             />
           </>
         );
