@@ -12,7 +12,20 @@ interface NavBarProps {
 
 export function NavBar({ value, onChange }: NavBarProps) {
   return (
-    <AppBar position="static" color="default">
+    <AppBar
+      position="static"
+      sx={(t) => ({
+        bgcolor:
+          t.palette.mode === "dark"
+            ? t.palette.background.paper
+            : t.palette.primary.main,
+        color:
+          t.palette.mode === "dark"
+            ? t.palette.text.primary
+            : t.palette.primary.contrastText,
+        transition: "background-color 200ms, color 200ms",
+      })}
+    >
       <Toolbar className="w-full flex items-center">
         <div className="flex-1">
           <Tabs

@@ -122,8 +122,8 @@ export function ChartsPage() {
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="flex-none overflow-hidden border-r
-             bg-gray-50 border-slate-200
-             dark:bg-slate-900 dark:border-slate-700
+             border-slate-200 dark:border-slate-700
+             bg-transparent dark:bg-slate-900
              transition-colors duration-200"
             >
               <ChartListSidebar

@@ -42,16 +42,23 @@ export function ThemeModeProvider({ children }: { children: React.ReactNode }) {
     setMode(mode === "dark" ? "light" : "dark");
   }, [mode, setMode]);
 
-  // MUI theme (kept minimal; customize as you like)
   const theme = useMemo(
     () =>
       createTheme({
         palette: {
           mode,
+          // pick a blue you like; these match Tailwind blue-600/50/200-ish
+          primary: {
+            main: "#2563eb", 
+            light: "#eff6ff",
+            dark: "#1e40af",
+            contrastText: "#ffffff",
+          },
           background: {
             default: isDark ? "#0b1020" : "#ffffff",
             paper: isDark ? "#0f172a" : "#ffffff",
           },
+          divider: isDark ? "rgba(148,163,184,0.24)" : "#e5e7eb",
         },
         shape: { borderRadius: 12 },
       }),
