@@ -27,6 +27,7 @@ import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import DeviceNode from "./DeviceNode";
 import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
 import MenuList from "./MenueList";
+import { useThemeMode } from "../../contexts/ThemeModeContext";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -42,6 +43,7 @@ export function ChartEditor({
 }: ChardEditorProps) {
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { isDark } = useThemeMode();
   const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
 
   const [ctx, setCtx] = useState<CtxState>({
@@ -473,8 +475,8 @@ export function ChartEditor({
           fitView
           style={{ width: "100%", height: "100%" }}
         >
-          <Background />
-          <Controls />
+          <Background color={isDark ? "#1f2937" : "#e5e7eb"} gap={16} />
+          <Controls className={isDark ? "invert" : ""} />
         </ReactFlow>
       </div>
     </div>

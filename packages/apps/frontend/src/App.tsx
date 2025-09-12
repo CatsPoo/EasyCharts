@@ -1,19 +1,16 @@
 import { ReactFlowProvider } from "reactflow";
+import { ThemeModeProvider } from "./contexts/ThemeModeContext";
 import { ChartsPage } from "./pages/ChartsPage";
-import { useColorScheme } from "./hooks/useColorSchema";
-import { ThemeProvider, CssBaseline } from "@mui/material";
 
 function App() {
-  const { theme } = useColorScheme();
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <ThemeModeProvider>
       <div className="w-screen h-screen">
         <ReactFlowProvider>
           <ChartsPage />
         </ReactFlowProvider>
       </div>
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

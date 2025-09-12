@@ -50,8 +50,11 @@ export function ChartListSidebar({
       sx={{
         width: "100%",
         flexShrink: 0,
-        borderRight: "1px solid #ddd",
         height: "100%",
+        borderRight: 1,
+        borderColor: "divider",
+        bgcolor: "background.paper",
+        color: "text.primary",
       }}
     >
       {isMyCharts && (

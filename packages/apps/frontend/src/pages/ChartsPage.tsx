@@ -121,7 +121,10 @@ export function ChartsPage() {
               animate={{ width: 210, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="flex-none overflow-hidden border-r bg-gray-100 border-slate-200 dark:bg-slate-900 dark:border-slate-700"
+              className="flex-none overflow-hidden border-r
+             bg-gray-50 border-slate-200
+             dark:bg-slate-900 dark:border-slate-700
+             transition-colors duration-200"
             >
               <ChartListSidebar
                 isMyCharts={tab === 0}

@@ -296,14 +296,16 @@ export default function DeviceNode({
 
   return (
     <div
-      className={[
-        "relative w-[220px] rounded-2xl border shadow-sm",
-        "bg-white border-slate-200 text-slate-800",
-        "dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100",
-        selected
-          ? "ring-2 ring-indigo-400 ring-offset-2 dark:ring-offset-slate-900"
-          : "",
-      ].join(" ")}
+className={[
+    "relative w-[220px] rounded-2xl border shadow-sm",
+    // surface
+    "bg-white border-slate-200 text-slate-900",
+    "dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100",
+    // selection ring: offset must match the surrounding surface per theme
+    selected
+      ? "ring-2 ring-indigo-400 ring-offset-2 ring-offset-white dark:ring-offset-slate-900"
+      : "",
+  ].join(" ")}
     >
       {editMode && selected && (
         <IconButton
