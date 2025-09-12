@@ -25,7 +25,7 @@ import "reactflow/dist/style.css";
 import { useListAssets } from "../../hooks/assetsHooks";
 import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import DeviceNode from "./DeviceNode";
-import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
+import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";
 import MenuList from "./MenueList";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 

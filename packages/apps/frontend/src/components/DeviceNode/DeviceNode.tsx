@@ -26,6 +26,9 @@ import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
 import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
+import { useThemeMode } from "../../contexts/ThemeModeContext";
+import type { SidesOffset } from "./interfaces/sidesOffset.interface";
+import { InlineEditor } from "./InlineEditor";
 
 function initials(text?: string) {
   if (!text) return "Unknow";
@@ -43,6 +46,8 @@ export default function DeviceNode({
   const { id: deviceId, name, ipAddress, model } = device;
   const { name: modelName, iconUrl, vendor } = model;
   const { name: vendorName } = vendor ?? {};
+
+  const { isDark } = useThemeMode();
 
   const [pendingSide, setPendingSide] = useState<Side | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -68,7 +73,7 @@ export default function DeviceNode({
       (_, i) => pad + (i * usable) / (count - 1)
     );
   }
-  const nextOffsetForSide = (side: Side) => {
+  const nextOffsetForSide = (side: Side) : SidesOffset=> {
     if (side === "left")
       return { axis: "y", value: spread(handles.left.length + 1).at(-1) ?? 0 };
     if (side === "right")
@@ -198,114 +203,20 @@ export default function DeviceNode({
     setNewPortName("");
   };
 
-  const inlineEditor = (() => {
-    if (!pendingSide) return null;
-    const { value } = nextOffsetForSide(pendingSide);
-    const common =
-      "absolute z-10 flex items-center gap-2 bg-white/90 backdrop-blur px-2 py-1 rounded-md border border-slate-200 shadow";
-
-    const iconBtn =
-      "inline-flex items-center justify-center w-7 h-7 rounded-md border border-slate-300 " +
-      "bg-white shadow hover:bg-slate-50 focus:outline-none";
-
-    const SelectEl = (
-      <select
-        value={selectedPortId}
-        onChange={(e) => setSelectedPortId(e.target.value)}
-        className="h-8 min-w-[160px] rounded-md border border-slate-300 bg-white px-2 text-xs shadow focus:outline-none focus:ring"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <option value="" disabled>
-          Choose a port…
-        </option>
-
-        {/* show only ports not already in use */}
-        {device.ports
-          .filter((p) => !portsInUseIds.has(p.id))
-          .map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.type})
-            </option>
-          ))}
-      </select>
-    );
-
-    const AddPortBtn = (
-      <button
-        type="button"
-        className={iconBtn}
-        title="Create new port"
-        onClick={(e) => onInlineEditorPlusClick(e)}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <AddIcon htmlColor="#2563eb" fontSize="small" />
-      </button>
-    );
-
-    const ConfirmBtn = (
-      <button
-        type="button"
-        className={iconBtn}
-        disabled={!selectedPortId}
-        onClick={(e) => {
-          onInlineEditorCheckClick(e);
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CheckIcon fontSize="small" />
-      </button>
-    );
-
-    const CancelBtn = (
-      <button
-        type="button"
-        className={iconBtn}
-        onClick={(e) => {
-          e.stopPropagation();
-          cancelInlineEditor();
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <CloseIcon fontSize="small" />
-      </button>
-    );
-
-    // position around the node depending on side
-    const styleFor = (side: Side) =>
-      side === "left"
-        ? { top: `${value}%`, left: -240, transform: "translateY(-50%)" }
-        : side === "right"
-        ? { top: `${value}%`, right: -240, transform: "translateY(-50%)" }
-        : side === "top"
-        ? { left: `${value}%`, top: -44, transform: "translateX(-50%)" }
-        : { left: `${value}%`, bottom: -44, transform: "translateX(-50%)" };
-
-    return (
-      <div
-        className={common}
-        style={styleFor(pendingSide)}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        {SelectEl}
-        {AddPortBtn}
-        {ConfirmBtn}
-        {CancelBtn}
-      </div>
-    );
-  })();
-
   return (
     <div
-className={[
-    "relative w-[220px] rounded-2xl border shadow-sm",
-    // surface
-    "bg-white border-slate-200 text-slate-900",
-    "dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100",
-    // selection ring: offset must match the surrounding surface per theme
-    selected
-      ? "ring-2 ring-indigo-400 ring-offset-2 ring-offset-white dark:ring-offset-slate-900"
-      : "",
-  ].join(" ")}
+      className={[
+        "relative w-[220px] rounded-2xl border shadow-sm",
+        isDark
+          ? "bg-slate-900 border-slate-700 text-slate-100"
+          : "bg-white border-slate-200 text-slate-900",
+        selected
+          ? [
+              "ring-2 ring-indigo-400 ring-offset-2",
+              isDark ? "ring-offset-slate-900" : "ring-offset-white",
+            ].join(" ")
+          : "",
+      ].join(" ")}
     >
       {editMode && selected && (
         <IconButton
@@ -330,7 +241,12 @@ className={[
       )}
 
       {/* Header: device name */}
-      <div className="px-3 pt-2 pb-1 border-b border-slate-100">
+      <div
+        className={[
+          "px-3 pt-2 pb-1 border-b",
+          isDark ? "border-slate-700" : "border-slate-100",
+        ].join(" ")}
+      >
         <div className="text-sm font-semibold truncate">{name ?? "Device"}</div>
       </div>
 
@@ -534,7 +450,19 @@ className={[
         );
       })}
 
-      {editMode && isEditorOpen && inlineEditor}
+      {editMode && isEditorOpen && (
+        <InlineEditor
+          devicePorts={device.ports}
+          cancelInlineEditor={cancelInlineEditor}
+          nextOffsetForSide={nextOffsetForSide}
+          onInlineEditorCheckClick={onInlineEditorCheckClick}
+          onInlineEditorPlusClick={onInlineEditorPlusClick}
+          pendingSide={pendingSide}
+          portsInUseIds={portsInUseIds}
+          selectedPortId={selectedPortId}
+          setSelectedPortId={setSelectedPortId}
+        />
+      )}
 
       {editMode && selected && (
         <>
