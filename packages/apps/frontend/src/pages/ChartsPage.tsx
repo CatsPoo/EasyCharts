@@ -13,10 +13,11 @@ import Box from "@mui/material/Box";
 import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
-import AssetPage from "../components/AssetsList/AssetsPage";
-import { ChartEditor } from "../components/ChartEditor/ChartEditor"; 
+import AssetTab from "../components/AssetsList/AssetTab";
+import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
+import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { updateChart, useChartById } from "../hooks/chartsHooks";
 
 export function ChartsPage() {
@@ -121,7 +122,10 @@ export function ChartsPage() {
               animate={{ width: 210, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="flex-none overflow-hidden border-r bg-gray-100"
+              className="flex-none overflow-hidden border-r
+             border-slate-200 dark:border-slate-700
+             bg-transparent dark:bg-slate-900
+             transition-colors duration-200"
             >
               <ChartListSidebar
                 isMyCharts={tab === 0}
@@ -143,14 +147,14 @@ export function ChartsPage() {
                 setMadeChanges={setEditorMadeChanges}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="flex items-center justify-center h-full">
                 Select a chart to preview
               </div>
             )}
           </Box>
         ) : (
           <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex" }}>
-            <AssetPage />
+            <AssetTab />
           </Box>
         )}
       </Box>
@@ -171,7 +175,6 @@ export function ChartsPage() {
                 top: 14,
                 right: 16,
                 zIndex: 10,
-                background: "#7676c4",
                 padding: 6,
                 borderRadius: 4,
                 height: 41,
@@ -179,6 +182,7 @@ export function ChartsPage() {
             >
               {!readonly ? (
                 <FormControlLabel
+                style={{background: "#7676c4"}}
                   control={
                     <Switch
                       checked={editMode}
@@ -188,7 +192,8 @@ export function ChartsPage() {
                   }
                   label={editMode ? "Edit Mode" : "View Mode"}
                 />
-              ) : null}
+                ) : null}
+              <ThemeToggleButton />
             </div>
             {editMode && (
               <Button
@@ -201,6 +206,7 @@ export function ChartsPage() {
               </Button>
             )}
           </Toolbar>
+          
         </AppBar>
 
         {editChart && (
