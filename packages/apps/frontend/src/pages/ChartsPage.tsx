@@ -1,4 +1,4 @@
-import { type Chart, type ChartCreate } from "@easy-charts/easycharts-types";
+import { type Chart } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   AppBar,
@@ -12,14 +12,14 @@ import {
 import Box from "@mui/material/Box";
 import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import AssetTab from "../components/AssetsList/AssetTab";
-import { ChartEditor } from "../components/ChartEditor/ChartEditor";
+import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/chartEditorHandle.interfaces";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
-import { updateChart, useChartById } from "../hooks/chartsHooks";
-import type { DeleteSets } from "../components/ChartEditor/interfaces/DeleteSets.interfaces";
+import { useChartById } from "../hooks/chartsHooks";
+import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 
 export function ChartsPage() {
   const [tab, setTab] = React.useState(0);
@@ -32,13 +32,8 @@ export function ChartsPage() {
   const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
 
-  const deleteSetsRef = React.useRef<DeleteSets>({
-    devices: new Set(),
-    ports: new Set(),
-    lines: new Set(),
-  });
+  const chartEditorRef = React.useRef<ChartEditorHandle>(null);
 
-  // const {getChart,getChartsInformation,updateChart} = useCharts()
   const readonly = false;
 
   useEffect(() => {
@@ -83,36 +78,22 @@ export function ChartsPage() {
     setEditChart(undefined);
   };
 
-  const onSave = useCallback(
-    async (e?: React.MouseEvent<HTMLButtonElement>) => {
-      // prevent form submit refresh if inside a <form>
-      e?.preventDefault();
-      if (!editChart) return;
-
-      const payload: ChartCreate = {
-        name: editChart.name,
-        description: editChart.description ?? "",
-        devicesOnChart: editChart.devicesOnChart,
-        linesOnChart: editChart.linesOnChart,
-      };
-
+  async function handleSaveClick() {
+    if (!chartEditorRef.current) return;
+    try {
       setSaving(true);
-      try {
-        setSelectedId("");
-        const newChart: Chart = await updateChart(editChart.id, payload);
-        setSelectedId(newChart.id);
-        setEditChart(undefined);
-        setDialogOpen(false);
-        setEditorMadeChanges(false);
-      } catch (err: any) {
-        console.error("updateChart failed:", err);
-        // toast.error(err?.message ?? "Failed to save chart");
-      } finally {
-        setSaving(false);
-      }
-    },
-    [editChart, updateChart, setSelectedId, setEditChart]
-  );
+      const saved = await chartEditorRef.current.onSave();
+      // do any parent-side updates you want
+      setSelectedId(saved.id);
+      setDialogOpen(false);
+      setEditorMadeChanges(false);
+      setEditChart(undefined);
+    } catch (err) {
+      console.error("updateChart failed:", err);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -151,7 +132,6 @@ export function ChartsPage() {
                 setChart={setEditChart}
                 editMode={false}
                 setMadeChanges={setEditorMadeChanges}
-                deleteSetsRef={deleteSetsRef}
               />
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -206,7 +186,7 @@ export function ChartsPage() {
               <Button
                 color="success"
                 variant="contained"
-                onClick={onSave}
+                onClick={handleSaveClick}
                 disabled={saving || !editorMageChanges}
               >
                 {saving ? "Saving…" : "Save"}
@@ -222,6 +202,7 @@ export function ChartsPage() {
             setChart={setEditChart}
             editMode={editMode}
             setMadeChanges={setEditorMadeChanges}
+            ref = {chartEditorRef}
           />
         )}
       </Dialog>

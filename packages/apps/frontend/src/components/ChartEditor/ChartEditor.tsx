@@ -1,6 +1,7 @@
 import {
   ChartEntitiesEnum,
   type Chart,
+  type ChartCreate,
   type Device,
   type DeviceOnChart,
   type Handles,
@@ -9,7 +10,7 @@ import {
   type Port,
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
 
@@ -31,20 +32,20 @@ import MenuList from "./EditoroMenuList";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { DeleteSets } from "./interfaces/DeleteSets.interfaces";
+import { updateChart } from "../../hooks/chartsHooks";
+import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
 
 interface ChardEditorProps {
   chart: Chart;
   setChart: React.Dispatch<React.SetStateAction<Chart>>;
   editMode: boolean;
   setMadeChanges: React.Dispatch<React.SetStateAction<boolean>>;
-  deleteSetsRef : typeof useRef<DeleteSets>
 }
-export function ChartEditor({
-  chart,
-  setChart,
-  editMode,
-  setMadeChanges,
-}: ChardEditorProps) {
+
+export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(function ChartEditor(
+  { chart, setChart, editMode, setMadeChanges }: ChardEditorProps,
+  ref
+) {
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { isDark } = useThemeMode();
@@ -55,6 +56,15 @@ export function ChartEditor({
     ports: new Set(),
     lines: new Set(),
   });
+
+ const dirtyRef = useRef(false);
+ const setDirty = useCallback(
+   (v: boolean) => {
+     dirtyRef.current = v;
+     setMadeChanges(v);
+   },
+   [setMadeChanges]
+ );
 
   const [ctx, setCtx] = useState<CtxState>({
     open: false,
@@ -235,9 +245,9 @@ export function ChartEditor({
         es.filter((e) => e.sourceHandle !== portId && e.targetHandle !== portId)
       );
 
-      setMadeChanges(true);
+      setDirty(true);
     },
-    [setChart, setEdges, setMadeChanges]
+    [setChart, setEdges, setDirty]
   );
 
   //delete device from both cgart and from dtabase
@@ -269,9 +279,9 @@ export function ChartEditor({
           ),
         };
       });
-      setMadeChanges(true);
+      setDirty(true);
     },
-    [setChart, setMadeChanges]
+    [setChart, setDirty]
   );
 
   const convertDeviceToNode = useCallback(
@@ -538,6 +548,34 @@ export function ChartEditor({
     setEdges(chart.linesOnChart.map(convertLineToEdge));
   }, []);
 
+   const onSave = useCallback(
+     async (e?: React.MouseEvent<HTMLButtonElement>) => {
+       // prevent form submit refresh if inside a <form>
+       e?.preventDefault();
+
+       const payload: ChartCreate= {
+         name: chart.name,
+         description: chart.description ?? "",
+         devicesOnChart: chart.devicesOnChart,
+         linesOnChart: chart.linesOnChart,
+       };
+       try {
+         const newChart: Chart = await updateChart(chart.id, payload);
+         setDirty(false);
+         return newChart
+       } catch (err: any) {
+         console.error("updateChart failed:", err);
+       }
+       return null
+     },
+     [chart.description, chart.devicesOnChart, chart.id, chart.linesOnChart, chart.name, setDirty]
+   );
+
+   useImperativeHandle(ref, () => ({
+    onSave,
+    isChangesMade: () => dirtyRef.current,
+  }), [onSave]);
+
   return (
     <div className="flex flex-1 h-full">
       <AnimatePresence initial={false}>
@@ -605,4 +643,4 @@ export function ChartEditor({
       </div>
     </div>
   );
-}
+});
