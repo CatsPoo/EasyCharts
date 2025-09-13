@@ -67,3 +67,21 @@ export async function updateChart(id: string, data: ChartUpdate): Promise<Chart>
    return (await res.json()) as Chart;
 }
 
+export function useUpdateChartMutation() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ChartUpdate }) => updateChart(id, data),
+    onSuccess: (saved, vars) => {
+      // EITHER directly update cache to avoid a refetch:
+      qc.setQueryData(['chart', saved.id], saved);
+
+      // AND/OR invalidate so useChartById refetches:
+      qc.invalidateQueries({ queryKey: ['chart', vars.id] });
+
+      // if your list shows names, also refresh metadata list
+      qc.invalidateQueries({ queryKey: ['chartsMetadata'] });
+    },
+  });
+}
+
