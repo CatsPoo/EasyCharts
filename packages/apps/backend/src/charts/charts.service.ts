@@ -346,6 +346,14 @@ export class ChartsService {
         chartId:chartId,
         lineId:Not(In(dto.linesOnChart.map(loc=>loc.line.id)))
       })
+
+      // delete entities permenantly from db
+      if(dto.deletes){
+        const {devices,lines,ports} = dto.deletes
+        if(devices && devices.length >0) await deviceRepo.delete(devices)
+        if(lines && lines.length >0) await lineRepo.delete(lines)
+        if(ports && ports.length >0) await portRepo.delete(ports)
+      }
     }
 
     // ---- 4) Return fresh chart with full relations

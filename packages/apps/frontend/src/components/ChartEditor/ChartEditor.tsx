@@ -2,6 +2,7 @@ import {
   ChartEntitiesEnum,
   type Chart,
   type ChartCreate,
+  type ChartUpdate,
   type Device,
   type DeviceOnChart,
   type Handles,
@@ -40,7 +41,7 @@ import MenuList from "./EditoroMenuList";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { DeleteSets } from "./interfaces/DeleteSets.interfaces";
-import { updateChart, useUpdateChartMutation } from "../../hooks/chartsHooks";
+import {useUpdateChartMutation } from "../../hooks/chartsHooks";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
 
 interface ChardEditorProps {
@@ -327,10 +328,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [chart.devicesOnChart]
     );
 
-    const availableDevices = useMemo(
-      () => availableDevicesResponse?.rows ?? [],
-      [availableDevicesResponse]
-    );
+    const availableDevices = useMemo(() => {
+      const all = availableDevicesResponse?.rows ?? [];
+      const deleted = deleteSetsRef.current.devices;
+      return deleted.size ? all.filter((d) => !deleted.has(d.id)) : all;
+    }, [availableDevicesResponse,deleteSetsRef]);
 
     // Devices not yet placed
     const unusedDevices = useMemo(() => {
@@ -569,11 +571,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         // prevent form submit refresh if inside a <form>
         e?.preventDefault();
 
-        const payload: ChartCreate = {
+        const payload: ChartUpdate = {
           name: chart.name,
           description: chart.description ?? "",
           devicesOnChart: chart.devicesOnChart,
           linesOnChart: chart.linesOnChart,
+          deletes: {
+            devices: [...deleteSetsRef.current[ChartEntitiesEnum.DEVICES]],
+            lines: [...deleteSetsRef.current[ChartEntitiesEnum.LINES]],
+            ports: [...deleteSetsRef.current[ChartEntitiesEnum.PORTS]],
+          },
         };
         try {
           const newChart: Chart = await updateMut.mutateAsync({
