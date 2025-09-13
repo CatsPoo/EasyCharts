@@ -38,6 +38,8 @@ export function ChartsPage() {
 
   const readonly = false;
 
+  const noopSetChart = React.useCallback(() => {return}, []);
+
   useEffect(() => {
     setSelectedId("");
   }, [tab]);
@@ -145,15 +147,10 @@ export function ChartsPage() {
               </Box>
             ) : selectedChart ? (
               <ChartEditor
-                key={selectedChart.id}
                 chart={selectedChart}
-                setChart={() => {
-                  return;
-                }}
+                setChart={noopSetChart}
                 editMode={false}
-                setMadeChanges={() => {
-                  return;
-                }}
+                setMadeChanges={noopSetChart}
               />
             ) : (
               <Box

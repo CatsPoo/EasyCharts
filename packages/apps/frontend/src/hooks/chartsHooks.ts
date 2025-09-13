@@ -55,6 +55,9 @@ export function useChartById(id: string) {
     queryKey: ['chart', id],
     queryFn: () => getChartById(id),
     enabled: !!id,
+    refetchOnWindowFocus: false,     
+    refetchOnReconnect: false, 
+    staleTime: 30_000,
   });
 }
 
@@ -73,17 +76,11 @@ export function useUpdateChartMutation() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: ChartUpdate }) => updateChart(id, data),
-    onSuccess: (saved, vars) => {
-      // EITHER directly update cache to avoid a refetch:
+    mutationFn: ({ id, data }: { id: string; data: ChartUpdate }) =>
+      updateChart(id, data),
+    onSuccess: (saved) => {
       qc.setQueryData(['chart', saved.id], saved);
-
-      // AND/OR invalidate so useChartById refetches:
-      qc.invalidateQueries({ queryKey: ['chart', vars.id] });
-
-      // if your list shows names, also refresh metadata list
       qc.invalidateQueries({ queryKey: ['chartsMetadata'] });
     },
   });
 }
-
