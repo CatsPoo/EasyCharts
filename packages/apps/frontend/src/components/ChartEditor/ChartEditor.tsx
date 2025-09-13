@@ -348,7 +348,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(funct
       });
     });
     setEdges(chart.linesOnChart.map(convertLineToEdge));
-  }, [setNodes, setEdges, chart.devicesOnChart, chart.linesOnChart]);
+  }, [chart.devicesOnChart, chart.linesOnChart, convertDeviceToNode, setEdges, setNodes]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {

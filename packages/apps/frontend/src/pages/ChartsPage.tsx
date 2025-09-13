@@ -1,8 +1,10 @@
 import { type Chart } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
+  Alert,
   AppBar,
   Button,
+  CircularProgress,
   Dialog,
   FormControlLabel,
   IconButton,
@@ -86,6 +88,7 @@ export function ChartsPage() {
       if(!saved)
         throw new Error('unable to save chart')
 
+      setSelectedId(saved.id);
       setDialogOpen(false);
       setEditorMadeChanges(false);
 
@@ -126,18 +129,38 @@ export function ChartsPage() {
 
         {tab !== 2 ? (
           <Box sx={{ flex: 1, position: "relative" }}>
-            {selectedChart ? (
+            {selectedChartError ? (
+              <Box
+                sx={{ height: "100%", display: "grid", placeItems: "center" }}
+              >
+                <Alert severity="error">
+                  Failed to load chart: {String(selectedChartError)}
+                </Alert>
+              </Box>
+            ) : isSelectedChartLoading ? (
+              <Box
+                sx={{ height: "100%", display: "grid", placeItems: "center" }}
+              >
+                <CircularProgress size={200} />
+              </Box>
+            ) : selectedChart ? (
               <ChartEditor
                 key={selectedChart.id}
                 chart={selectedChart}
-                setChart={setEditChart}
+                setChart={() => {
+                  return;
+                }}
                 editMode={false}
-                setMadeChanges={setEditorMadeChanges}
+                setMadeChanges={() => {
+                  return;
+                }}
               />
             ) : (
-              <div className="flex items-center justify-center h-full">
+              <Box
+                sx={{ height: "100%", display: "grid", placeItems: "center" }}
+              >
                 Select a chart to preview
-              </div>
+              </Box>
             )}
           </Box>
         ) : (
@@ -203,7 +226,7 @@ export function ChartsPage() {
             setChart={setEditChart}
             editMode={editMode}
             setMadeChanges={setEditorMadeChanges}
-            ref = {chartEditorRef}
+            ref={chartEditorRef}
           />
         )}
       </Dialog>
