@@ -83,11 +83,12 @@ export function ChartsPage() {
     try {
       setSaving(true);
       const saved = await chartEditorRef.current.onSave();
-      // do any parent-side updates you want
-      setSelectedId(saved.id);
+      if(!saved)
+        throw new Error('unable to save chart')
+
       setDialogOpen(false);
       setEditorMadeChanges(false);
-      setEditChart(undefined);
+
     } catch (err) {
       console.error("updateChart failed:", err);
     } finally {

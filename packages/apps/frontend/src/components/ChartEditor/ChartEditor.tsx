@@ -32,7 +32,7 @@ import MenuList from "./EditoroMenuList";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { DeleteSets } from "./interfaces/DeleteSets.interfaces";
-import { updateChart } from "../../hooks/chartsHooks";
+import { updateChart, useUpdateChartMutation } from "../../hooks/chartsHooks";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
 
 interface ChardEditorProps {
@@ -50,6 +50,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(funct
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { isDark } = useThemeMode();
   const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
+
+  const updateMut = useUpdateChartMutation();
 
   const deleteSetsRef = useRef<DeleteSets>({
     devices: new Set(),
@@ -560,7 +562,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(funct
          linesOnChart: chart.linesOnChart,
        };
        try {
-         const newChart: Chart = await updateChart(chart.id, payload);
+        const newChart: Chart = await updateMut.mutateAsync({
+          id: chart.id,
+          data: payload,
+        });
          setDirty(false);
          return newChart
        } catch (err: any) {
@@ -568,7 +573,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(funct
        }
        return null
      },
-     [chart.description, chart.devicesOnChart, chart.id, chart.linesOnChart, chart.name, setDirty]
+     [chart.description, chart.devicesOnChart, chart.id, chart.linesOnChart, chart.name, setDirty, updateMut]
    );
 
    useImperativeHandle(ref, () => ({

@@ -60,10 +60,30 @@ export function useChartById(id: string) {
 
 export async function updateChart(id: string, data: ChartUpdate): Promise<Chart> {
   const res = await fetch(`/api/charts/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+    credentials: 'include',
   });
-   return (await res.json()) as Chart;
+  if (!res.ok) throw new Error(await res.text() || `Failed to update chart (${res.status})`);
+  return res.json();
+}
+
+export function useUpdateChartMutation() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ChartUpdate }) => updateChart(id, data),
+    onSuccess: (saved, vars) => {
+      // EITHER directly update cache to avoid a refetch:
+      qc.setQueryData(['chart', saved.id], saved);
+
+      // AND/OR invalidate so useChartById refetches:
+      qc.invalidateQueries({ queryKey: ['chart', vars.id] });
+
+      // if your list shows names, also refresh metadata list
+      qc.invalidateQueries({ queryKey: ['chartsMetadata'] });
+    },
+  });
 }
 
