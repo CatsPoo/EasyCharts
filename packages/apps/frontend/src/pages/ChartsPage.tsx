@@ -19,6 +19,7 @@ import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { updateChart, useChartById } from "../hooks/chartsHooks";
+import type { DeleteSets } from "../components/ChartEditor/interfaces/DeleteSets.interfaces";
 
 export function ChartsPage() {
   const [tab, setTab] = React.useState(0);
@@ -30,6 +31,12 @@ export function ChartsPage() {
   const [editChart, setEditChart] = useState<Chart | undefined>(undefined);
   const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
+
+  const deleteSetsRef = React.useRef<DeleteSets>({
+    devices: new Set(),
+    ports: new Set(),
+    lines: new Set(),
+  });
 
   // const {getChart,getChartsInformation,updateChart} = useCharts()
   const readonly = false;
@@ -82,11 +89,11 @@ export function ChartsPage() {
       e?.preventDefault();
       if (!editChart) return;
 
-      const payload :ChartCreate = {
+      const payload: ChartCreate = {
         name: editChart.name,
         description: editChart.description ?? "",
         devicesOnChart: editChart.devicesOnChart,
-        linesOnChart:editChart.linesOnChart
+        linesOnChart: editChart.linesOnChart,
       };
 
       setSaving(true);
@@ -97,7 +104,6 @@ export function ChartsPage() {
         setEditChart(undefined);
         setDialogOpen(false);
         setEditorMadeChanges(false);
-        
       } catch (err: any) {
         console.error("updateChart failed:", err);
         // toast.error(err?.message ?? "Failed to save chart");
@@ -145,6 +151,7 @@ export function ChartsPage() {
                 setChart={setEditChart}
                 editMode={false}
                 setMadeChanges={setEditorMadeChanges}
+                deleteSetsRef={deleteSetsRef}
               />
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -182,7 +189,7 @@ export function ChartsPage() {
             >
               {!readonly ? (
                 <FormControlLabel
-                style={{background: "#7676c4"}}
+                  style={{ background: "#7676c4" }}
                   control={
                     <Switch
                       checked={editMode}
@@ -192,7 +199,7 @@ export function ChartsPage() {
                   }
                   label={editMode ? "Edit Mode" : "View Mode"}
                 />
-                ) : null}
+              ) : null}
               <ThemeToggleButton />
             </div>
             {editMode && (
@@ -206,7 +213,6 @@ export function ChartsPage() {
               </Button>
             )}
           </Toolbar>
-          
         </AppBar>
 
         {editChart && (

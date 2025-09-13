@@ -1,4 +1,5 @@
 import {
+  ChartEntitiesEnum,
   type Chart,
   type Device,
   type DeviceOnChart,
@@ -29,12 +30,14 @@ import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interf
 import MenuList from "./EditoroMenuList";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
+import type { DeleteSets } from "./interfaces/DeleteSets.interfaces";
 
 interface ChardEditorProps {
   chart: Chart;
   setChart: React.Dispatch<React.SetStateAction<Chart>>;
   editMode: boolean;
   setMadeChanges: React.Dispatch<React.SetStateAction<boolean>>;
+  deleteSetsRef : typeof useRef<DeleteSets>
 }
 export function ChartEditor({
   chart,
@@ -46,6 +49,12 @@ export function ChartEditor({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { isDark } = useThemeMode();
   const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
+
+  const deleteSetsRef = useRef<DeleteSets>({
+    devices: new Set(),
+    ports: new Set(),
+    lines: new Set(),
+  });
 
   const [ctx, setCtx] = useState<CtxState>({
     open: false,
@@ -59,17 +68,20 @@ export function ChartEditor({
     []
   );
 
-  const moveMenuTo = useCallback((e: React.MouseEvent) => {
-  e.preventDefault();   // block browser context menu
-  e.stopPropagation();
-  setCtx(prev => ({
-    ...prev,
-    open: true,
-    x: e.clientX,
-    y: e.clientY,
-    kind:ctx.kind
-  }));
-}, [ctx.kind]);
+  const moveMenuTo = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault(); // block browser context menu
+      e.stopPropagation();
+      setCtx((prev) => ({
+        ...prev,
+        open: true,
+        x: e.clientX,
+        y: e.clientY,
+        kind: ctx.kind,
+      }));
+    },
+    [ctx.kind]
+  );
 
   const onPaneContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -145,6 +157,7 @@ export function ChartEditor({
   const [nodes, setNodes, onNodesChangeRF] = useNodesState<Node[]>([]);
   const [edges, setEdges, onEdgesChangeRF] = useEdgesState<Edge[]>([]);
 
+  //Remove Node from chart but keep it in database
   const onRemoveNode = useCallback(
     (deviceId: string) => {
       setChart((prev) => ({
@@ -167,10 +180,83 @@ export function ChartEditor({
     [setChart, setNodes, setEdges]
   );
 
-  const onRemoveEdge = useCallback((edgeId:string)=>{
-    setEdges((es) => es.filter((e) => e.id !== edgeId));
-    setChart(prev => ({ ...prev, linesOnChart: prev.linesOnChart.filter(l => l.line.id !== edgeId) }));
-  },[setChart, setEdges])
+  //Remove line from chart but keep it on dayabase
+  const onRemoveEdge = useCallback(
+    (edgeId: string) => {
+      setEdges((es) => es.filter((e) => e.id !== edgeId));
+      setChart((prev) => ({
+        ...prev,
+        linesOnChart: prev.linesOnChart.filter((l) => l.line.id !== edgeId),
+      }));
+    },
+    [setChart, setEdges]
+  );
+
+  //remove handle from chart but keep iit in database
+  const onRemoveHandle = useCallback(
+    (deviceId: string, portId: string) => {
+      // 1) update chart state (handles + lines)
+      setChart((prev) => {
+        const devicesOnChart = prev.devicesOnChart.map((doc) => {
+          if (doc.device.id !== deviceId) return doc;
+
+          const strip = (arr: any[] = []) =>
+            arr.filter((h) => h?.port?.id !== portId);
+
+          const newHandles: Handles = {
+            left: strip(doc.handles.left),
+            right: strip(doc.handles.right),
+            top: strip(doc.handles.top),
+            bottom: strip(doc.handles.bottom),
+          };
+
+          // mark port as free; don't remove from device.ports
+          const newDevice = {
+            ...doc.device,
+            ports: (doc.device.ports ?? []).map((p) =>
+              p.id === portId ? { ...p, inUse: false } : p
+            ),
+          };
+
+          return { ...doc, handles: newHandles, device: newDevice };
+        });
+
+        // also drop any lines that referenced this port
+        const linesOnChart = prev.linesOnChart.filter(
+          (l) =>
+            l.line.sourcePort.id !== portId && l.line.targetPort.id !== portId
+        );
+
+        return { ...prev, devicesOnChart, linesOnChart };
+      });
+
+      // 2) update reactflow edges immediately
+      setEdges((es) =>
+        es.filter((e) => e.sourceHandle !== portId && e.targetHandle !== portId)
+      );
+
+      setMadeChanges(true);
+    },
+    [setChart, setEdges, setMadeChanges]
+  );
+
+  //delete device from both cgart and from dtabase
+  const onDeleteDevice = useCallback(
+    (deviceId: string) => {
+      onRemoveNode(deviceId);
+      deleteSetsRef.current[ChartEntitiesEnum.DEVICES].add(deviceId);
+    },
+    [onRemoveNode]
+  );
+
+  //delete line from both chart and database
+  const onDeleteLine = useCallback(
+    (lineId: string) => {
+      onRemoveEdge(lineId);
+      deleteSetsRef.current[ChartEntitiesEnum.LINES].add(lineId);
+    },
+    [onRemoveEdge]
+  );
 
   const updateDeviceOnChart = useCallback(
     (deviceOnChart: DeviceOnChart) => {
@@ -200,7 +286,7 @@ export function ChartEditor({
           editMode,
           updateDeviceOnChart,
           onRemoveNode,
-          onHandleContextMenu
+          onHandleContextMenu,
         } as DeviceNodeData,
       };
       return node;
@@ -396,48 +482,53 @@ export function ChartEditor({
     [setEdges]
   );
 
-  const onCtxAction = useCallback((action: EditorMenuListKeys) => {
-  const { payload } = ctx;
+  const onCtxAction = useCallback(
+    (action: EditorMenuListKeys) => {
+      const { payload } = ctx;
 
-  setMadeChanges(true)
-  switch(action){
-    case EditorMenuListKeys.Add_DDEVICE_TO_CHART:
-      break;
+      setMadeChanges(true);
+      switch (action) {
+        case EditorMenuListKeys.Add_DDEVICE_TO_CHART:
+          break;
 
-    case EditorMenuListKeys.DELETE_DEVICE:
-      break;
+        case EditorMenuListKeys.DELETE_DEVICE:
+          onDeleteDevice(payload.node.id);
+          break;
 
-    case EditorMenuListKeys.EDIT_DEVICE:
-      
-      break;
+        case EditorMenuListKeys.EDIT_DEVICE:
+          break;
 
-    case EditorMenuListKeys.REMOVE_DEVICE_FROM_CHART:;
-      onRemoveNode(payload.node.id);
-      break;
+        case EditorMenuListKeys.REMOVE_DEVICE_FROM_CHART:
+          onRemoveNode(payload.node.id);
+          break;
 
-    case EditorMenuListKeys.EDIT_LINE:
-      break;
-    
-    case EditorMenuListKeys.REMOVE_LINE_FROM_CHART:
-      onRemoveEdge(payload.edge.id)
-      break;
+        case EditorMenuListKeys.EDIT_LINE:
+          break;
 
-    case EditorMenuListKeys.DELETE_LINE:
-      break;
+        case EditorMenuListKeys.REMOVE_LINE_FROM_CHART:
+          onRemoveEdge(payload.edge.id);
+          break;
 
-    case EditorMenuListKeys.EDIT_PORT:
-      break;
+        case EditorMenuListKeys.DELETE_LINE:
+          onDeleteLine(payload.edge.id);
+          break;
 
-    case EditorMenuListKeys.REMOVE_PORT:
-      break;
+        case EditorMenuListKeys.EDIT_PORT:
+          break;
 
-    case EditorMenuListKeys.FIT:
-      break;
-    
-  }
+        case EditorMenuListKeys.REMOVE_PORT:
+          console.log(payload);
+          //onRemoveHandle(payload.handle.)
+          break;
 
-  closeCtx();
-}, [ctx, onRemoveNode, setEdges, setChart, closeCtx]);
+        case EditorMenuListKeys.FIT:
+          break;
+      }
+
+      closeCtx();
+    },
+    [ctx, onRemoveNode, setEdges, setChart, closeCtx]
+  );
 
   useEffect(() => {
     setNodes(chart.devicesOnChart.map(convertDeviceToNode));
@@ -504,7 +595,7 @@ export function ChartEditor({
           connectionLineType={ConnectionLineType.Step}
           onPaneContextMenu={editMode ? onPaneContextMenu : undefined}
           onNodeContextMenu={editMode ? onNodeContextMenu : undefined}
-          onEdgeContextMenu={editMode ?  onEdgeContextMenu : undefined}
+          onEdgeContextMenu={editMode ? onEdgeContextMenu : undefined}
           fitView
           style={{ width: "100%", height: "100%" }}
         >

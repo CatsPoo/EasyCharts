@@ -11,7 +11,17 @@ export const ChartCreateSchema = z.object({
   linesOnChart: z.array(LineOnChartSchema)
 });
 
-export const ChartUpdateSchema = ChartCreateSchema.partial();
+const DeletesSchema = z.object({
+  devices: z.array(z.string().uuid()).optional().default([]),
+  ports:   z.array(z.string().uuid()).optional().default([]),
+  lines:   z.array(z.string().uuid()).optional().default([]),
+});
+
+// update = partial(create) + deletes
+export const ChartUpdateSchema = ChartCreateSchema.partial().extend({
+  deletes: DeletesSchema.optional(),
+});
+
 
 export const ChartSchema = IdentifiableSchema.extend({
   name: z.string(),

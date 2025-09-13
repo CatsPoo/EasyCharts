@@ -9,7 +9,7 @@ export default function EditorMenuList({
 }) {
   const itemsByKind: Record<CtxKind, Array<{ key: EditorMenuListKeys; label: string }>> = {
     pane: [
-      { key: EditorMenuListKeys.Add_DDEVICE, label: "Add device here" },
+      { key: EditorMenuListKeys.Add_DDEVICE_TO_CHART, label: "Add device here" },
       { key: EditorMenuListKeys.FIT, label: "Fit view" },
     ],
     node: [
