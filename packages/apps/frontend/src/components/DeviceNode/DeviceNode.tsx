@@ -314,6 +314,7 @@ export default function DeviceNode({
               position={Position.Left}
               style={posStyle}
               isConnectableEnd={false}
+              isConnectableStart={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -329,7 +330,8 @@ export default function DeviceNode({
               type="target"
               position={Position.Left}
               style={posStyle}
-              isConnectableStart={false} // can end here, not start here
+              isConnectableStart={false} 
+              isConnectableEnd={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -357,6 +359,7 @@ export default function DeviceNode({
               position={Position.Right}
               style={posStyle}
               isConnectableEnd={false}
+              isConnectableStart={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -373,6 +376,7 @@ export default function DeviceNode({
               position={Position.Right}
               style={posStyle}
               isConnectableStart={false}
+              isConnectableEnd={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -400,6 +404,7 @@ export default function DeviceNode({
               position={Position.Top}
               style={posStyle}
               isConnectableEnd={false}
+              isConnectableStart={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -416,6 +421,7 @@ export default function DeviceNode({
               position={Position.Top}
               style={posStyle}
               isConnectableStart={false}
+              isConnectableEnd={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -443,6 +449,7 @@ export default function DeviceNode({
               position={Position.Bottom}
               style={posStyle}
               isConnectableEnd={false}
+              isConnectableStart={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -459,6 +466,7 @@ export default function DeviceNode({
               position={Position.Bottom}
               style={posStyle}
               isConnectableStart={false}
+              isConnectableEnd={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
