@@ -82,7 +82,7 @@ export function InlineEditor({
           Choose a port…
         </option>
         {devicePorts
-          .filter((p) => !portsInUseIds.has(p.id))
+          .filter((p) => !portsInUseIds.has(p.id) || p.inUse)
           .map((p) => (
             <option key={p.id} value={p.id}>
               {p.name} ({p.type})

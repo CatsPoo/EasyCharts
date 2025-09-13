@@ -29,6 +29,7 @@ import { ChartEntity } from "./entities/chart.entity";
 import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
 import { LineOnChartEntity } from "./entities/lineonChart.emtity";
 import { PortOnChartEntity } from "./entities/portOnChart.entity";
+import { PortsService } from "../devices/ports.service";
 @Injectable()
 export class ChartsService {
   constructor(
@@ -38,7 +39,8 @@ export class ChartsService {
     private readonly chartRepo: Repository<ChartEntity>,
 
     private readonly devicesService: DevicesService,
-    private readonly linesService:LinessService
+    private readonly linesService:LinessService,
+    private readonly portsService:PortsService
   ) {}
 
   convertPortEntityToPort(portEntity: PortEntity): Port {
@@ -104,7 +106,7 @@ export class ChartsService {
     for(const ll of linesOnChart ?? []){
       convertedLinesOnChart.push(await this.convertLineonChartEntity(ll));
     }
-    console.log("convertedLinesOnChart",convertedLinesOnChart);
+
     return {
       devicesOnChart: convertedDeviceOnCharts,
       linesOnChart: convertedLinesOnChart,
@@ -355,6 +357,8 @@ export class ChartsService {
         if(ports && ports.length >0) await portRepo.delete(ports)
       }
     }
+
+    this.portsService.updatePortsInUseSate(chartId)
 
     // ---- 4) Return fresh chart with full relations
     return chartsRepo.findOneOrFail({
