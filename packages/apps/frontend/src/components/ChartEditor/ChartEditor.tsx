@@ -43,6 +43,8 @@ import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { DeleteSets } from "./interfaces/DeleteSets.interfaces";
 import {useUpdateChartMutation } from "../../hooks/chartsHooks";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
+import { EditLineDialog } from "./EditLineDialog";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -56,7 +58,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     { chart, setChart, editMode, setMadeChanges }: ChardEditorProps,
     ref
   ) {
+
     const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
+    const [isEditlineDialogOpen,setEditLineDialogOpen] = useState<boolean>(false)
+    const [selectedEditLine,setSelectedEditLine] = useState<Edge| null>(null)
+
+    //TODO IF THE PC TURN OFF
+    //set edit line when click on edit line
+    //pass the selected line to the dialog
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { isDark } = useThemeMode();
     const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
@@ -294,12 +303,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     //delete line from both chart and database
     const onDeleteLine = useCallback(
-      (lineId: string) => {
-        onRemoveEdge(lineId);
+      (line:Edge) => {
+        onRemoveEdge(line);
         deleteSetsRef.current[ChartEntitiesEnum.LINES].add(lineId);
       },
       [onRemoveEdge]
     );
+
+    const onEditLine = useCallback((line:Edge)=> {
+      setEditLineDialogOpen(true)
+    },[setEditLineDialogOpen])
 
     const updateDeviceOnChart = useCallback(
       (deviceOnChart: DeviceOnChart) => {
@@ -707,6 +720,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             <Controls className={isDark ? "invert" : ""} />
           </ReactFlow>
         </div>
+        <EditLineDialog
+        isEditlineDialogOpen = {isEditlineDialogOpen}
+         />
       </div>
     );
   }
