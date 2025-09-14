@@ -203,6 +203,16 @@ export default function DeviceNode({
     setNewPortName("");
   };
 
+  const isPortInUse = (portId?: string) =>
+    !!portId && (device.ports ?? []).some((p) => p.id === portId && p.inUse);
+
+  // red styling for "in use" handles
+  const redHandleStyle = {
+    background: "#ef4444", // Tailwind's red-500
+    borderColor: "#b91c1c", // red-700
+    boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.25)",
+  };
+
   return (
     <div
       className={[
@@ -292,6 +302,9 @@ export default function DeviceNode({
       {leftYs.map((y, i) => {
         const pid = handles.left?.[i]?.port?.id;
         if (!pid) return null;
+        const inUse = isPortInUse(pid);
+        const posStyle = { top: `${y}%`, ...(inUse ? redHandleStyle : {}) };
+
         return (
           <>
             <Handle
@@ -299,8 +312,9 @@ export default function DeviceNode({
               id={pid}
               type="source"
               position={Position.Left}
-              style={{ top: `${y}%` }}
+              style={posStyle}
               isConnectableEnd={false}
+              isConnectableStart={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -315,8 +329,9 @@ export default function DeviceNode({
               id={pid}
               type="target"
               position={Position.Left}
-              style={{ top: `${y}%` }}
-              isConnectableStart={false} // can end here, not start here
+              style={posStyle}
+              isConnectableStart={false} 
+              isConnectableEnd={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -332,6 +347,9 @@ export default function DeviceNode({
       {rightYs.map((y, i) => {
         const pid = handles.right?.[i]?.port?.id;
         if (!pid) return null;
+        const inUse = isPortInUse(pid);
+        const posStyle = { top: `${y}%`, ...(inUse ? redHandleStyle : {}) };
+
         return (
           <>
             <Handle
@@ -339,8 +357,9 @@ export default function DeviceNode({
               id={pid}
               type="source"
               position={Position.Right}
-              style={{ top: `${y}%` }}
+              style={posStyle}
               isConnectableEnd={false}
+              isConnectableStart={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -355,8 +374,9 @@ export default function DeviceNode({
               id={pid}
               type="target"
               position={Position.Right}
-              style={{ top: `${y}%` }}
+              style={posStyle}
               isConnectableStart={false}
+              isConnectableEnd={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -372,6 +392,9 @@ export default function DeviceNode({
       {topXs.map((x, i) => {
         const pid = handles.top?.[i]?.port?.id;
         if (!pid) return null;
+        const inUse = isPortInUse(pid);
+        const posStyle = { left: `${x}%`, ...(inUse ? redHandleStyle : {}) };
+
         return (
           <>
             <Handle
@@ -379,8 +402,9 @@ export default function DeviceNode({
               id={pid}
               type="source"
               position={Position.Top}
-              style={{ left: `${x}%` }}
+              style={posStyle}
               isConnectableEnd={false}
+              isConnectableStart={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -395,8 +419,9 @@ export default function DeviceNode({
               id={pid}
               type="target"
               position={Position.Top}
-              style={{ left: `${x}%` }}
+              style={posStyle}
               isConnectableStart={false}
+              isConnectableEnd={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -412,6 +437,9 @@ export default function DeviceNode({
       {bottomXs.map((x, i) => {
         const pid = handles.bottom?.[i]?.port?.id;
         if (!pid) return null;
+        const inUse = isPortInUse(pid);
+        const posStyle = { left: `${x}%`, ...(inUse ? redHandleStyle : {}) };
+
         return (
           <>
             <Handle
@@ -419,8 +447,9 @@ export default function DeviceNode({
               id={pid}
               type="source"
               position={Position.Bottom}
-              style={{ left: `${x}%` }}
+              style={posStyle}
               isConnectableEnd={false}
+              isConnectableStart={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -435,8 +464,9 @@ export default function DeviceNode({
               id={pid}
               type="target"
               position={Position.Bottom}
-              style={{ left: `${x}%` }}
+              style={posStyle}
               isConnectableStart={false}
+              isConnectableEnd={!inUse} 
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,

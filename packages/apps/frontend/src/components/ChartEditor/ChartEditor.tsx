@@ -204,11 +204,30 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     //Remove line from chart but keep it on dayabase
     const onRemoveEdge = useCallback(
-      (edgeId: string) => {
-        setEdges((es) => es.filter((e) => e.id !== edgeId));
+      (edgeToRemove:Edge) => {
+        
+        const used = new Set<string>();
+        if (edgeToRemove.sourceHandle) used.add(edgeToRemove.sourceHandle);
+        if (edgeToRemove.targetHandle) used.add(edgeToRemove.targetHandle);
+
+
+        setEdges((es) => es.filter((e) => e.id !== edgeToRemove.id));
         setChart((prev) => ({
           ...prev,
-          linesOnChart: prev.linesOnChart.filter((l) => l.line.id !== edgeId),
+          linesOnChart: prev.linesOnChart.filter((l) => l.line.id !== edgeToRemove.id),
+          devicesOnChart: prev.devicesOnChart.map((doc) => {
+            return {
+              ...doc,
+              device:{
+                ...doc.device,
+                ports: doc.device.ports.map(p=>{
+                  return {
+                    ...p,
+                    inUse: ! used.has(p.id),
+                  } as Port})
+              }
+            } as DeviceOnChart
+          }),
         }));
       },
       [setChart, setEdges]
@@ -396,8 +415,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           chartId: chart.id,
           line: {
             id: newId,
-            sourcePort: sourcePort,
-            targetPort: targetPort,
+            sourcePort,
+            targetPort,
           } as Line,
           type: "step",
           label: "",
@@ -411,6 +430,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           return {
             ...prev,
             linesOnChart: [...prev.linesOnChart, newLine],
+            devicesOnChart: prev.devicesOnChart.map(doc=>{
+              return {
+                ...doc,
+                device : {
+                  ...doc.device,
+                  ports: [...doc.device.ports.filter(p => p.id === sourcePort.id || p.id === targetPort.id),sourcePort,targetPort]
+                } as Device,
+              } as DeviceOnChart
+            })
           } as Chart;
         });
       },
@@ -538,7 +566,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.REMOVE_LINE_FROM_CHART:
-            onRemoveEdge(payload.edge.id);
+            onRemoveEdge(payload.edge);
             break;
 
           case EditorMenuListKeys.DELETE_LINE:
