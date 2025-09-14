@@ -47,12 +47,16 @@ export function ChartListSidebar({
 
   return (
     <Box
-      sx={{
+      sx={(t) => ({
         width: "100%",
         flexShrink: 0,
-        borderRight: "1px solid #ddd",
         height: "100%",
-      }}
+        borderRight: 1,
+        borderColor: t.palette.mode === "dark" ? "divider" : "primary.200",
+        bgcolor: t.palette.mode === "dark" ? "background.paper" : "primary.light",
+        color: "text.primary",
+        transition: "background-color 200ms, border-color 200ms",
+      })}
     >
       {isMyCharts && (
       <>

@@ -1,8 +1,10 @@
-import { type Chart, type ChartCreate } from "@easy-charts/easycharts-types";
+import { type Chart } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
+  Alert,
   AppBar,
   Button,
+  CircularProgress,
   Dialog,
   FormControlLabel,
   IconButton,
@@ -12,12 +14,14 @@ import {
 import Box from "@mui/material/Box";
 import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
-import { useCallback, useEffect, useState } from "react";
-import AssetPage from "../components/AssetsList/AssetsPage";
-import { ChartEditor } from "../components/ChartEditor/ChartEditor"; 
+import { useEffect, useState } from "react";
+import AssetTab from "../components/AssetsList/AssetTab";
+import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/chartEditorHandle.interfaces";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
-import { updateChart, useChartById } from "../hooks/chartsHooks";
+import { ThemeToggleButton } from "../components/ThemeToggleButton";
+import { useChartById } from "../hooks/chartsHooks";
+import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 
 export function ChartsPage() {
   const [tab, setTab] = React.useState(0);
@@ -30,9 +34,11 @@ export function ChartsPage() {
   const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
 
-  // const {getChart,getChartsInformation,updateChart} = useCharts()
+  const chartEditorRef = React.useRef<ChartEditorHandle>(null);
+
   const readonly = false;
 
+  const nope = React.useCallback(()=>{return} ,[])
   useEffect(() => {
     setSelectedId("");
   }, [tab]);
@@ -75,37 +81,24 @@ export function ChartsPage() {
     setEditChart(undefined);
   };
 
-  const onSave = useCallback(
-    async (e?: React.MouseEvent<HTMLButtonElement>) => {
-      // prevent form submit refresh if inside a <form>
-      e?.preventDefault();
-      if (!editChart) return;
-
-      const payload :ChartCreate = {
-        name: editChart.name,
-        description: editChart.description ?? "",
-        devicesOnChart: editChart.devicesOnChart,
-        linesOnChart:editChart.linesOnChart
-      };
-
+  async function handleSaveClick() {
+    if (!chartEditorRef.current) return;
+    try {
       setSaving(true);
-      try {
-        setSelectedId("");
-        const newChart: Chart = await updateChart(editChart.id, payload);
-        setSelectedId(newChart.id);
-        setEditChart(undefined);
-        setDialogOpen(false);
-        setEditorMadeChanges(false);
-        
-      } catch (err: any) {
-        console.error("updateChart failed:", err);
-        // toast.error(err?.message ?? "Failed to save chart");
-      } finally {
-        setSaving(false);
-      }
-    },
-    [editChart, updateChart, setSelectedId, setEditChart]
-  );
+      const saved: Chart | null = await chartEditorRef.current.onSave();
+      if( ! saved)
+        throw new Error('Unable to save the chart')
+      // do any parent-side updates you want
+      setSelectedId(saved.id);
+      setDialogOpen(false);
+      setEditorMadeChanges(false);
+      setEditChart(undefined);
+    } catch (err) {
+      console.error("updateChart failed:", err);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -121,7 +114,10 @@ export function ChartsPage() {
               animate={{ width: 210, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="flex-none overflow-hidden border-r bg-gray-100"
+              className="flex-none overflow-hidden border-r
+             border-slate-200 dark:border-slate-700
+             bg-transparent dark:bg-slate-900
+             transition-colors duration-200"
             >
               <ChartListSidebar
                 isMyCharts={tab === 0}
@@ -134,23 +130,39 @@ export function ChartsPage() {
 
         {tab !== 2 ? (
           <Box sx={{ flex: 1, position: "relative" }}>
-            {selectedChart ? (
+            {selectedChartError ? (
+              <Box
+                sx={{ height: "100%", display: "grid", placeItems: "center" }}
+              >
+                <Alert severity="error">
+                  Failed to load chart: {String(selectedChartError)}
+                </Alert>
+              </Box>
+            ) : isSelectedChartLoading ? (
+              <Box
+                sx={{ height: "100%", display: "grid", placeItems: "center" }}
+              >
+                <CircularProgress size={300} />
+              </Box>
+            ) : selectedChart ? (
               <ChartEditor
                 key={selectedChart.id}
                 chart={selectedChart}
-                setChart={setEditChart}
+                setChart={nope} 
                 editMode={false}
-                setMadeChanges={setEditorMadeChanges}
+                setMadeChanges={nope}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
+              <Box
+                sx={{ height: "100%", display: "grid", placeItems: "center" }}
+              >
                 Select a chart to preview
-              </div>
+              </Box>
             )}
           </Box>
         ) : (
           <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex" }}>
-            <AssetPage />
+            <AssetTab />
           </Box>
         )}
       </Box>
@@ -171,7 +183,6 @@ export function ChartsPage() {
                 top: 14,
                 right: 16,
                 zIndex: 10,
-                background: "#7676c4",
                 padding: 6,
                 borderRadius: 4,
                 height: 41,
@@ -179,6 +190,7 @@ export function ChartsPage() {
             >
               {!readonly ? (
                 <FormControlLabel
+                  style={{ background: "#7676c4" }}
                   control={
                     <Switch
                       checked={editMode}
@@ -189,12 +201,13 @@ export function ChartsPage() {
                   label={editMode ? "Edit Mode" : "View Mode"}
                 />
               ) : null}
+              <ThemeToggleButton />
             </div>
             {editMode && (
               <Button
                 color="success"
                 variant="contained"
-                onClick={onSave}
+                onClick={handleSaveClick}
                 disabled={saving || !editorMageChanges}
               >
                 {saving ? "Saving…" : "Save"}
@@ -210,6 +223,7 @@ export function ChartsPage() {
             setChart={setEditChart}
             editMode={editMode}
             setMadeChanges={setEditorMadeChanges}
+            ref={chartEditorRef}
           />
         )}
       </Dialog>

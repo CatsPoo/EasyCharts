@@ -3,19 +3,32 @@ import {
   type HandleInfo,
   type Port,
   type PortType,
-  type Side
+  type Side,
 } from "@easy-charts/easycharts-types";
 import AddIcon from "@mui/icons-material/Add";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
-import RemoveIcon from "@mui/icons-material/Remove";
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, Select, TextField } from "@mui/material";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
+  TextField,
+} from "@mui/material";
 import { useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
 import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
-
+import { useThemeMode } from "../../contexts/ThemeModeContext";
+import type { SidesOffset } from "./interfaces/sidesOffset.interface";
+import { InlineEditor } from "./InlineEditor";
 
 function initials(text?: string) {
   if (!text) return "Unknow";
@@ -28,18 +41,20 @@ export default function DeviceNode({
   data,
   selected,
 }: NodeProps<DeviceNodeData>) {
-  const { deviceOnChart, editMode,updateDeviceOnChart } = data;
-  const { device,handles} = deviceOnChart;
+  const { deviceOnChart, editMode, updateDeviceOnChart,onRemoveNode,onHandleContextMenu } = data;
+  const { device, handles } = deviceOnChart;
   const { id: deviceId, name, ipAddress, model } = device;
   const { name: modelName, iconUrl, vendor } = model;
   const { name: vendorName } = vendor ?? {};
+
+  const { isDark } = useThemeMode();
 
   const [pendingSide, setPendingSide] = useState<Side | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   const updateInternals = useUpdateNodeInternals();
 
-  const portTypeOptions :string[] = Object.values(PortTypeValues) ?? []
+  const portTypeOptions: string[] = Object.values(PortTypeValues) ?? [];
 
   const [selectedPortId, setSelectedPortId] = useState<string>("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -58,46 +73,57 @@ export default function DeviceNode({
       (_, i) => pad + (i * usable) / (count - 1)
     );
   }
-   const nextOffsetForSide = (side: Side) => {
-    if (side === "left")   return { axis: "y", value: spread(handles.left.length + 1).at(-1) ?? 0 };
-    if (side === "right")  return { axis: "y", value: spread(handles.right.length + 1).at(-1) ?? 0 };
-    if (side === "top")    return { axis: "x", value: spread(handles.top.length + 1).at(-1) ?? 0 };
+  const nextOffsetForSide = (side: Side) : SidesOffset=> {
+    if (side === "left")
+      return { axis: "y", value: spread(handles.left.length + 1).at(-1) ?? 0 };
+    if (side === "right")
+      return { axis: "y", value: spread(handles.right.length + 1).at(-1) ?? 0 };
+    if (side === "top")
+      return { axis: "x", value: spread(handles.top.length + 1).at(-1) ?? 0 };
     return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
   };
 
-  const defaultPortValues: Port = { id: uuidv4(), name: '', type: 'rj45', deviceId, inUse: false };
+  const defaultPortValues: Port = {
+    id: uuidv4(),
+    name: "",
+    type: "rj45",
+    deviceId,
+    inUse: false,
+  };
 
-  const leftYs   = useMemo(() => spread(handles.left.length),   [handles.left]);
-  const rightYs  = useMemo(() => spread(handles.right.length),  [handles.right]);
-  const topXs    = useMemo(() => spread(handles.top.length),    [handles.top]);
-  const bottomXs = useMemo(() => spread(handles.bottom.length), [handles.bottom]);
+  const leftYs = useMemo(() => spread(handles.left.length), [handles.left]);
+  const rightYs = useMemo(() => spread(handles.right.length), [handles.right]);
+  const topXs = useMemo(() => spread(handles.top.length), [handles.top]);
+  const bottomXs = useMemo(
+    () => spread(handles.bottom.length),
+    [handles.bottom]
+  );
 
-const portsInUseIds = useMemo(() => {
-  const list: HandleInfo[] = [
-    ...(deviceOnChart.handles.left ?? []),
-    ...(deviceOnChart.handles.right ?? []),
-    ...(deviceOnChart.handles.top ?? []),
-    ...(deviceOnChart.handles.bottom ?? []),
-  ];
-  return new Set(list.map(h => h.port.id));
-}, [
-  deviceOnChart.handles.left,
-  deviceOnChart.handles.right,
-  deviceOnChart.handles.top,
-  deviceOnChart.handles.bottom,
-]);
-
+  const portsInUseIds = useMemo(() => {
+    const list: HandleInfo[] = [
+      ...(deviceOnChart.handles.left ?? []),
+      ...(deviceOnChart.handles.right ?? []),
+      ...(deviceOnChart.handles.top ?? []),
+      ...(deviceOnChart.handles.bottom ?? []),
+    ];
+    return new Set(list.map((h) => h.port.id));
+  }, [
+    deviceOnChart.handles.left,
+    deviceOnChart.handles.right,
+    deviceOnChart.handles.top,
+    deviceOnChart.handles.bottom,
+  ]);
 
   useLayoutEffect(() => {
     updateInternals(deviceId);
-  }, [deviceId,editMode, deviceOnChart,updateDeviceOnChart, updateInternals]);
+  }, [deviceId, editMode, deviceOnChart, updateDeviceOnChart, updateInternals]);
 
-  const onAddHandle =  (side: Side) => {
+  const onAddHandle = (side: Side) => {
     if (isEditorOpen) return;
     setIsEditorOpen(true);
-   const port : Port = {...defaultPortValues, id: uuidv4()};
+    const port: Port = { ...defaultPortValues, id: uuidv4() };
     setNewPort(port);
-    const newHandle: HandleInfo = { port};
+    const newHandle: HandleInfo = { port };
     updateDeviceOnChart({
       ...deviceOnChart,
       handles: {
@@ -113,14 +139,11 @@ const portsInUseIds = useMemo(() => {
       ...deviceOnChart,
       handles: {
         ...handles,
-        [side]: handles[side].slice(0, -1).concat({ port}), 
+        [side]: handles[side].slice(0, -1).concat({ port }),
       },
-    })
+    });
     setIsEditorOpen(false);
     updateInternals(deviceId);
-  };
-  const onRemoveHandle = (side:Side) => {
-    // TODO: implement remove handle for `side`
   };
 
   const cancelInlineEditor = () => {
@@ -136,141 +159,104 @@ const portsInUseIds = useMemo(() => {
     setPendingSide(null);
   };
 
-  const onInlineEditorPlusClick  = (e:React.MouseEvent<HTMLButtonElement, MouseEvent>) =>{
+  const onInlineEditorPlusClick = (
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+  ) => {
     e.stopPropagation();
-    setNewPort({...defaultPortValues, id: uuidv4()});
+    setNewPort({ ...defaultPortValues, id: uuidv4() });
     setCreateDialogOpen(true);
-  }
+  };
 
-  const onInlineEditorCheckClick = (e:React.MouseEvent<HTMLButtonElement, MouseEvent>) =>{
+  const onInlineEditorCheckClick = (
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+  ) => {
     e.stopPropagation();
     if (!pendingSide || !selectedPortId) return;
 
-    const port:Port = device.ports.find(p=>p.id===selectedPortId)!
-    addPortToHandle(pendingSide, port); 
+    const port: Port = device.ports.find((p) => p.id === selectedPortId)!;
+    addPortToHandle(pendingSide, port);
 
     setPendingSide(null);
     setSelectedPortId("");
-  }
+  };
 
   const onCreatePort = () => {
     if (!pendingSide) return;
     if (!newPort) return;
 
-    const portToUse: Port = { ...newPort, name: newPortName, type: newPortType as PortType };
+    const portToUse: Port = {
+      ...newPort,
+      name: newPortName,
+      type: newPortType as PortType,
+    };
     updateDeviceOnChart({
       ...deviceOnChart,
-      device: { ...device, ports: [...device.ports, portToUse] }
-    })
+      device: { ...device, ports: [...device.ports, portToUse] },
+    });
     setNewPort(null);
     setCreateDialogOpen(false);
   };
 
-  const onDialogCreateButtonClick = async  () =>{
+  const onDialogCreateButtonClick = async () => {
     onCreatePort();
     setCreateDialogOpen(false);
     setNewPortName("");
-  }
+  };
 
-  const inlineEditor = (() => {
-  if (!pendingSide) return null;
-  const { value } = nextOffsetForSide(pendingSide);
-  const common =
-    "absolute z-10 flex items-center gap-2 bg-white/90 backdrop-blur px-2 py-1 rounded-md border border-slate-200 shadow";
+  const isPortInUse = (portId?: string) =>
+    !!portId && (device.ports ?? []).some((p) => p.id === portId && p.inUse);
 
-  const iconBtn =
-    "inline-flex items-center justify-center w-7 h-7 rounded-md border border-slate-300 " +
-    "bg-white shadow hover:bg-slate-50 focus:outline-none";
-
-  const SelectEl = (
-    <select
-      value={selectedPortId}
-      onChange={(e) => setSelectedPortId(e.target.value)}
-      className="h-8 min-w-[160px] rounded-md border border-slate-300 bg-white px-2 text-xs shadow focus:outline-none focus:ring"
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <option value="" disabled>
-        Choose a port…
-      </option>
-      
-      {/* show only ports not already in use */}
-      {device.ports.filter(p => !portsInUseIds.has(p.id)).map(p => (
-        <option key={p.id} value={p.id}>
-          {p.name} ({p.type})
-        </option>
-      ))}
-    </select>
-  );
-
-  const AddPortBtn = (
-    <button
-      type="button"
-      className={iconBtn}
-      title="Create new port"
-      onClick={(e) => onInlineEditorPlusClick(e)}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <AddIcon htmlColor="#2563eb" fontSize="small" />
-    </button>
-  );
-
-  const ConfirmBtn = (
-    <button
-      type="button"
-      className={iconBtn}
-      disabled={!selectedPortId}
-      onClick={(e) => {onInlineEditorCheckClick(e)}}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <CheckIcon fontSize="small" />
-    </button>
-  );
-
-  const CancelBtn = (
-    <button
-      type="button"
-      className={iconBtn}
-      onClick={(e) => {
-        e.stopPropagation();
-        cancelInlineEditor()
-      }}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <CloseIcon fontSize="small" />
-    </button>
-  );
-
-  // position around the node depending on side
-  const styleFor = (side: Side) =>
-    side === "left"
-      ? { top: `${value}%`, left: -240, transform: "translateY(-50%)" }
-      : side === "right"
-      ? { top: `${value}%`, right: -240, transform: "translateY(-50%)" }
-      : side === "top"
-      ? { left: `${value}%`, top: -44, transform: "translateX(-50%)" }
-      : { left: `${value}%`, bottom: -44, transform: "translateX(-50%)" };
-
-  return (
-    <div className={common} style={styleFor(pendingSide)} onMouseDown={(e) => e.stopPropagation()}>
-      {SelectEl}
-      {AddPortBtn}
-      {ConfirmBtn}
-      {CancelBtn}
-    </div>
-  );
-})();
-
+  // red styling for "in use" handles
+  const redHandleStyle = {
+    background: "#ef4444", // Tailwind's red-500
+    borderColor: "#b91c1c", // red-700
+    boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.25)",
+  };
 
   return (
     <div
       className={[
-        "w-[220px] rounded-2xl border bg-white shadow-sm",
-        "border-slate-200 text-slate-800",
-        selected ? "ring-2 ring-indigo-400 ring-offset-2" : "",
+        "relative w-[220px] rounded-2xl border shadow-sm",
+        isDark
+          ? "bg-slate-900 border-slate-700 text-slate-100"
+          : "bg-white border-slate-200 text-slate-900",
+        selected
+          ? [
+              "ring-2 ring-indigo-400 ring-offset-2",
+              isDark ? "ring-offset-slate-900" : "ring-offset-white",
+            ].join(" ")
+          : "",
       ].join(" ")}
     >
+      {editMode && selected && (
+        <IconButton
+          aria-label="Remove device"
+          size="small"
+          onMouseDown={(e) => e.stopPropagation()} // avoid drag/select
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemoveNode(deviceId);
+          }}
+          className="!absolute right-1 top-1 z-20"
+          disableRipple
+          disableFocusRipple
+          sx={{
+            p: 0.25,
+            bgcolor: "transparent",
+            "&:hover": { bgcolor: "transparent" },
+          }}
+        >
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      )}
+
       {/* Header: device name */}
-      <div className="px-3 pt-2 pb-1 border-b border-slate-100">
+      <div
+        className={[
+          "px-3 pt-2 pb-1 border-b",
+          isDark ? "border-slate-700" : "border-slate-100",
+        ].join(" ")}
+      >
         <div className="text-sm font-semibold truncate">{name ?? "Device"}</div>
       </div>
 
@@ -316,6 +302,9 @@ const portsInUseIds = useMemo(() => {
       {leftYs.map((y, i) => {
         const pid = handles.left?.[i]?.port?.id;
         if (!pid) return null;
+        const inUse = isPortInUse(pid);
+        const posStyle = { top: `${y}%`, ...(inUse ? redHandleStyle : {}) };
+
         return (
           <>
             <Handle
@@ -323,16 +312,34 @@ const portsInUseIds = useMemo(() => {
               id={pid}
               type="source"
               position={Position.Left}
-              style={{ top: `${y}%` }}
-              isConnectableEnd={false} // can start here, not end here
+              style={posStyle}
+              isConnectableEnd={false}
+              isConnectableStart={!inUse} 
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "source",
+                  side: "left",
+                })
+              }
             />
             <Handle
               key={`${pid}-t`}
               id={pid}
               type="target"
               position={Position.Left}
-              style={{ top: `${y}%` }}
-              isConnectableStart={false} // can end here, not start here
+              style={posStyle}
+              isConnectableStart={false} 
+              isConnectableEnd={!inUse} 
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "target",
+                  side: "left",
+                })
+              }
             />
           </>
         );
@@ -340,6 +347,9 @@ const portsInUseIds = useMemo(() => {
       {rightYs.map((y, i) => {
         const pid = handles.right?.[i]?.port?.id;
         if (!pid) return null;
+        const inUse = isPortInUse(pid);
+        const posStyle = { top: `${y}%`, ...(inUse ? redHandleStyle : {}) };
+
         return (
           <>
             <Handle
@@ -347,16 +357,34 @@ const portsInUseIds = useMemo(() => {
               id={pid}
               type="source"
               position={Position.Right}
-              style={{ top: `${y}%` }}
-              isConnectableEnd={false} 
+              style={posStyle}
+              isConnectableEnd={false}
+              isConnectableStart={!inUse} 
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "source",
+                  side: "right",
+                })
+              }
             />
             <Handle
               key={`${pid}-t`}
               id={pid}
               type="target"
               position={Position.Right}
-              style={{ top: `${y}%` }}
-              isConnectableStart={false} // can end here, not start here
+              style={posStyle}
+              isConnectableStart={false}
+              isConnectableEnd={!inUse} 
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "target",
+                  side: "right",
+                })
+              }
             />
           </>
         );
@@ -364,6 +392,9 @@ const portsInUseIds = useMemo(() => {
       {topXs.map((x, i) => {
         const pid = handles.top?.[i]?.port?.id;
         if (!pid) return null;
+        const inUse = isPortInUse(pid);
+        const posStyle = { left: `${x}%`, ...(inUse ? redHandleStyle : {}) };
+
         return (
           <>
             <Handle
@@ -371,16 +402,34 @@ const portsInUseIds = useMemo(() => {
               id={pid}
               type="source"
               position={Position.Top}
-              style={{ left: `${x}%` }}
-              isConnectableEnd={false} 
+              style={posStyle}
+              isConnectableEnd={false}
+              isConnectableStart={!inUse} 
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "source",
+                  side: "top",
+                })
+              }
             />
             <Handle
               key={`${pid}-t`}
               id={pid}
               type="target"
               position={Position.Top}
-              style={{ left: `${x}%` }}
-              isConnectableStart={false} 
+              style={posStyle}
+              isConnectableStart={false}
+              isConnectableEnd={!inUse} 
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "target",
+                  side: "top",
+                })
+              }
             />
           </>
         );
@@ -388,6 +437,9 @@ const portsInUseIds = useMemo(() => {
       {bottomXs.map((x, i) => {
         const pid = handles.bottom?.[i]?.port?.id;
         if (!pid) return null;
+        const inUse = isPortInUse(pid);
+        const posStyle = { left: `${x}%`, ...(inUse ? redHandleStyle : {}) };
+
         return (
           <>
             <Handle
@@ -395,22 +447,52 @@ const portsInUseIds = useMemo(() => {
               id={pid}
               type="source"
               position={Position.Bottom}
-              style={{ left: `${x}%` }}
-              isConnectableEnd={false} 
+              style={posStyle}
+              isConnectableEnd={false}
+              isConnectableStart={!inUse} 
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "source",
+                  side: "bottom",
+                })
+              }
             />
             <Handle
               key={`${pid}-t`}
               id={pid}
               type="target"
               position={Position.Bottom}
-              style={{ left: `${x}%` }}
+              style={posStyle}
               isConnectableStart={false}
+              isConnectableEnd={!inUse} 
+              onContextMenu={(e) =>
+                onHandleContextMenu?.(e, {
+                  deviceId,
+                  portId: pid,
+                  role: "target",
+                  side: "bottom",
+                })
+              }
             />
           </>
         );
       })}
 
-      {editMode && isEditorOpen && inlineEditor}
+      {editMode && isEditorOpen && (
+        <InlineEditor
+          devicePorts={device.ports}
+          cancelInlineEditor={cancelInlineEditor}
+          nextOffsetForSide={nextOffsetForSide}
+          onInlineEditorCheckClick={onInlineEditorCheckClick}
+          onInlineEditorPlusClick={onInlineEditorPlusClick}
+          pendingSide={pendingSide}
+          portsInUseIds={portsInUseIds}
+          selectedPortId={selectedPortId}
+          setSelectedPortId={setSelectedPortId}
+        />
+      )}
 
       {editMode && selected && (
         <>
@@ -433,23 +515,6 @@ const portsInUseIds = useMemo(() => {
             >
               <AddIcon fontSize="small" color="success" />
             </IconButton>
-            <IconButton
-              size="small"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemoveHandle("left");
-              }}
-              disableRipple
-              disableFocusRipple
-              sx={{
-                p: 0.25,
-                bgcolor: "transparent",
-                "&:hover": { bgcolor: "transparent" },
-              }}
-            >
-              <RemoveIcon fontSize="small" color="error" />
-            </IconButton>
           </div>
 
           {/* RIGHT controls */}
@@ -470,23 +535,6 @@ const portsInUseIds = useMemo(() => {
               }}
             >
               <AddIcon fontSize="small" color="success" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemoveHandle("right");
-              }}
-              disableRipple
-              disableFocusRipple
-              sx={{
-                p: 0.25,
-                bgcolor: "transparent",
-                "&:hover": { bgcolor: "transparent" },
-              }}
-            >
-              <RemoveIcon fontSize="small" color="error" />
             </IconButton>
           </div>
 
@@ -509,23 +557,6 @@ const portsInUseIds = useMemo(() => {
             >
               <AddIcon fontSize="small" color="success" />
             </IconButton>
-            <IconButton
-              size="small"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemoveHandle("top");
-              }}
-              disableRipple
-              disableFocusRipple
-              sx={{
-                p: 0.25,
-                bgcolor: "transparent",
-                "&:hover": { bgcolor: "transparent" },
-              }}
-            >
-              <RemoveIcon fontSize="small" color="error" />
-            </IconButton>
           </div>
 
           {/* BOTTOM controls */}
@@ -546,23 +577,6 @@ const portsInUseIds = useMemo(() => {
               }}
             >
               <AddIcon fontSize="small" color="success" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemoveHandle("bottom");
-              }}
-              disableRipple
-              disableFocusRipple
-              sx={{
-                p: 0.25,
-                bgcolor: "transparent",
-                "&:hover": { bgcolor: "transparent" },
-              }}
-            >
-              <RemoveIcon fontSize="small" color="error" />
             </IconButton>
           </div>
         </>
