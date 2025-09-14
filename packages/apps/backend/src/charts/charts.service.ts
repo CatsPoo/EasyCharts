@@ -324,7 +324,6 @@ export class ChartsService {
             "sourcePortId and targetPortId must be different"
           );
       }
-
       const wantedLines: Line[] = dto.linesOnChart.map((loc) => loc.line);
       await lineRepo.upsert(wantedLines.map(l=>this.linesService.convertLineToEntity(l)), {
         conflictPaths: ["id"],
