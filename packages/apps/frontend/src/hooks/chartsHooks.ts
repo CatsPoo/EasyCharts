@@ -64,6 +64,10 @@ export async function updateChart(id: string, data: ChartUpdate): Promise<Chart>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Failed to update chart (${res.status})`);
+  }
    return (await res.json()) as Chart;
 }
 
