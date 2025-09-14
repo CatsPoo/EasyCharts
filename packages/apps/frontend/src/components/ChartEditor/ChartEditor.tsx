@@ -433,11 +433,22 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             devicesOnChart: prev.devicesOnChart.map(doc=>{
               return {
                 ...doc,
-                device : {
+                device: {
                   ...doc.device,
-                  ports: [...doc.device.ports.filter(p => p.id === sourcePort.id || p.id === targetPort.id),sourcePort,targetPort]
+                  ports: doc.device.ports.find(
+                    (p) => p.id === sourcePort.id && p.id === targetPort.id
+                  )
+                    ? [
+                        ...doc.device.ports.filter(
+                          (p) =>
+                            p.id === sourcePort.id || p.id === targetPort.id
+                        ),
+                        sourcePort,
+                        targetPort,
+                      ]
+                    : doc.device.ports,
                 } as Device,
-              } as DeviceOnChart
+              } as DeviceOnChart;
             })
           } as Chart;
         });
