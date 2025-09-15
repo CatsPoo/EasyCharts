@@ -2,6 +2,7 @@ import { DeviceSchema } from "../devices/index.js";
 import { ModelBaseSchema } from "..//devices/schemas/model.schemas.js";
 import { VendorSchema } from "../devices/schemas/vendor.schemas.js";
 import z from "zod";
+import { Identifiable } from "src/generic.types.js";
 
 // 1) AssetKind — same literal keys
 export const assetKinds = ["devices", "models", "vendors"] as const;
@@ -15,4 +16,4 @@ export type AssetMap = {
 };
 
 // 3) AnyAsset — union of the mapped types
-export type AnyAsset = AssetMap[AssetKind];
+export type AnyAsset = AssetMap[AssetKind] & Identifiable;
