@@ -1,33 +1,32 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Stack,
-  TextField,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Stack,
+    TextField,
 } from "@mui/material";
-import { useCallback } from "react";
 import { useForm } from "react-hook-form";
 import type { Edge } from "reactflow";
 import z from "zod";
+import { EditLineDialogFormSchema, type EditLineDialogFormRespone } from "./interfaces/editLineDialogForm.interfaces";
+import { useEffect } from "react";
 
 interface EditLineDialofProps {
-  isEditlineDialogOpen: boolean;
-  line: Edge;
+  isOpen: boolean;
+  line: Edge | null;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: EditLineDialogFormRespone) => void;
 }
 export function EditLineDialog({
-  isEditlineDialogOpen,
+  isOpen,
   line,
   onSubmit,
   onClose,
 }: EditLineDialofProps) {
-  const schema = z.object({
-    label: z.string().min(1),
-  });
+  const schema = EditLineDialogFormSchema
 
   const {
     control,
@@ -37,22 +36,30 @@ export function EditLineDialog({
     reset,
   } = useForm<any>({
     resolver: zodResolver(schema),
-    defaultValues: line.label,
+    defaultValues : {
+        id:"",
+        label:""
+    } as EditLineDialogFormRespone,
+
     mode: "onSubmit",
   });
 
-  const onEditLineDialogSubmit = useCallback(() => {
-    return;
-  }, []);
+  useEffect(() => {
+    if (isOpen && line) {
+      reset({
+        id: line.id,
+        // Edge.label can be ReactNode; coerce to string safely
+        label: String(line.label ?? ""),
+      });
+    }
+  }, [isOpen, line, reset]);
 
-  const onEditLineDialogClose = useCallback(() => {
-    return;
-  }, []);
-
+  if (!isOpen || !line) return null;
+  
   return (
     <Dialog
-      open={isEditlineDialogOpen}
-      onClose={onEditLineDialogClose}
+      open={isOpen}
+      onClose={onClose}
       maxWidth="sm"
       fullWidth
     >
@@ -65,7 +72,7 @@ export function EditLineDialog({
       >
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            {line?.id && <input type="hidden" {...register("id")} />}
+            <input type="hidden" {...register("id")} />
             <TextField
               label="label"
               {...register("label")}
