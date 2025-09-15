@@ -207,8 +207,8 @@ export default function DeviceNode({
       return { axis: "x", value: spread(handles.top.length + 1).at(-1) ?? 0 };
     return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
   };
-  
-  const getHandleBySide = (side:Side,port:Port,offset:number) =>{
+
+  const renderHandleBySide = (side:Side,port:Port,offset:number) =>{
         return <DeviceHandle
         deviceId={deviceId}
         port={port}
@@ -306,16 +306,16 @@ export default function DeviceNode({
       </div>
 
       {leftYs.map((y, i) => {
-        return getHandleBySide("left", handles.left?.[i]?.port, y);
+        return renderHandleBySide("left", handles.left?.[i]?.port, y);
       })}
       {rightYs.map((y, i) => {
-        return getHandleBySide("right", handles.right?.[i]?.port, y);
+        return renderHandleBySide("right", handles.right?.[i]?.port, y);
       })}
       {topXs.map((x, i) => {
-        return getHandleBySide("top", handles.top?.[i]?.port, x);
+        return renderHandleBySide("top", handles.top?.[i]?.port, x);
       })}
       {bottomXs.map((x, i) => {
-        return getHandleBySide("bottom", handles.bottom?.[i]?.port, x);
+        return renderHandleBySide("bottom", handles.bottom?.[i]?.port, x);
       })}
 
       {editMode && isEditorOpen && (
