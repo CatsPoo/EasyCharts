@@ -21,7 +21,7 @@ import {
   Select,
   TextField,
 } from "@mui/material";
-import { Fragment, useLayoutEffect, useMemo, useState } from "react";
+import { Fragment, useLayoutEffect, useMemo, useState, type CSSProperties } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
@@ -29,6 +29,7 @@ import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 import type { SidesOffset } from "./interfaces/sidesOffset.interface";
 import { InlineEditor } from "./InlineEditor";
+import DeviceHandle from "./DeviceHandle";
 
 function initials(text?: string) {
   if (!text) return "Unknow";
@@ -73,22 +74,6 @@ export default function DeviceNode({
       (_, i) => pad + (i * usable) / (count - 1)
     );
   }
-  const nextOffsetForSide = (side: Side) : SidesOffset=> {
-    if (side === "left")
-      return { axis: "y", value: spread(handles.left.length + 1).at(-1) ?? 0 };
-    if (side === "right")
-      return { axis: "y", value: spread(handles.right.length + 1).at(-1) ?? 0 };
-    if (side === "top")
-      return { axis: "x", value: spread(handles.top.length + 1).at(-1) ?? 0 };
-    return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
-  };
-
-  const labelClass = [
-    "absolute text-[10px] leading-none px-1 py-0.5 rounded pointer-events-none select-none",
-    isDark
-      ? "bg-slate-700 text-white"
-      : "bg-white text-slate-700 border border-slate-300",
-  ].join(" ");
 
   const defaultPortValues: Port = {
     id: uuidv4(),
@@ -213,29 +198,16 @@ export default function DeviceNode({
   const isPortInUse = (portId?: string) =>
     !!portId && (device.ports ?? []).some((p) => p.id === portId && p.inUse);
 
-  // red styling for "in use" handles
-  const redHandleStyle = {
-    background: "#ef4444", // Tailwind's red-500
-    borderColor: "#b91c1c", // red-700
-    boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.25)",
-  };
-
-  const handleStyle = (side:Side,v:number) :React.CSSProperties =>{
-
+  const getHandleBySide = (side:Side,port:Port,offset:number) =>{
+        return <DeviceHandle
+        deviceId={deviceId}
+        port={port}
+        side={side}
+        offset={offset}
+        inUse={isPortInUse(port.id)}
+        onHandleContextMenu={onHandleContextMenu}
+        />;
   }
-
-  const labelStyle = (side: Side, v: number): React.CSSProperties => {
-  // v is %: y for left/right, x for top/bottom
-  if (side === "left")
-    return { top: `${v}%`, left: -6, transform: "translate(-100%, -50%)" };
-  if (side === "right")
-    return { top: `${v}%`, left: "100%", marginLeft: 6, transform: "translate(0, -50%)" };
-  if (side === "top")
-    return { left: `${v}%`, top: -6, transform: "translate(-50%, -100%)" };
-  // bottom
-  return { left: `${v}%`, top: "100%", marginTop: 6, transform: "translate(-50%, 0)" };
-};
-
 
   return (
     <div
@@ -323,194 +295,17 @@ export default function DeviceNode({
         </div>
       </div>
 
-
       {leftYs.map((y, i) => {
-        const pid = handles.left?.[i]?.port?.id;
-        if (!pid) return null;
-        const inUse = isPortInUse(pid);
-        const posStyle = { top: `${y}%`, ...(inUse ? redHandleStyle : {}) };
-        const portName = handles.left?.[i]?.port?.name ?? "";
-
-        return (
-          <Fragment key={`left-${pid}`}>
-            <Handle
-              key={`${pid}-s`}
-              id={pid}
-              type="source"
-              position={Position.Left}
-              style={posStyle}
-              isConnectableEnd={false}
-              isConnectableStart={!inUse}
-              onContextMenu={(e) =>
-                onHandleContextMenu?.(e, {
-                  deviceId,
-                  portId: pid,
-                  role: "source",
-                  side: "left",
-                })
-              }
-            />
-            <Handle
-              key={`${pid}-t`}
-              id={pid}
-              type="target"
-              position={Position.Left}
-              style={posStyle}
-              isConnectableStart={false}
-              isConnectableEnd={!inUse}
-              onContextMenu={(e) =>
-                onHandleContextMenu?.(e, {
-                  deviceId,
-                  portId: pid,
-                  role: "target",
-                  side: "left",
-                })
-              }
-            />
-            <div
-              className={labelClass}
-              style={labelStyle("left", y)}
-              title={portName} // tooltip on hover
-            >
-              {portName}
-            </div>
-          </Fragment>
-        );
+        return getHandleBySide("left", handles.left?.[i]?.port, y);
       })}
       {rightYs.map((y, i) => {
-        const pid = handles.right?.[i]?.port?.id;
-        if (!pid) return null;
-        const inUse = isPortInUse(pid);
-        const posStyle = { top: `${y}%`, ...(inUse ? redHandleStyle : {}) };
-
-        return (
-          <>
-            <Handle
-              key={`${pid}-s`}
-              id={pid}
-              type="source"
-              position={Position.Right}
-              style={posStyle}
-              isConnectableEnd={false}
-              isConnectableStart={!inUse} 
-              onContextMenu={(e) =>
-                onHandleContextMenu?.(e, {
-                  deviceId,
-                  portId: pid,
-                  role: "source",
-                  side: "right",
-                })
-              }
-            />
-            <Handle
-              key={`${pid}-t`}
-              id={pid}
-              type="target"
-              position={Position.Right}
-              style={posStyle}
-              isConnectableStart={false}
-              isConnectableEnd={!inUse} 
-              onContextMenu={(e) =>
-                onHandleContextMenu?.(e, {
-                  deviceId,
-                  portId: pid,
-                  role: "target",
-                  side: "right",
-                })
-              }
-            />
-          </>
-        );
+        return getHandleBySide("right", handles.right?.[i]?.port, y);
       })}
       {topXs.map((x, i) => {
-        const pid = handles.top?.[i]?.port?.id;
-        if (!pid) return null;
-        const inUse = isPortInUse(pid);
-        const posStyle = { left: `${x}%`, ...(inUse ? redHandleStyle : {}) };
-
-        return (
-          <>
-            <Handle
-              key={`${pid}-s`}
-              id={pid}
-              type="source"
-              position={Position.Top}
-              style={posStyle}
-              isConnectableEnd={false}
-              isConnectableStart={!inUse} 
-              onContextMenu={(e) =>
-                onHandleContextMenu?.(e, {
-                  deviceId,
-                  portId: pid,
-                  role: "source",
-                  side: "top",
-                })
-              }
-            />
-            <Handle
-              key={`${pid}-t`}
-              id={pid}
-              type="target"
-              position={Position.Top}
-              style={posStyle}
-              isConnectableStart={false}
-              isConnectableEnd={!inUse} 
-              onContextMenu={(e) =>
-                onHandleContextMenu?.(e, {
-                  deviceId,
-                  portId: pid,
-                  role: "target",
-                  side: "top",
-                })
-              }
-            />
-          </>
-        );
+        return getHandleBySide("top", handles.top?.[i]?.port, x);
       })}
       {bottomXs.map((x, i) => {
-        const pid = handles.bottom?.[i]?.port?.id;
-        if (!pid) return null;
-        const inUse = isPortInUse(pid);
-        const posStyle = { left: `${x}%`, ...(inUse ? redHandleStyle : {}) };
-
-        return (
-          <>
-            <Handle
-              key={`${pid}-s`}
-              id={pid}
-              type="source"
-              position={Position.Bottom}
-              style={posStyle}
-              isConnectableEnd={false}
-              isConnectableStart={!inUse} 
-              onContextMenu={(e) =>
-                onHandleContextMenu?.(e, {
-                  deviceId,
-                  portId: pid,
-                  role: "source",
-                  side: "bottom",
-                })
-              }
-            />
-            <Handle
-              key={`${pid}-t`}
-              id={pid}
-              type="target"
-              position={Position.Bottom}
-              style={posStyle}
-              isConnectableStart={false}
-              isConnectableEnd={!inUse} 
-              onContextMenu={(e) =>
-                onHandleContextMenu?.(e, {
-                  deviceId,
-                  portId: pid,
-                  role: "target",
-                  side: "bottom",
-                })
-              }
-            />
-          </>
-        );
+        return getHandleBySide("bottom", handles.bottom?.[i]?.port, x);
       })}
 
       {editMode && isEditorOpen && (
