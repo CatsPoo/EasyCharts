@@ -21,7 +21,7 @@ import {
   Select,
   TextField,
 } from "@mui/material";
-import { useLayoutEffect, useMemo, useState } from "react";
+import { Fragment, useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
@@ -82,6 +82,13 @@ export default function DeviceNode({
       return { axis: "x", value: spread(handles.top.length + 1).at(-1) ?? 0 };
     return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
   };
+
+  const labelClass = [
+    "absolute text-[10px] leading-none px-1 py-0.5 rounded pointer-events-none select-none",
+    isDark
+      ? "bg-slate-700 text-white"
+      : "bg-white text-slate-700 border border-slate-300",
+  ].join(" ");
 
   const defaultPortValues: Port = {
     id: uuidv4(),
@@ -213,6 +220,23 @@ export default function DeviceNode({
     boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.25)",
   };
 
+  const handleStyle = (side:Side,v:number) :React.CSSProperties =>{
+
+  }
+
+  const labelStyle = (side: Side, v: number): React.CSSProperties => {
+  // v is %: y for left/right, x for top/bottom
+  if (side === "left")
+    return { top: `${v}%`, left: -6, transform: "translate(-100%, -50%)" };
+  if (side === "right")
+    return { top: `${v}%`, left: "100%", marginLeft: 6, transform: "translate(0, -50%)" };
+  if (side === "top")
+    return { left: `${v}%`, top: -6, transform: "translate(-50%, -100%)" };
+  // bottom
+  return { left: `${v}%`, top: "100%", marginTop: 6, transform: "translate(-50%, 0)" };
+};
+
+
   return (
     <div
       className={[
@@ -299,14 +323,16 @@ export default function DeviceNode({
         </div>
       </div>
 
+
       {leftYs.map((y, i) => {
         const pid = handles.left?.[i]?.port?.id;
         if (!pid) return null;
         const inUse = isPortInUse(pid);
         const posStyle = { top: `${y}%`, ...(inUse ? redHandleStyle : {}) };
+        const portName = handles.left?.[i]?.port?.name ?? "";
 
         return (
-          <>
+          <Fragment key={`left-${pid}`}>
             <Handle
               key={`${pid}-s`}
               id={pid}
@@ -314,7 +340,7 @@ export default function DeviceNode({
               position={Position.Left}
               style={posStyle}
               isConnectableEnd={false}
-              isConnectableStart={!inUse} 
+              isConnectableStart={!inUse}
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -330,8 +356,8 @@ export default function DeviceNode({
               type="target"
               position={Position.Left}
               style={posStyle}
-              isConnectableStart={false} 
-              isConnectableEnd={!inUse} 
+              isConnectableStart={false}
+              isConnectableEnd={!inUse}
               onContextMenu={(e) =>
                 onHandleContextMenu?.(e, {
                   deviceId,
@@ -341,7 +367,14 @@ export default function DeviceNode({
                 })
               }
             />
-          </>
+            <div
+              className={labelClass}
+              style={labelStyle("left", y)}
+              title={portName} // tooltip on hover
+            >
+              {portName}
+            </div>
+          </Fragment>
         );
       })}
       {rightYs.map((y, i) => {
