@@ -107,7 +107,7 @@ export default function DeviceHandle({
         key={`${pid}-t`}
         id={pid}
         type="target"
-        position={Position.Left}
+        position={position}
         style={handleStyle()}
         isConnectableStart={false}
         isConnectableEnd={!inUse}

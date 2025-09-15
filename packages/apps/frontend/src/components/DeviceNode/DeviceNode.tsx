@@ -198,6 +198,16 @@ export default function DeviceNode({
   const isPortInUse = (portId?: string) =>
     !!portId && (device.ports ?? []).some((p) => p.id === portId && p.inUse);
 
+  const nextOffsetForSide = (side: Side) : SidesOffset=> {
+    if (side === "left")
+      return { axis: "y", value: spread(handles.left.length + 1).at(-1) ?? 0 };
+    if (side === "right")
+      return { axis: "y", value: spread(handles.right.length + 1).at(-1) ?? 0 };
+    if (side === "top")
+      return { axis: "x", value: spread(handles.top.length + 1).at(-1) ?? 0 };
+    return { axis: "x", value: spread(handles.bottom.length + 1).at(-1) ?? 0 }; // bottom
+  };
+  
   const getHandleBySide = (side:Side,port:Port,offset:number) =>{
         return <DeviceHandle
         deviceId={deviceId}
