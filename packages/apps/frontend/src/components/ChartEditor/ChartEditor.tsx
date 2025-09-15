@@ -1,14 +1,13 @@
 import {
   ChartEntitiesEnum,
   type Chart,
-  type ChartCreate,
   type ChartUpdate,
   type Device,
   type DeviceOnChart,
   type Handles,
   type Line,
   type LineOnChart,
-  type Port,
+  type Port
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -33,16 +32,18 @@ import ReactFlow, {
   useReactFlow,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { useThemeMode } from "../../contexts/ThemeModeContext";
 import { useListAssets } from "../../hooks/assetsHooks";
+import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import DeviceNode from "../DeviceNode/DeviceNode";
 import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";
+import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
-import { useThemeMode } from "../../contexts/ThemeModeContext";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
-import type { DeleteSets } from "./interfaces/DeleteSets.interfaces";
-import {useUpdateChartMutation } from "../../hooks/chartsHooks";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
+import type { DeleteSets } from "./interfaces/DeleteSets.interfaces";
+import type { EditLineDialogFormRespone } from "./interfaces/editLineDialogForm.interfaces";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -56,7 +57,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     { chart, setChart, editMode, setMadeChanges }: ChardEditorProps,
     ref
   ) {
+
     const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
+    const [isEditlineDialogOpen,setEditLineDialogOpen] = useState<boolean>(false)
+    const [selectedEditLine,setSelectedEditLine] = useState<Edge| null>(null)
+
+
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { isDark } = useThemeMode();
     const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
@@ -294,12 +300,41 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     //delete line from both chart and database
     const onDeleteLine = useCallback(
-      (lineId: string) => {
-        onRemoveEdge(lineId);
-        deleteSetsRef.current[ChartEntitiesEnum.LINES].add(lineId);
+      (line:Edge) => {
+        onRemoveEdge(line);
+        deleteSetsRef.current[ChartEntitiesEnum.LINES].add(line.id);
       },
       [onRemoveEdge]
     );
+
+    const onEditLine = useCallback((line:Edge)=> {
+      setSelectedEditLine(line)
+      setEditLineDialogOpen(true)
+      
+    },[setEditLineDialogOpen,setSelectedEditLine])
+
+    const onEditLineDialogClose = useCallback(() => {
+      setEditLineDialogOpen(false);
+      setSelectedEditLine(null);
+    }, [setEditLineDialogOpen,setSelectedEditLine]);
+
+    const onEditLineDialgSubmit = useCallback((newValue : EditLineDialogFormRespone)=>{
+      console.log(newValue)
+      console.log(selectedEditLine)
+      setChart(prev =>{
+        return {
+          ...prev,
+          linesOnChart: prev.linesOnChart.map(loc =>{
+            return (loc.line.id === selectedEditLine?.id) ? {
+              ...loc,
+              label: newValue.label
+            } as LineOnChart as LineOnChart : loc
+          })
+        } as Chart
+      })
+
+      setEditLineDialogOpen(false)
+    },[selectedEditLine, setChart])
 
     const updateDeviceOnChart = useCallback(
       (deviceOnChart: DeviceOnChart) => {
@@ -574,6 +609,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.EDIT_LINE:
+            onEditLine(payload.edge)
             break;
 
           case EditorMenuListKeys.REMOVE_LINE_FROM_CHART:
@@ -718,6 +754,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             <Controls className={isDark ? "invert" : ""} />
           </ReactFlow>
         </div>
+        <EditLineDialog
+          isOpen={isEditlineDialogOpen}
+          line={selectedEditLine ?? edges[0]}
+          onClose={onEditLineDialogClose}
+          onSubmit={onEditLineDialgSubmit}
+        />
       </div>
     );
   }

@@ -1,5 +1,5 @@
 // AssetForm.tsx (patch)
-import { DeviceBaseSchema, ModelBaseSchema, VendorBaseSchema, type AssetKind, type AssetMap } from "@easy-charts/easycharts-types";
+import { type AssetKind, type AssetMap } from "@easy-charts/easycharts-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
@@ -12,8 +12,8 @@ import {
 } from "@mui/material";
 import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { AssetsSelectionList } from "./AsetsSelectionList.component";
 import z from "zod";
+import { AssetsSelectionList } from "./AsetsSelectionList.component";
 
 const schemas = {
   devices: z.object({
