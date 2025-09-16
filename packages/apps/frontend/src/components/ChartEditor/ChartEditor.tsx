@@ -8,6 +8,7 @@ import {
   type Line,
   type LineOnChart,
   type Port,
+  type Side,
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -161,7 +162,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           deviceId: string;
           portId: string;
           role: "source" | "target";
-          side?: "left" | "right" | "top" | "bottom";
+          side?: Side;
         }
       ) => {
         e.preventDefault();
