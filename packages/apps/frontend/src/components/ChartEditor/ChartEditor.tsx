@@ -42,8 +42,9 @@ import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
-import type { DeleteSets } from "./interfaces/DeleteSets.interfaces";
+import type { DeleteSets } from "./interfaces/deleteSets.interfaces";
 import type { EditLineDialogFormRespone } from "./interfaces/editLineDialogForm.interfaces";
+import { ConfirmDialog } from "../DeleteAlertDialog";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -59,9 +60,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
   ) {
 
     const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
-    const [isEditlineDialogOpen,setEditLineDialogOpen] = useState<boolean>(false)
-    const [selectedEditLine,setSelectedEditLine] = useState<Edge| null>(null)
+    const [isEditlineDialogOpen, setEditLineDialogOpen] = useState<boolean>(false);
+    const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [pandingDelete,setPandingDelete] = useState<{value: Node|Edge|null, kind?: keyof DeleteSets}>({value:null})
+    const [confimDialogTitle,setConfirmDialogTitle] = useState<string>('')
+    const [confimDialogDescription,setConfirmDialogDescription] = useState<string>('')
 
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { isDark } = useThemeMode();
@@ -313,6 +318,27 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       
     },[setEditLineDialogOpen,setSelectedEditLine])
 
+    const onConfirmDialogConfirm = useCallback(() => {
+      if (!pandingDelete.kind) return;
+      try {
+        if (pandingDelete.kind === "devices") {
+          onDeleteDevice((pandingDelete.value as Node).id);
+        }
+        if (pandingDelete.kind === "lines") {
+          onDeleteLine(pandingDelete.value as Edge);
+        }
+      } catch (e) {
+        console.log("Delete failed: ", e);
+      }
+      setPandingDelete({value:null})
+      setConfirmDeleteOpen(false)
+    }, [onDeleteDevice, onDeleteLine, pandingDelete.kind, pandingDelete.value]);
+
+    const onconfigDialofClose = useCallback(()=>{
+      setPandingDelete({value:null})
+      setConfirmDeleteOpen(false)
+    },[])
+
     const onEditLineDialogClose = useCallback(() => {
       setEditLineDialogOpen(false);
       setSelectedEditLine(null);
@@ -369,7 +395,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         };
         return node;
       },
-      [editMode, onRemoveNode, updateDeviceOnChart]
+      [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart]
     );
 
     const { data: availableDevicesResponse } = useListAssets("devices", {
@@ -598,7 +624,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.DELETE_DEVICE:
-            onDeleteDevice(payload.node.id);
+            setPandingDelete({value:payload.node,kind:'devices'});
+            setConfirmDialogTitle("Delete Device?");
+            setConfirmDialogDescription(
+              "Are you shure you want to permenantly delete device: <add device name>"
+            );
+            setConfirmDeleteOpen(true);
             break;
 
           case EditorMenuListKeys.EDIT_DEVICE:
@@ -609,7 +640,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.EDIT_LINE:
-            onEditLine(payload.edge)
+            onEditLine(payload.edge);
             break;
 
           case EditorMenuListKeys.REMOVE_LINE_FROM_CHART:
@@ -617,7 +648,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.DELETE_LINE:
-            onDeleteLine(payload.edge.id);
+            setPandingDelete({value:payload.edge,kind:'lines'});
+            setConfirmDialogTitle("Delete Line?");
+            setConfirmDialogDescription(
+              "Are you shure you want to permenantly delete line: " +payload.edge.label
+            );
+            setConfirmDeleteOpen(true);
+            //onDeleteLine(payload.edge.id);
             break;
 
           case EditorMenuListKeys.EDIT_PORT:
@@ -759,6 +796,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           line={selectedEditLine ?? edges[0]}
           onClose={onEditLineDialogClose}
           onSubmit={onEditLineDialgSubmit}
+        />
+        <ConfirmDialog
+          open={confirmDeleteOpen}
+          title={confimDialogTitle}
+          description={confimDialogDescription}
+          confirmText="Delete"
+          confirmColor="error"
+          loading={false}
+          onCancel={onconfigDialofClose}
+          onConfirm={onConfirmDialogConfirm}
         />
       </div>
     );
