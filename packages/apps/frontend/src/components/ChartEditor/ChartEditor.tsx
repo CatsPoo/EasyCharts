@@ -7,7 +7,7 @@ import {
   type Handles,
   type Line,
   type LineOnChart,
-  type Port
+  type Port,
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -58,15 +58,19 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     { chart, setChart, editMode, setMadeChanges }: ChardEditorProps,
     ref
   ) {
-
     const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
-    const [isEditlineDialogOpen, setEditLineDialogOpen] = useState<boolean>(false);
+    const [isEditlineDialogOpen, setEditLineDialogOpen] =
+      useState<boolean>(false);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-    const [pandingDelete,setPandingDelete] = useState<{value: Node|Edge|null, kind?: keyof DeleteSets}>({value:null})
-    const [confimDialogTitle,setConfirmDialogTitle] = useState<string>('')
-    const [confimDialogDescription,setConfirmDialogDescription] = useState<string>('')
+    const [pandingDelete, setPandingDelete] = useState<{
+      value: Node | Edge | null;
+      kind?: keyof DeleteSets;
+    }>({ value: null });
+    const [confimDialogTitle, setConfirmDialogTitle] = useState<string>("");
+    const [confimDialogDescription, setConfirmDialogDescription] =
+      useState<string>("");
 
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { isDark } = useThemeMode();
@@ -215,29 +219,30 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     //Remove line from chart but keep it on dayabase
     const onRemoveEdge = useCallback(
-      (edgeToRemove:Edge) => {
-        
+      (edgeToRemove: Edge) => {
         const used = new Set<string>();
         if (edgeToRemove.sourceHandle) used.add(edgeToRemove.sourceHandle);
         if (edgeToRemove.targetHandle) used.add(edgeToRemove.targetHandle);
 
-
         setEdges((es) => es.filter((e) => e.id !== edgeToRemove.id));
         setChart((prev) => ({
           ...prev,
-          linesOnChart: prev.linesOnChart.filter((l) => l.line.id !== edgeToRemove.id),
+          linesOnChart: prev.linesOnChart.filter(
+            (l) => l.line.id !== edgeToRemove.id
+          ),
           devicesOnChart: prev.devicesOnChart.map((doc) => {
             return {
               ...doc,
-              device:{
+              device: {
                 ...doc.device,
-                ports: doc.device.ports.map(p=>{
+                ports: doc.device.ports.map((p) => {
                   return {
                     ...p,
-                    inUse: ! used.has(p.id),
-                  } as Port})
-              }
-            } as DeviceOnChart
+                    inUse: !used.has(p.id),
+                  } as Port;
+                }),
+              },
+            } as DeviceOnChart;
           }),
         }));
       },
@@ -305,18 +310,20 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     //delete line from both chart and database
     const onDeleteLine = useCallback(
-      (line:Edge) => {
+      (line: Edge) => {
         onRemoveEdge(line);
         deleteSetsRef.current[ChartEntitiesEnum.LINES].add(line.id);
       },
       [onRemoveEdge]
     );
 
-    const onEditLine = useCallback((line:Edge)=> {
-      setSelectedEditLine(line)
-      setEditLineDialogOpen(true)
-      
-    },[setEditLineDialogOpen,setSelectedEditLine])
+    const onEditLine = useCallback(
+      (line: Edge) => {
+        setSelectedEditLine(line);
+        setEditLineDialogOpen(true);
+      },
+      [setEditLineDialogOpen, setSelectedEditLine]
+    );
 
     const onConfirmDialogConfirm = useCallback(() => {
       if (!pandingDelete.kind) return;
@@ -330,37 +337,42 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       } catch (e) {
         console.log("Delete failed: ", e);
       }
-      setPandingDelete({value:null})
-      setConfirmDeleteOpen(false)
+      setPandingDelete({ value: null });
+      setConfirmDeleteOpen(false);
     }, [onDeleteDevice, onDeleteLine, pandingDelete.kind, pandingDelete.value]);
 
-    const onconfigDialofClose = useCallback(()=>{
-      setPandingDelete({value:null})
-      setConfirmDeleteOpen(false)
-    },[])
+    const onconfigDialofClose = useCallback(() => {
+      setPandingDelete({ value: null });
+      setConfirmDeleteOpen(false);
+    }, []);
 
     const onEditLineDialogClose = useCallback(() => {
       setEditLineDialogOpen(false);
       setSelectedEditLine(null);
-    }, [setEditLineDialogOpen,setSelectedEditLine]);
+    }, [setEditLineDialogOpen, setSelectedEditLine]);
 
-    const onEditLineDialgSubmit = useCallback((newValue : EditLineDialogFormRespone)=>{
-      console.log(newValue)
-      console.log(selectedEditLine)
-      setChart(prev =>{
-        return {
-          ...prev,
-          linesOnChart: prev.linesOnChart.map(loc =>{
-            return (loc.line.id === selectedEditLine?.id) ? {
-              ...loc,
-              label: newValue.label
-            } as LineOnChart as LineOnChart : loc
-          })
-        } as Chart
-      })
+    const onEditLineDialgSubmit = useCallback(
+      (newValue: EditLineDialogFormRespone) => {
+        console.log(newValue);
+        console.log(selectedEditLine);
+        setChart((prev) => {
+          return {
+            ...prev,
+            linesOnChart: prev.linesOnChart.map((loc) => {
+              return loc.line.id === selectedEditLine?.id
+                ? ({
+                    ...loc,
+                    label: newValue.label,
+                  } as LineOnChart as LineOnChart)
+                : loc;
+            }),
+          } as Chart;
+        });
 
-      setEditLineDialogOpen(false)
-    },[selectedEditLine, setChart])
+        setEditLineDialogOpen(false);
+      },
+      [selectedEditLine, setChart]
+    );
 
     const updateDeviceOnChart = useCallback(
       (deviceOnChart: DeviceOnChart) => {
@@ -412,7 +424,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       const all = availableDevicesResponse?.rows ?? [];
       const deleted = deleteSetsRef.current.devices;
       return deleted.size ? all.filter((d) => !deleted.has(d.id)) : all;
-    }, [availableDevicesResponse,deleteSetsRef]);
+    }, [availableDevicesResponse, deleteSetsRef]);
 
     // Devices not yet placed
     const unusedDevices = useMemo(() => {
@@ -491,7 +503,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           return {
             ...prev,
             linesOnChart: [...prev.linesOnChart, newLine],
-            devicesOnChart: prev.devicesOnChart.map(doc=>{
+            devicesOnChart: prev.devicesOnChart.map((doc) => {
               return {
                 ...doc,
                 device: {
@@ -510,23 +522,91 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                     : doc.device.ports,
                 } as Device,
               } as DeviceOnChart;
-            })
+            }),
           } as Chart;
         });
       },
       [setChart, chart.devicesOnChart, setEdges, setMadeChanges, chart.id]
     );
 
-    const OnReconnectStart = useCallback(() => {
-      setIsReconnecting(true);
+    const onReconnect = useCallback(
+      (oldEdge: Edge, newConnection: Connection) => {
+        
+        setChart((prev) => {
+          const newSourcDevice: DeviceOnChart | undefined =
+            prev.devicesOnChart.find(
+              (doc) => doc.device.id === newConnection.source
+            );
+          const newTargetDevice: DeviceOnChart | undefined =
+            prev.devicesOnChart.find(
+              (doc) => doc.device.id === newConnection.target
+            );
+          const newSourcePort: Port | undefined =
+            newSourcDevice?.device.ports.find(
+              (p) => p.id === newConnection.sourceHandle
+            );
+          const newTargetePort: Port | undefined =
+            newTargetDevice?.device.ports.find(
+              (p) => p.id === newConnection.targetHandle
+            );
 
-      setMadeChanges(true);
-    }, [setIsReconnecting, setMadeChanges]);
+          if (
+            !newSourcDevice ||
+            !newTargetDevice ||
+            !newSourcePort ||
+            !newTargetePort
+          )
+            return prev;
 
-    const OnReconnectEnd = useCallback(() => {
-      setIsReconnecting(false);
-    }, [setIsReconnecting]);
+            newSourcePort.inUse = true
+            newTargetePort.inUse = true
+            
+          return {
+            ...prev,
+            linesOnChart: prev.linesOnChart.map((loc) => {
+              return loc.line.id === oldEdge.id
+                ? ({
+                    ...loc,
+                    line: {
+                      ...loc.line,
+                      sourcePort: newSourcePort,
+                      targetPort: newTargetePort,
+                    } as Line,
+                  } as LineOnChart)
+                : loc;
+            }),
+            devicesOnChart: prev.devicesOnChart.map((doc) => {
+              return doc.device.id === newSourcDevice.device.id ||
+                doc.device.id === newTargetDevice.device.id ||
+                doc.device.id === oldEdge.target ||
+                doc.device.id === oldEdge.source
+                ? ({
+                    ...doc,
+                    device: {
+                      ...doc.device,
+                      ports: doc.device.ports.map((p) => {
+                        return p.id === oldEdge.sourceHandle ||
+                          p.id === oldEdge.targetHandle
+                          ? ({ ...p, inUse: false } as Port)
+                          : p.id === newSourcePort.id
+                          ? newSourcePort
+                          : p.id === newTargetePort.id
+                          ? newTargetePort
+                          : p;
+                      }),
+                    },
+                  } as DeviceOnChart)
+                : doc;
+            }),
+          } as Chart;
+        });
 
+        setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
+        setMadeChanges(true);
+      },
+
+      [setChart, setEdges, setMadeChanges]
+    );
     const onDragOver = useCallback(
       (e: React.DragEvent) => {
         if (!editMode) return;
@@ -624,7 +704,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.DELETE_DEVICE:
-            setPandingDelete({value:payload.node,kind:'devices'});
+            setPandingDelete({ value: payload.node, kind: "devices" });
             setConfirmDialogTitle("Delete Device?");
             setConfirmDialogDescription(
               "Are you shure you want to permenantly delete device: <add device name>"
@@ -648,10 +728,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.DELETE_LINE:
-            setPandingDelete({value:payload.edge,kind:'lines'});
+            setPandingDelete({ value: payload.edge, kind: "lines" });
             setConfirmDialogTitle("Delete Line?");
             setConfirmDialogDescription(
-              "Are you shure you want to permenantly delete line: " +payload.edge.label
+              "Are you shure you want to permenantly delete line: " +
+                payload.edge.label
             );
             setConfirmDeleteOpen(true);
             //onDeleteLine(payload.edge.id);
@@ -775,8 +856,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             onEdgesChange={editMode ? onEdgesChange : undefined}
             onConnect={editMode ? onConnect : undefined}
             onEdgeUpdate={editMode ? onEdgeUpdate : undefined}
-            onReconnectStart={OnReconnectStart}
-            onReconnectEnd={OnReconnectEnd}
+            onReconnect={onReconnect}
             nodesDraggable={editMode}
             nodesConnectable={editMode}
             defaultEdgeOptions={{ type: ConnectionLineType.Step }}
@@ -811,4 +891,3 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     );
   }
 );
-
