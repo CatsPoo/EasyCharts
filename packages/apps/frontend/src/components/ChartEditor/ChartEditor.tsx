@@ -585,7 +585,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                     device: {
                       ...doc.device,
                       ports: doc.device.ports.map((p) => {
-                        return p.id === oldEdge.sourceHandle ||
+                        return(p.id === oldEdge.sourceHandle && p.id !== newSourcePort.id) ||
                           p.id === oldEdge.targetHandle
                           ? ({ ...p, inUse: false } as Port)
                           : p.id === newSourcePort.id
@@ -856,7 +856,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             onEdgesChange={editMode ? onEdgesChange : undefined}
             onConnect={editMode ? onConnect : undefined}
             onEdgeUpdate={editMode ? onEdgeUpdate : undefined}
-            onReconnect={onReconnect}
+            onReconnect={editMode ? onReconnect : undefined}
             nodesDraggable={editMode}
             nodesConnectable={editMode}
             defaultEdgeOptions={{ type: ConnectionLineType.Step }}
