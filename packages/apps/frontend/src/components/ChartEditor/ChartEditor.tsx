@@ -114,6 +114,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       actionsHistory.current.push(newChart)
       actionsHistoryIndex.current++
     },[])
+
     const moveMenuTo = useCallback(
       (e: React.MouseEvent) => {
         e.preventDefault(); // block browser context menu
@@ -732,6 +733,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         setMadeChanges(true);
         switch (action) {
+
+          case EditorMenuListKeys.UNDO:
+            onUndoClick()
+            break
+          case EditorMenuListKeys.REDO:
+            onRedoClick()
+            break
           case EditorMenuListKeys.Add_DDEVICE_TO_CHART:
             break;
 
@@ -838,13 +846,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onUndoClick = useCallback(()=>{
       if(actionsHistoryIndex.current ===0) return
-      actionsHistoryIndex.current--
-      setChart(actionsHistory.current[actionsHistoryIndex.current])
-    },[setChart])
+      actionsHistoryIndex.current-=1
+      if(actionsHistoryIndex.current ===0) setMadeChanges(false)
+      setChart(actionsHistory.current[actionsHistoryIndex.current-1])
+    },[setChart, setMadeChanges])
 
     const onRedoClick = useCallback(()=>{
       if(actionsHistoryIndex.current === actionsHistory.current.length -1) return
-      actionsHistoryIndex.current++
+      actionsHistoryIndex.current+=1
       setChart(actionsHistory.current[actionsHistoryIndex.current])
     },[setChart])
 

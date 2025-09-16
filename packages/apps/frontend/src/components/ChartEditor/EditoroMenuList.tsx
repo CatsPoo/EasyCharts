@@ -8,6 +8,10 @@ export default function EditorMenuList({
   onAction: (a: EditorMenuListKeys) => void;
 }) {
   const itemsByKind: Record<CtxKind, Array<{ key: EditorMenuListKeys; label: string }>> = {
+    common:[
+      {key: EditorMenuListKeys.UNDO,label: 'Undo'},
+      {key: EditorMenuListKeys.UNDO,label: 'Redo'},
+    ],
     pane: [
       { key: EditorMenuListKeys.Add_DDEVICE_TO_CHART, label: "Add device here" },
       { key: EditorMenuListKeys.FIT, label: "Fit view" },
@@ -28,11 +32,11 @@ export default function EditorMenuList({
     ],
   };
 
-  const items = itemsByKind[kind] ?? [];
+  const items = [...itemsByKind[kind]?? [] , ...itemsByKind['common'] ?? []] ;
   return (
     <ul className="py-1">
       {items.map((it) => (
-        <li key={it.key}>
+        <li key={it.key + kind}>
           <button
             className="w-full px-3 py-1.5 text-left text-sm hover:bg-slate-100"
             onClick={() => onAction(it.key)}
