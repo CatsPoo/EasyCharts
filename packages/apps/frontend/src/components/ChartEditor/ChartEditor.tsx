@@ -59,7 +59,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     { chart, setChart, editMode, setMadeChanges }: ChardEditorProps,
     ref
   ) {
-    const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
     const [isEditlineDialogOpen, setEditLineDialogOpen] =
       useState<boolean>(false);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
