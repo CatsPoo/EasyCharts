@@ -75,6 +75,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const actionsHistory = useRef<Chart[]>([chart]);
     const actionsHistoryIndex = useRef<number>(actionsHistory.current.length-1);
 
+    const [canUndo, setCanUndo] = useState(false);
+    const [canRedo, setCanRedo] = useState(false);
+
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { isDark } = useThemeMode();
 
@@ -140,6 +143,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         0,
         actionsHistoryIndex.current + 1
       );
+      setCanUndo(true)
+      setCanUndo(actionsHistoryIndex.current > 0);
 
       actionsHistory.current.push(structuredClone(newChart));
       actionsHistoryIndex.current = actionsHistory.current.length - 1;
@@ -210,19 +215,26 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       actionsHistoryIndex.current -= 1;
       setChart(actionsHistory.current[actionsHistoryIndex.current]);
       setMadeChanges(actionsHistoryIndex.current > 0);
+      setCanUndo(actionsHistoryIndex.current > 0);
+  setCanRedo(actionsHistoryIndex.current < actionsHistory.current.length - 1);
     }, [setChart, setMadeChanges]);
 
     const onRedoClick = useCallback(() => {
-      console.log(actionsHistory.current.length)
-      console.log(actionsHistoryIndex.current)
-      if (actionsHistoryIndex.current === actionsHistory.current.length-1) return;
+      if (actionsHistoryIndex.current === actionsHistory.current.length - 1)
+        return;
       actionsHistoryIndex.current += 1;
       setChart(actionsHistory.current[actionsHistoryIndex.current]);
+      setCanUndo(actionsHistoryIndex.current > 0);
+      setCanRedo(
+        actionsHistoryIndex.current < actionsHistory.current.length - 1
+      );
     }, [setChart]);
 
     useEffect(() => {
       actionsHistory.current = [chart];
       actionsHistoryIndex.current = 0;
+      setCanRedo(false)
+      setCanRedo(false)
     }, [chart.id]);
 
     const convertLineToEdge = (lineonChart: LineOnChart): Edge => {
@@ -885,7 +897,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 style={{ left: ctx.x, top: ctx.y }}
                 onContextMenu={(e) => e.preventDefault()}
               >
-                <MenuList kind={ctx.kind} onAction={onCtxAction} />
+                <MenuList
+                  kind={ctx.kind}
+                  onAction={onCtxAction}
+                  isRedoEnabled={canRedo}
+                  isUndoEnabled={canUndo}
+                />
               </div>
             </>
           )}
