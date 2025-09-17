@@ -7,11 +7,9 @@ import type {
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
+import { LineEntity } from "../lines/entities/line.entity";
 import { QueryDto } from "../query/dto/query.dto";
 import { PortEntity } from "./entities/port.entity";
-import { LineEntity } from "../lines/entities/line.entity";
-import { DeviceOnChartEntity } from "../charts/entities/deviceOnChart.entityEntity";
-import { LineOnChartEntity } from "../charts/entities/lineonChart.emtity";
 
 @Injectable()
 export class PortsService {
@@ -82,74 +80,37 @@ export class PortsService {
       .getMany();
   }
 
-  async markPortsUsedInChart(chartId: string): Promise<void> {
-    const portRepo = this.dataSource.getRepository(PortEntity);
-    const qb = portRepo.createQueryBuilder();
+  async recomputePortsInUse(): Promise<void> {
+    await this.dataSource.transaction(async (m) => {
+      const portRepo = m.getRepository(PortEntity);
+      const qb = portRepo.createQueryBuilder();
 
-    const usedAsSource = qb
-      .subQuery()
-      .select("l.source_port_id")
-      .from(LineEntity, "l")
-      .innerJoin(LineOnChartEntity, "loc", "loc.lineId = l.id")
-      .where("loc.chartId = :chartId")
-      .getQuery();
+      const usedAsSource = qb
+        .subQuery()
+        .select("l.source_port_id")
+        .from(LineEntity, "l")
+        .getQuery();
 
-    const usedAsTarget = qb
-      .subQuery()
-      .select("l2.target_port_id")
-      .from(LineEntity, "l2")
-      .innerJoin(LineOnChartEntity, "loc2", "loc2.lineId = l2.id")
-      .where("loc2.chartId = :chartId")
-      .getQuery();
+      const usedAsTarget = qb
+        .subQuery()
+        .select("l2.target_port_id")
+        .from(LineEntity, "l2")
+        .getQuery();
 
-    await portRepo
-      .createQueryBuilder()
-      .update(PortEntity)
-      .set({ inUse: true })
-      .where(`id IN ${usedAsSource} OR id IN ${usedAsTarget}`)
-      .setParameters({ chartId })
-      .execute();
-  }
+      // 1) set all to false
+      await portRepo
+        .createQueryBuilder()
+        .update(PortEntity)
+        .set({ inUse: false })
+        .execute();
 
-  async resetUnusedPortsForChart(chartId: string): Promise<void> {
-    const portRepo = this.dataSource.getRepository(PortEntity);
-    const qb = portRepo.createQueryBuilder();
-
-    const devicesInChart = qb
-      .subQuery()
-      .select("doc.deviceId")
-      .from(DeviceOnChartEntity, "doc")
-      .where("doc.chartId = :chartId")
-      .getQuery();
-
-    const usedAsSource = qb
-      .subQuery()
-      .select("l.source_port_id")
-      .from(LineEntity, "l")
-      .innerJoin(LineOnChartEntity, "loc", "loc.lineId = l.id")
-      .where("loc.chartId = :chartId")
-      .getQuery();
-
-    const usedAsTarget = qb
-      .subQuery()
-      .select("l2.target_port_id")
-      .from(LineEntity, "l2")
-      .innerJoin(LineOnChartEntity, "loc2", "loc2.lineId = l2.id")
-      .where("loc2.chartId = :chartId")
-      .getQuery();
-
-    await portRepo
-      .createQueryBuilder()
-      .update(PortEntity)
-      .set({ inUse: false })
-      .where(`deviceId IN ${devicesInChart}`)
-      .andWhere(`id NOT IN ${usedAsSource}`)
-      .andWhere(`id NOT IN ${usedAsTarget}`)
-      .setParameters({ chartId })
-      .execute();
-  }
-  async updatePortsInUseSate(chartId: string): Promise<void> {
-    await this.markPortsUsedInChart(chartId);
-    await this.resetUnusedPortsForChart(chartId);
+      // 2) set used ones to true
+      await portRepo
+        .createQueryBuilder()
+        .update(PortEntity)
+        .set({ inUse: true })
+        .where(`id IN ${usedAsSource} OR id IN ${usedAsTarget}`)
+        .execute();
+    });
   }
 }
