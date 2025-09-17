@@ -72,8 +72,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [confimDialogDescription, setConfirmDialogDescription] =
       useState<string>("");
 
+    const actionsHistory = useRef<Chart[]>([chart]);
+    const actionsHistoryIndex = useRef<number>(actionsHistory.current.length-1);
+
+    const [canUndo, setCanUndo] = useState(false);
+    const [canRedo, setCanRedo] = useState(false);
+
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { isDark } = useThemeMode();
+
     const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
 
     const updateMut = useUpdateChartMutation();
@@ -131,6 +138,30 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       });
     }, []);
 
+    const addChartToHistory = useCallback((newChart: Chart) => {
+      actionsHistory.current = actionsHistory.current.slice(
+        0,
+        actionsHistoryIndex.current + 1
+      );
+      setCanUndo(true)
+      setCanUndo(actionsHistoryIndex.current > 0);
+
+      actionsHistory.current.push(structuredClone(newChart));
+      actionsHistoryIndex.current = actionsHistory.current.length - 1;
+    }, []);
+
+
+    const applyChartChange = useCallback(
+      (produce: (base: Chart) => Chart) => {
+        const base = chart;
+        const next = produce(base);
+        setChart(next);
+        addChartToHistory(next); 
+        setMadeChanges(true);
+      },
+      [addChartToHistory, chart, setChart, setMadeChanges]
+    );
+
     const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
       e.preventDefault();
       setCtx({
@@ -176,7 +207,35 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       []
     );
 
+
     const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
+
+    const onUndoClick = useCallback(() => {
+      if (actionsHistoryIndex.current === 0) return;
+      actionsHistoryIndex.current -= 1;
+      setChart(actionsHistory.current[actionsHistoryIndex.current]);
+      setMadeChanges(actionsHistoryIndex.current > 0);
+      setCanUndo(actionsHistoryIndex.current > 0);
+  setCanRedo(actionsHistoryIndex.current < actionsHistory.current.length - 1);
+    }, [setChart, setMadeChanges]);
+
+    const onRedoClick = useCallback(() => {
+      if (actionsHistoryIndex.current === actionsHistory.current.length - 1)
+        return;
+      actionsHistoryIndex.current += 1;
+      setChart(actionsHistory.current[actionsHistoryIndex.current]);
+      setCanUndo(actionsHistoryIndex.current > 0);
+      setCanRedo(
+        actionsHistoryIndex.current < actionsHistory.current.length - 1
+      );
+    }, [setChart]);
+
+    useEffect(() => {
+      actionsHistory.current = [chart];
+      actionsHistoryIndex.current = 0;
+      setCanRedo(false)
+      setCanRedo(false)
+    }, [chart.id]);
 
     const convertLineToEdge = (lineonChart: LineOnChart): Edge => {
       return {
@@ -197,24 +256,26 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     //Remove Node from chart but keep it in database
     const onRemoveNode = useCallback(
       (deviceId: string) => {
-        setChart((prev) => ({
-          ...prev,
-          devicesOnChart: prev.devicesOnChart.filter(
-            (doc) => doc.device.id !== deviceId
-          ),
-          // optional: also drop edges touching this device in chart state
-          linesOnChart: prev.linesOnChart.filter(
-            (l) =>
-              l.line.sourcePort.deviceId !== deviceId &&
-              l.line.targetPort.deviceId !== deviceId
-          ),
-        }));
+        applyChartChange((prev) => {
+          return{
+            ...prev,
+            devicesOnChart: prev.devicesOnChart.filter(
+              (doc) => doc.device.id !== deviceId
+            ),
+            // optional: also drop edges touching this device in chart state
+            linesOnChart: prev.linesOnChart.filter(
+              (l) =>
+                l.line.sourcePort.deviceId !== deviceId &&
+                l.line.targetPort.deviceId !== deviceId
+            ),
+          } as Chart;
+        });
         setNodes((ns) => ns.filter((n) => n.id !== deviceId));
         setEdges((es) =>
           es.filter((e) => e.source !== deviceId && e.target !== deviceId)
         );
       },
-      [setChart, setNodes, setEdges]
+      [applyChartChange, setNodes, setEdges]
     );
 
     //Remove line from chart but keep it on dayabase
@@ -225,35 +286,37 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         if (edgeToRemove.targetHandle) used.add(edgeToRemove.targetHandle);
 
         setEdges((es) => es.filter((e) => e.id !== edgeToRemove.id));
-        setChart((prev) => ({
-          ...prev,
-          linesOnChart: prev.linesOnChart.filter(
-            (l) => l.line.id !== edgeToRemove.id
-          ),
-          devicesOnChart: prev.devicesOnChart.map((doc) => {
-            return {
-              ...doc,
-              device: {
-                ...doc.device,
-                ports: doc.device.ports.map((p) => {
-                  return {
-                    ...p,
-                    inUse: !used.has(p.id),
-                  } as Port;
-                }),
-              },
-            } as DeviceOnChart;
-          }),
-        }));
+        applyChartChange((prev) => {
+          return {
+            ...prev,
+            linesOnChart: prev.linesOnChart.filter(
+              (l) => l.line.id !== edgeToRemove.id
+            ),
+            devicesOnChart: prev.devicesOnChart.map((doc) => {
+              return {
+                ...doc,
+                device: {
+                  ...doc.device,
+                  ports: doc.device.ports.map((p) => {
+                    return {
+                      ...p,
+                      inUse: !used.has(p.id),
+                    } as Port;
+                  }),
+                },
+              } as DeviceOnChart;
+            }),
+          } as Chart;
+        });
       },
-      [setChart, setEdges]
+      [applyChartChange, setEdges]
     );
 
     //remove handle from chart but keep iit in database
     const onRemoveHandle = useCallback(
       (deviceId: string, portId: string) => {
         // 1) update chart state (handles + lines)
-        setChart((prev) => {
+        applyChartChange((prev) => {
           const devicesOnChart = prev.devicesOnChart.map((doc) => {
             if (doc.device.id !== deviceId) return doc;
 
@@ -284,7 +347,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               l.line.sourcePort.id !== portId && l.line.targetPort.id !== portId
           );
 
-          return { ...prev, devicesOnChart, linesOnChart };
+          return { ...prev, devicesOnChart, linesOnChart } as Chart;
         });
 
         // 2) update reactflow edges immediately
@@ -296,7 +359,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         setDirty(true);
       },
-      [setChart, setEdges, setDirty]
+      [applyChartChange, setEdges, setDirty]
     );
 
     //delete device from both cgart and from dtabase
@@ -353,10 +416,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onEditLineDialgSubmit = useCallback(
       (newValue: EditLineDialogFormRespone) => {
-        console.log(newValue);
-        console.log(selectedEditLine);
-        setChart((prev) => {
-          return {
+        applyChartChange((prev) => {
+          return{
             ...prev,
             linesOnChart: prev.linesOnChart.map((loc) => {
               return loc.line.id === selectedEditLine?.id
@@ -370,24 +431,25 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         });
 
         setEditLineDialogOpen(false);
+        setMadeChanges(true)
       },
-      [selectedEditLine, setChart]
+      [applyChartChange, selectedEditLine?.id, setMadeChanges]
     );
 
     const updateDeviceOnChart = useCallback(
       (deviceOnChart: DeviceOnChart) => {
         const { device, handles } = deviceOnChart;
-        setChart((prev) => {
-          return {
+        applyChartChange((prev) => {
+          return{
             ...prev,
             devicesOnChart: prev.devicesOnChart.map((doc) =>
               doc.device.id === device.id ? { ...doc, handles, device } : doc
             ),
-          };
+          } as Chart;
         });
         setDirty(true);
       },
-      [setChart, setDirty]
+      [applyChartChange, setDirty]
     );
 
     const convertDeviceToNode = useCallback(
@@ -499,7 +561,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         setEdges((eds) => [...eds, convertLineToEdge(newLine)]);
         setMadeChanges(true);
-        setChart((prev) => {
+        applyChartChange((prev) => {
           return {
             ...prev,
             linesOnChart: [...prev.linesOnChart, newLine],
@@ -523,16 +585,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 } as Device,
               } as DeviceOnChart;
             }),
-          } as Chart;
+          }as Chart;
         });
       },
-      [setChart, chart.devicesOnChart, setEdges, setMadeChanges, chart.id]
+      [chart.devicesOnChart, chart.id, setEdges, setMadeChanges, applyChartChange]
     );
 
     const onReconnect = useCallback(
       (oldEdge: Edge, newConnection: Connection) => {
-        
-        setChart((prev) => {
+        applyChartChange((prev) => {
           const newSourcDevice: DeviceOnChart | undefined =
             prev.devicesOnChart.find(
               (doc) => doc.device.id === newConnection.source
@@ -558,9 +619,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           )
             return prev;
 
-            newSourcePort.inUse = true
-            newTargetePort.inUse = true
-            
+          newSourcePort.inUse = true;
+          newTargetePort.inUse = true;
+
           return {
             ...prev,
             linesOnChart: prev.linesOnChart.map((loc) => {
@@ -585,7 +646,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                     device: {
                       ...doc.device,
                       ports: doc.device.ports.map((p) => {
-                        return(p.id === oldEdge.sourceHandle && p.id !== newSourcePort.id) ||
+                        return (p.id === oldEdge.sourceHandle &&
+                          p.id !== newSourcePort.id) ||
                           p.id === oldEdge.targetHandle
                           ? ({ ...p, inUse: false } as Port)
                           : p.id === newSourcePort.id
@@ -599,13 +661,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 : doc;
             }),
           } as Chart;
+
         });
 
         setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
         setMadeChanges(true);
       },
 
-      [setChart, setEdges, setMadeChanges]
+      [applyChartChange, setEdges, setMadeChanges]
     );
     const onDragOver = useCallback(
       (e: React.DragEvent) => {
@@ -618,7 +681,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onNodeDragStop = useCallback(
       (_e: React.MouseEvent, node: Node) => {
-        setChart((prev) => {
+        applyChartChange((prev) => {
           return {
             ...prev,
             devicesOnChart: prev.devicesOnChart.map((loc) =>
@@ -626,11 +689,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 ? { ...loc, position: node.position }
                 : loc
             ),
-          };
+          } as Chart;
         });
         setMadeChanges(true);
       },
-      [setChart, setMadeChanges]
+      [applyChartChange, setMadeChanges]
     );
 
     const onDrop = useCallback(
@@ -660,8 +723,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         } as DeviceOnChart);
         setNodes((nds) => [...nds, newNode]);
 
-        setChart((prev) => {
-          return {
+        applyChartChange((prev) => {
+          return{
             ...chart,
             devicesOnChart: [
               ...chart.devicesOnChart,
@@ -672,20 +735,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 handles: defaultHandles,
               } as DeviceOnChart,
             ],
-          };
+          } as Chart;
         });
         setMadeChanges(true);
       },
-      [
-        editMode,
-        project,
-        devicesById,
-        setNodes,
-        setChart,
-        setMadeChanges,
-        chart,
-        convertDeviceToNode,
-      ]
+      [editMode, devicesById, project, convertDeviceToNode, setNodes, applyChartChange, setMadeChanges, chart]
     );
     const onEdgeUpdate = useCallback(
       (oldE: Edge, conn: Connection) => {
@@ -700,6 +754,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         setMadeChanges(true);
         switch (action) {
+          case EditorMenuListKeys.UNDO:
+            onUndoClick();
+            break;
+          case EditorMenuListKeys.REDO:
+            onRedoClick();
+            break;
           case EditorMenuListKeys.Add_DDEVICE_TO_CHART:
             break;
 
@@ -742,8 +802,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.REMOVE_PORT:
-            console.log(payload);
-            //onRemoveHandle(payload.handle.)
             break;
 
           case EditorMenuListKeys.FIT:
@@ -752,12 +810,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         closeCtx();
       },
-      [ctx, onRemoveNode, setEdges, setChart, closeCtx]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge]
     );
-
-    // useEffect(() => {
-    //   setNodes(chart.devicesOnChart.map(convertDeviceToNode));
-    // }, []);
 
     const onSave = useCallback(
       async (e?: React.MouseEvent<HTMLButtonElement>) => {
@@ -843,7 +897,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 style={{ left: ctx.x, top: ctx.y }}
                 onContextMenu={(e) => e.preventDefault()}
               >
-                <MenuList kind={ctx.kind} onAction={onCtxAction} />
+                <MenuList
+                  kind={ctx.kind}
+                  onAction={onCtxAction}
+                  isRedoEnabled={canRedo}
+                  isUndoEnabled={canUndo}
+                />
               </div>
             </>
           )}

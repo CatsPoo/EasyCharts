@@ -1,4 +1,6 @@
 export enum  EditorMenuListKeys{
+    UNDO = 'undo',
+    REDO = 'redo',
     Add_DDEVICE_TO_CHART = 'add_device',
     FIT = 'fit',
     EDIT_DEVICE='edit_device',
