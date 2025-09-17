@@ -89,3 +89,31 @@ export function useUpdateChartMutation() {
   });
 }
 
+export async function deleteChart(id: string): Promise<void> {
+  const res = await fetch(`/api/charts/${id}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Failed to delete chart (${res.status})`);
+  }
+}
+
+export function useDeleteChartMutation() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id}: { id: string }) => deleteChart(id),
+    onSuccess: (saved, vars) => {
+
+      // AND/OR invalidate so useChartById refetches:
+      qc.invalidateQueries({ queryKey: ['chart', vars.id] });
+
+      // if your list shows names, also refresh metadata list
+      qc.invalidateQueries({ queryKey: ['chartsMetadata'] });
+    },
+  });
+}
+
+
