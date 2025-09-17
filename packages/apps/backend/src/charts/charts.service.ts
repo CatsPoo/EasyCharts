@@ -357,7 +357,9 @@ export class ChartsService {
       }
     }
 
-    this.portsService.updatePortsInUseSate(chartId)
+    this.linesService.deleteOrphanLines().then(
+     ()=> this.portsService.recomputePortsInUse()
+    )
 
     // ---- 4) Return fresh chart with full relations
     return chartsRepo.findOneOrFail({
@@ -383,5 +385,7 @@ export class ChartsService {
     const chart = await this.chartRepo.findOne({ where: { id } });
     if (!chart) throw new NotFoundException("Chart not found");
     await this.chartRepo.remove(chart); // cascades will clean placements/lines
+    this.linesService.deleteOrphanLines().then(()=>
+    this.portsService.recomputePortsInUse())
   }
 }
