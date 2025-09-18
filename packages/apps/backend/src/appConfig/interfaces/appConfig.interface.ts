@@ -1,5 +1,6 @@
 export interface appConfigSchema{
-    database:databaseConfig
+    database:databaseConfig,
+    jwt:jwtConfig
 }
 
 export interface databaseConfig {
@@ -8,4 +9,9 @@ export interface databaseConfig {
   host: string;
   port: number;
   database_name: string;
+}
+
+export interface jwtConfig {
+  secret:string,
+  expireIn:string
 }

@@ -14,6 +14,10 @@ export class AppConfigService {
         port: this.configService.get<number>("DB_PORT", 5432),
         database_name: this.configService.get<string>("DB_NAME", ""),
       },
+      jwt:{
+        secret:this.configService.get<string>("JWT_SECRET",""),
+        expireIn:this.configService.get<string>("JWT_EXPIRE_IN","")
+      }
     };
   }
 
