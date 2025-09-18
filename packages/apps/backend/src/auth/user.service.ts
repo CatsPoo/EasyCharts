@@ -31,6 +31,12 @@ export class UsersService {
     return user
   }
 
+  async getsUerByUsername(username:string) : Promise<User>{
+    const user :UserEntity | null = await this.userRepo.findOne({where:{username}})
+    if(!user) throw new NotFoundException("User not found");
+    return user
+  }
+
   //TODO Add lines to create dto
   async createUser(dto: UserCreate): Promise<User> {
     const hasjedPasswordUser : UserCreate = {
