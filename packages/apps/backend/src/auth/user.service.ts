@@ -1,21 +1,19 @@
 // src/Users/Users.service.ts
 import {
   Permission,
-    type User,
-    type UserCreate,
-    type UserUpdate
+  type User,
+  type UserCreate,
+  type UserUpdate
 } from "@Easy-charts/easycharts-types";
 import {
   BadRequestException,
-    Injectable,
-    NotFoundException,
-    UseGuards
+  Injectable,
+  NotFoundException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import * as bcrypt from 'bcrypt';
 import { Repository } from "typeorm";
 import { UserEntity } from "./entities/user.entity";
-import * as bcrypt from 'bcrypt';
-import { JwdAuthGuard } from "./guards/jwtAuth.guard";
 
 @Injectable()
 export class UsersService {
@@ -68,9 +66,4 @@ export class UsersService {
     await this.userRepo.remove(User); 
   }
 
-  async setUserPermitions(id:string,permissions : Permission[]) : Promise<User>{
-    const user : User = await this.getUserById(id)
-    user.permissions = permissions
-    return this.userRepo.save(user)
-  }
 }
