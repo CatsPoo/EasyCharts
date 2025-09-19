@@ -1,6 +1,9 @@
+import { JwtSignOptions } from "@nestjs/jwt";
+
 export interface appConfigSchema{
     database:databaseConfig,
-    jwt:jwtConfig
+    jwt:JwtSignOptions,
+    refreshJwt : JwtSignOptions
 }
 
 export interface databaseConfig {
@@ -9,9 +12,4 @@ export interface databaseConfig {
   host: string;
   port: number;
   database_name: string;
-}
-
-export interface jwtConfig {
-  secret:string,
-  expireIn:string
 }

@@ -16,7 +16,11 @@ export class AppConfigService {
       },
       jwt:{
         secret:this.configService.get<string>("JWT_SECRET",""),
-        expireIn:this.configService.get<string>("JWT_EXPIRE_IN","")
+        expiresIn:this.configService.get<string>("JWT_EXPIRE_IN","")
+      },
+      refreshJwt:{
+        secret:this.configService.get<string>("REFRESH_JWT_SECRET",""),
+        expiresIn:this.configService.get<string>("REFRESH_JWT_EXPIRE_IN","")
       }
     };
   }

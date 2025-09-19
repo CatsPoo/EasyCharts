@@ -32,13 +32,11 @@ import { RequirePermissions } from "./decorators/permissions.decorator";
 export class UsersController {
   constructor(private readonly userService : UsersService) {}
 
-
   @RequirePermissions(Permission.USER_MANAGE)
   @Get()
   findAll() {
     return this.userService.getAllUsers()
   }
-
 
   @Get("/profile")
   findOne(@Req() req : {user:User}) {

@@ -10,6 +10,7 @@ import {JwtModule} from '@nestjs/jwt'
 import { AppConfigModule } from "../appConfig/appConfig.module";
 import { AppConfigService } from "../appConfig/appConfig.service";
 import { JwtStrategy } from "./strategies/jwt.strategy";
+import { RefreshStrategy } from "./strategies/refreshstrategy";
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserEntity]),
@@ -17,16 +18,11 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
      JwtModule.registerAsync({
       imports: [AppConfigModule],
       inject: [AppConfigService],
-      useFactory: (cfg: AppConfigService) => ({
-        secret: cfg.getConfig().jwt.secret,
-        signOptions:{
-          expiresIn:cfg.getConfig().jwt.expireIn
-        }
-      }),
+      useFactory: (cfg: AppConfigService) => (cfg.getConfig().jwt),
     }),
 ],
   controllers: [UsersController, AuthController],
-  providers: [UsersService, AuthService, LocalStrategy,JwtStrategy],
+  providers: [UsersService, AuthService, LocalStrategy,JwtStrategy,RefreshStrategy],
   exports: [UsersService],
 })
 export class AuthModule {}

@@ -1,10 +1,10 @@
+import { Permission } from '@easy-charts/easycharts-types';
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { UserEntity } from '../entities/user.entity';
-import { Permission, User } from '@easy-charts/easycharts-types';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -21,7 +21,6 @@ export class PermissionsGuard implements CanActivate {
     if (!required || required.length === 0) return true;
 
     const req = ctx.switchToHttp().getRequest();
-    console.log('user',req)
     const authUserId :  string | undefined= req.user // set by JwtStrategy
     if (!authUserId) throw new ForbiddenException('Not authenticated');
 
