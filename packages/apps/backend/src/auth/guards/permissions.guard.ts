@@ -4,7 +4,7 @@ import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../entities/user.entity';
-import { Permission } from '@easy-charts/easycharts-types';
+import { Permission, User } from '@easy-charts/easycharts-types';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -21,11 +21,12 @@ export class PermissionsGuard implements CanActivate {
     if (!required || required.length === 0) return true;
 
     const req = ctx.switchToHttp().getRequest();
-    const authUser = req.user as { userId: string } | undefined; // set by JwtStrategy
-    if (!authUser?.userId) throw new ForbiddenException('Not authenticated');
+    console.log('user',req)
+    const authUserId :  string | undefined= req.user // set by JwtStrategy
+    if (!authUserId) throw new ForbiddenException('Not authenticated');
 
     const user = await this.usersRepo.findOne({
-      where: { id: authUser.userId, isActive: true },
+      where: { id:authUserId, isActive: true },
       select: { id: true, permissions: true },
     });
     if (!user) throw new ForbiddenException('User not found or inactive');

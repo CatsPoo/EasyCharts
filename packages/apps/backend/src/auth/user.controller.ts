@@ -26,8 +26,7 @@ import { PermissionsGuard } from "./guards/permissions.guard";
 import { UsersService } from "./user.service";
 import { RequirePermissions } from "./decorators/permissions.decorator";
 
-@UseGuards(JwdAuthGuard)
-@UseGuards(PermissionsGuard)
+@UseGuards(JwdAuthGuard,PermissionsGuard)
 @Controller("users")
 @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 export class UsersController {
