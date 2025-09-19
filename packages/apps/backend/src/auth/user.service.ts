@@ -1,17 +1,21 @@
 // src/Users/Users.service.ts
 import {
+  Permission,
     type User,
     type UserCreate,
     type UserUpdate
 } from "@Easy-charts/easycharts-types";
 import {
+  BadRequestException,
     Injectable,
-    NotFoundException
+    NotFoundException,
+    UseGuards
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { UserEntity } from "./entities/user.entity";
 import * as bcrypt from 'bcrypt';
+import { JwdAuthGuard } from "./guards/jwtAuth.guard";
 
 @Injectable()
 export class UsersService {
@@ -19,7 +23,6 @@ export class UsersService {
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>
   ) {}
-
 
   async getAllUsers(): Promise<User[]> {
     return await this.userRepo.find({});
@@ -37,8 +40,9 @@ export class UsersService {
     return user
   }
 
-  //TODO Add lines to create dto
   async createUser(dto: UserCreate): Promise<User> {
+    const user : UserEntity[] = await this.userRepo.find({where:{username : dto.username}})
+    if(user.length > 0) throw new BadRequestException('Username '+dto.username + ' already exists')
     const hasjedPasswordUser : UserCreate = {
         ...dto,
         password: await bcrypt.hash(dto.password, 12)
@@ -62,5 +66,11 @@ export class UsersService {
     const User = await this.userRepo.findOne({ where: { id } });
     if (!User) throw new NotFoundException("User not found");
     await this.userRepo.remove(User); 
+  }
+
+  async setUserPermitions(id:string,permissions : Permission[]) : Promise<User>{
+    const user : User = await this.getUserById(id)
+    user.permissions = permissions
+    return this.userRepo.save(user)
   }
 }

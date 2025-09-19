@@ -13,7 +13,7 @@ export class AuthController{
     @Post('login')
     async login (@Req() req: any) : Promise<AuthLoginResponse>{
         const userId:string = req.user
-        const tocken : string = this.authService.login(userId)
+        const tocken : string = await this.authService.login(userId)
         return {userId,tocken}
     
     }

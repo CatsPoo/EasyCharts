@@ -21,6 +21,6 @@ export class AuthService {
 
   async login(userId:string):Promise<string>{
     const payload : AuthJwtPayload = {sub:userId}
-    return await this.jwtService.sign(payload)
+    return this.jwtService.sign(payload)
   }
 }
