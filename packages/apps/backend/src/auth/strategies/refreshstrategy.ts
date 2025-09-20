@@ -1,22 +1,32 @@
+import { User } from "@easy-charts/easycharts-types";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
-import {Strategy,ExtractJwt} from 'passport-jwt'
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { AppConfigService } from "../../appConfig/appConfig.service";
+import { AuthService } from "../auth.service";
 import { AuthJwtPayload } from "../interfaces/jwt.interfaces";
-import { Injectable } from "@nestjs/common";
 
 @Injectable()
-export class RefreshStrategy extends PassportStrategy(Strategy,'refresh-jwt'){
-    constructor(
-      appConfigService:AppConfigService
-    ){
-        super({
-          jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-          secretOrKey: appConfigService.getConfig().refreshJwt.secret,
-          ignoreExperation:false
-        });
-    }
+export class RefreshStrategy extends PassportStrategy(Strategy, "refresh-jwt") {
+  constructor(
+    appConfigService: AppConfigService,
+    private readonly authService: AuthService
+  ) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: appConfigService.getConfig().refreshJwt.secret,
+      ignoreExperation: false,
+      passRectoCallback: true,
+    });
+  }
 
-    validate(payload: AuthJwtPayload) : string {
-    return payload.sub;
+  validate(req: Request, payload: AuthJwtPayload): Promise<User> {
+    const refreshToken: string | undefined = req.headers
+      .get("authorization")
+      ?.replace("Bearer", "")
+      .trim();
+    if (!refreshToken) throw new UnauthorizedException();
+    const userId: string = payload.sub;
+    return this.authService.valudateRefreshToken(userId, refreshToken);
   }
 }

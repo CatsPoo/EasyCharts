@@ -6,13 +6,15 @@ export const PermissionsEnumSchema = z.enum(Object.values(Permission));
 
 export const UserBaseSchema = z.object({
   username: z.string().min(1),
-  password : z.string().min(6),
   displayName : z.string(),
   isActive : z.boolean(),
-  permissions: z.array(PermissionsEnumSchema)
+  permissions: z.array(PermissionsEnumSchema),
+  refreshTokenHash : z.string()
 });
 
-export const UserCreateSchema = UserBaseSchema
+export const UserCreateSchema = UserBaseSchema.extend({
+  password: z.string()
+})
 
 export const UserUpdateSchema = UserCreateSchema.partial()
 

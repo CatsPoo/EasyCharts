@@ -1,9 +1,10 @@
-import { AuthLoginResponse, AuthRefreshResponse } from "@easy-charts/easycharts-types";
-import { Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from "@nestjs/common";
+import { AuthLoginResponse, AuthRefreshResponse, LoginPayloadSchema } from "@easy-charts/easycharts-types";
+import { Controller, HttpCode, HttpStatus, Post, Req, UseGuards, UsePipes } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { LocalAuthGuard } from "./guards/localAuth.guard";
 import { LoginResponse } from "./interfaces/auth.interfaces";
 import { RefreshAuthGuard } from "./guards/refreshAuth.guard";
+import { ZodValidationPipe } from "../common/zodValidation.pipe";
 
 @Controller('auth')
 export class AuthController{
@@ -11,6 +12,7 @@ export class AuthController{
     }
 
     @HttpCode(HttpStatus.OK)
+    @UsePipes(new ZodValidationPipe(LoginPayloadSchema))
     @UseGuards(LocalAuthGuard)
     @Post('login')
     async login (@Req() req: {user:string}) : Promise<AuthLoginResponse>{

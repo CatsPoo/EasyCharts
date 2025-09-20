@@ -12,7 +12,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import * as bcrypt from 'bcrypt';
-import { Repository } from "typeorm";
+import { Repository, UpdateResult } from "typeorm";
 import { UserEntity } from "./entities/user.entity";
 
 @Injectable()
@@ -23,16 +23,21 @@ export class UsersService {
   ) {}
 
   async getAllUsers(): Promise<User[]> {
-    return await this.userRepo.find({});
+    const users : UserEntity[]= await this.userRepo.find({});
+    return users.map(u=>this.convertUserEntity(u))
   }
 
+  convertUserEntity(userEntity : UserEntity) : User{
+    const {password,...safe} = userEntity
+    return safe as User
+  }
   async getUserById(id: string): Promise<User> {
     const user : UserEntity | null = await this.userRepo.findOne({where:{id}});
     if(!user) throw new NotFoundException("User not found");
-    return user
+    return this.convertUserEntity(user)
   }
 
-  async getsUerByUsername(username:string) : Promise<User>{
+  async getsUerWithPasswordByUsername(username:string) : Promise<UserEntity>{
     const user :UserEntity | null = await this.userRepo.findOne({where:{username}})
     if(!user) throw new NotFoundException("User not found");
     return user
@@ -49,20 +54,26 @@ export class UsersService {
   }
 
   async updateUser(userId: string, dto: UserUpdate): Promise<User> {
-     const user = await this.getUserById(userId)
+     const user : UserEntity | null = await this.userRepo.findOne({where:{id:userId}})
+     if(!user) throw new NotFoundException("User not found");
     if (dto.username !== undefined) user.username = dto.username;
     if (dto.displayName !== undefined) user.displayName = dto.displayName;
     if (dto.isActive !== undefined) user.isActive = dto.isActive;
     if(dto.password !== undefined) user.password = dto.password;
     if(dto.permissions !== undefined) user.permissions = dto.permissions
-
-
-    return await this.userRepo.save(user);
+    return this.convertUserEntity(await this.userRepo.save(user));
   }
 
   async removeUser(id: string): Promise<void> {
     const User = await this.userRepo.findOne({ where: { id } });
     if (!User) throw new NotFoundException("User not found");
     await this.userRepo.remove(User); 
+  }
+
+  async updateUserRefreshToken(id:string,refreshToken:string|null) : Promise<int>{
+    const refreshTokenHash : string = await bcrypt.hash(refreshToken, 12)
+    const updateResults :UpdateResult = await this.userRepo.update(id,{refreshTokenHash})
+    if(!updateResults || updateResults.affected==0) throw new NotFoundException('User not found')
+    return updateResults.affected
   }
 }

@@ -21,4 +21,7 @@ export class UserEntity {
 
   @Column("varchar", { array: true, default: "{}" })
   permissions!: Permission[];
+
+   @Column({nullable:true})
+  refreshTokenHash?: string;
 }
