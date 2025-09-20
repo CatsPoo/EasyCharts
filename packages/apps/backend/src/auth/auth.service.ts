@@ -1,4 +1,4 @@
-import { AuthLoginResponse, AuthRefreshResponse, User } from "@easy-charts/easycharts-types";
+import { AuthLoginResponse, AuthRefreshResponse, AuthTokenRenerateResponse, User } from "@easy-charts/easycharts-types";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from 'bcrypt';
@@ -22,7 +22,7 @@ export class AuthService {
 
   }
 
-  async valudateRefreshToken(userId:string,refreshToken:string) : Promise<user>{
+  async valudateRefreshToken(userId:string,refreshToken:string) : Promise<User>{
     try{
       const user : User = await this.usersService.getUserById(userId)
       const isTokensMatch : boolean = await bcrypt.compare(refreshToken,await user.refreshTokenHash)
@@ -35,9 +35,9 @@ export class AuthService {
 
   }
 
-  async generateTockens(userId:string) : Promise<AuthLoginResponse>{
+  async generateTockens(userId:string) : Promise<AuthTokenRenerateResponse>{
     const payload : AuthJwtPayload = {sub:userId}
-    const [tocken, refreshTocken] = await Promise.all([
+    const [token, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload),
       this.jwtService.signAsync(
         payload,
@@ -46,25 +46,26 @@ export class AuthService {
     ]);
     return {
       userId,
-      tocken,
-      refreshTocken
+      token,
+      refreshToken
     }
   }
 
   async login(userId:string):Promise<AuthLoginResponse>{
-    const {tocken,refreshTocken} : AuthLoginResponse = await this.generateTockens(userId)
-    await this.usersService.updateUserRefreshToken(userId,refreshTocken)
+    const {token,refreshToken} : AuthTokenRenerateResponse = await this.generateTockens(userId)
+    await this.usersService.updateUserRefreshToken(userId,refreshToken)
+    const user : User = await this.usersService.getUserById(userId)
     return {
-      userId,
-      tocken,
-      refreshTocken
+      user,
+      token,
+      refreshToken
     }
   }
 
-  async refreshTocken(userId:string):Promise<AuthRefreshResponse>{
+  async refreshToken(userId:string):Promise<AuthRefreshResponse>{
     const payload : AuthJwtPayload = {sub:userId}
-    const tocken : string = this.jwtService.sign(payload)
-    return {userId,tocken}
+    const token : string = this.jwtService.sign(payload)
+    return {userId,token}
   }
 
   async logout(userId: string):Promise<void>{
