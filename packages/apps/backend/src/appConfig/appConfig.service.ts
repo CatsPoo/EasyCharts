@@ -14,14 +14,20 @@ export class AppConfigService {
         port: this.configService.get<number>("DB_PORT", 5432),
         database_name: this.configService.get<string>("DB_NAME", ""),
       },
-      jwt:{
-        secret:this.configService.get<string>("JWT_SECRET",""),
-        expiresIn:this.configService.get<string>("JWT_EXPIRE_IN","")
+      jwt: {
+        secret: this.configService.get<string>("JWT_SECRET", ""),
+        expiresIn: this.configService.get<string>("JWT_EXPIRE_IN", ""),
       },
-      refreshJwt:{
-        secret:this.configService.get<string>("REFRESH_JWT_SECRET",""),
-        expiresIn:this.configService.get<string>("REFRESH_JWT_EXPIRE_IN","")
-      }
+      refreshJwt: {
+        secret: this.configService.get<string>("REFRESH_JWT_SECRET", ""),
+        expiresIn: this.configService.get<string>("REFRESH_JWT_EXPIRE_IN", ""),
+      },
+      redis: {
+        username: this.configService.get<string>("REDIS_USERNAME", ""),
+        password: this.configService.get<string>("REDIS_PASSWORD", ""),
+        host: this.configService.get<string>("REDIS_HOST", ""),
+        port: this.configService.get<number>("REDIS_PORT", 1234),
+      },
     };
   }
 
