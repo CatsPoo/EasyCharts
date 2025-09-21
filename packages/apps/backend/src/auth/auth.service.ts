@@ -1,4 +1,4 @@
-import { AuthLoginResponse, AuthRefreshResponse, AuthTokenRenerateResponse, User } from "@easy-charts/easycharts-types";
+import {AuthRefreshResponse, AuthResponse, AuthTokenRenerateResponse, User } from "@easy-charts/easycharts-types";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from 'bcrypt';
@@ -51,7 +51,7 @@ export class AuthService {
     }
   }
 
-  async login(userId:string):Promise<AuthLoginResponse>{
+  async login(userId:string):Promise<AuthResponse>{
     const {token,refreshToken} : AuthTokenRenerateResponse = await this.generateTockens(userId)
     await this.usersService.updateUserRefreshToken(userId,refreshToken)
     const user : User = await this.usersService.getUserById(userId)
@@ -64,8 +64,9 @@ export class AuthService {
 
   async refreshToken(userId:string):Promise<AuthRefreshResponse>{
     const payload : AuthJwtPayload = {sub:userId}
+    const user : User = await this.usersService.getUserById(userId)
     const token : string = this.jwtService.sign(payload)
-    return {userId,token}
+    return {user,token}
   }
 
   async logout(userId: string):Promise<void>{

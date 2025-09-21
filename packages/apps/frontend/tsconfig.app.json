@@ -38,7 +38,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "config.ts"
-  ],
+, "src/env.d.ts"  ],
   "references": [
     {
       "path": "../../libs/easycharts-types/tsconfig.lib.json"
