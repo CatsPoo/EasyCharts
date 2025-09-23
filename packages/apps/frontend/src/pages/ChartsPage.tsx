@@ -1,4 +1,4 @@
-import { type Chart } from "@easy-charts/easycharts-types";
+import { Permission, type Chart } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   Alert,
@@ -25,6 +25,7 @@ import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { useChartById } from "../hooks/chartsHooks";
 import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import { useAuth } from "../auth/useAuth";
+import { RequirePermissions } from "../auth/RequirePermissions";
 
 export function ChartsPage() {
   const { user } = useAuth();
@@ -120,7 +121,7 @@ export function ChartsPage() {
             <Tab label="Assets" />
           </Tabs>
         </div>
-        </NavBar>
+      </NavBar>
 
       <Box sx={{ display: "flex", flex: 1 }}>
         <AnimatePresence initial={false}>
@@ -165,7 +166,7 @@ export function ChartsPage() {
               <ChartEditor
                 key={selectedChart.id}
                 chart={selectedChart}
-                setChart={nope} 
+                setChart={nope}
                 editMode={false}
                 setMadeChanges={nope}
               />
@@ -205,19 +206,21 @@ export function ChartsPage() {
                 height: 41,
               }}
             >
-              {!readonly ? (
-                <FormControlLabel
-                  style={{ background: "#7676c4" }}
-                  control={
-                    <Switch
-                      checked={editMode}
-                      onChange={(e) => setEditMode(e.target.checked)}
-                      color="primary"
-                    />
-                  }
-                  label={editMode ? "Edit Mode" : "View Mode"}
-                />
-              ) : null}
+              <RequirePermissions required={[Permission.CHART_UPDATE]}>
+                {!readonly ? (
+                  <FormControlLabel
+                    style={{ background: "#7676c4" }}
+                    control={
+                      <Switch
+                        checked={editMode}
+                        onChange={(e) => setEditMode(e.target.checked)}
+                        color="primary"
+                      />
+                    }
+                    label={editMode ? "Edit Mode" : "View Mode"}
+                  />
+                ) : null}
+              </RequirePermissions>
               <ThemeToggleButton />
             </div>
             {editMode && (
