@@ -2,7 +2,7 @@
 import type { AuthResponse } from "@easy-charts/easycharts-types";
 import axios, { AxiosError, type AxiosInstance } from "axios";
 
-let http: AxiosInstance | null = null;
+let http: AxiosInstance;
 
 // callbacks provided by AuthProvider
 let getAccessToken: () => string | null;
