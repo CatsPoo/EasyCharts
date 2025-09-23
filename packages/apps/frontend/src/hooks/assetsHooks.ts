@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions} from '@tanstack/react-query';
 import type { AssetMap, Device, DeviceUpdate, Model, ModelUpdate, Vendor, VendorUpdate } from '@easy-charts/easycharts-types';
+import { http } from '../api/http';
 
 // helpful alias
 type ListResponse<K extends keyof AssetMap> = { rows: Array<AssetMap[K]>; total: number };
@@ -54,10 +55,12 @@ export function useListAssets<K extends keyof AssetMap>(
   return useQuery<ListResponse<K>>({
     queryKey: ["assets", kind, params] as const,
     queryFn: async () => {
-      const qs = toQueryString(params);
-      const res = await fetch(`/api/${kind}?${qs}`);
-      if (!res.ok) throw new Error("Failed to fetch");
-      return (await res.json()) as ListResponse<K>;
+      try{
+        const qs = toQueryString(params);
+        const { data } = await http.get(`/api/${kind}?${qs}`);
+        return data
+      }
+      catch(err:any){ throw new Error("Failed to fetch");}
     },
     placeholderData: (prev) => prev,
     ...options,
@@ -68,15 +71,14 @@ export function useListAssets<K extends keyof AssetMap>(
 export function useCreateAsset<K extends keyof AssetMap>(kind: K) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Omit<AssetMap[K], 'id'>) => {
+    mutationFn: async (dto: Omit<AssetMap[K], 'id'>) => {
 
-      const res = await fetch(`/api/${kind}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Create failed');
-      return res.json() as Promise<AssetMap[K]>;
+      try {
+        const { data } = await http.post(`/api/${kind}`, dto);
+        return data;
+      } catch (err: any) {
+        throw new Error("Create failed");
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['assets', kind] }),
   });
@@ -87,21 +89,20 @@ export function useUpdateAsset<K extends keyof AssetMap>(kind: K) {
   return useMutation({
     mutationFn: async (data: AssetMap[K]) => {
       const id = (data as any).id as string;
-      if (!id) throw new Error('Missing id for update');
+      if (!id) throw new Error("Missing id for update");
 
       // Strip id from body and map nested objects → ids
       const { id: _omit, ...rest } = data as any;
-      const payload = serializeForApi(kind, rest, 'update');
-      const res = await fetch(`/api/${kind}/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Update failed');
-      return res.json() as Promise<AssetMap[K]>;
+      const payload = serializeForApi(kind, rest, "update");
+      try {
+        const { data } = await http.put(`/api/${kind}/${id}`, payload);
+        return data;
+      } catch {
+        throw new Error("Update failed");
+      }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['assets', kind] });
+      qc.invalidateQueries({ queryKey: ["assets", kind] });
     },
   });
 }
@@ -110,8 +111,11 @@ export function useDeleteAsset<K extends keyof AssetMap>(kind: K) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/${kind}/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Delete failed');
+      try {
+        await http.delete(`/api/${kind}/${id}`);
+      } catch {
+        throw new Error("Delete failed");
+      }
       return true;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['assets', kind] }),
