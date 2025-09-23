@@ -28,7 +28,7 @@ export class UsersService {
   }
 
   convertUserEntity(userEntity : UserEntity) : User{
-    const {password,...safe} = userEntity
+    const {password,refreshTokenHash,...safe} = userEntity
     return safe as User
   }
   async getUserById(id: string): Promise<User> {

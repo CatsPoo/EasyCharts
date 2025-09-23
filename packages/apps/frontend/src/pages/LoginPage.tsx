@@ -36,7 +36,7 @@ export const LoginPage: React.FC = () => {
       await login(username.trim(), password);
       navigate(from, { replace: true });
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Login failed");
+      setError("Login failed");
     } finally {
       setSubmitting(false);
     }

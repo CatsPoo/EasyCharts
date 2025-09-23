@@ -1,16 +1,14 @@
-import { Permission } from '@easy-charts/easycharts-types';
+import { Permission, User } from '@easy-charts/easycharts-types';
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
-import { UserEntity } from '../entities/user.entity';
+import { UsersService } from '../user.service';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    @InjectRepository(UserEntity) private readonly usersRepo: Repository<UserEntity>,
+     private readonly userService: UsersService,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -24,11 +22,8 @@ export class PermissionsGuard implements CanActivate {
     const authUserId :  string | undefined= req.user // set by JwtStrategy
     if (!authUserId) throw new ForbiddenException('Not authenticated');
 
-    const user = await this.usersRepo.findOne({
-      where: { id:authUserId, isActive: true },
-      select: { id: true, permissions: true },
-    });
-    if (!user) throw new ForbiddenException('User not found or inactive');
+    const user : User = await this.userService.getUserById(authUserId)
+    if (!user || !user.isActive) throw new ForbiddenException('User not found or inactive');
 
     const set = new Set(user.permissions ?? []);
     const ok = required.every((p) => set.has(p));

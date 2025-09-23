@@ -1,1 +1,1 @@
-export { useAuthInternal as useAuth } from './authProvider'
+export {useAuth} from './authProvider'
