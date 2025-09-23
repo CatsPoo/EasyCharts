@@ -1,10 +1,10 @@
-import { AuthLoginResponse, AuthRefreshResponse, LoginPayloadSchema } from "@easy-charts/easycharts-types";
+import {AuthRefreshResponse, LoginPayloadSchema } from "@easy-charts/easycharts-types";
 import { Controller, HttpCode, HttpStatus, Post, Req, UseGuards, UsePipes } from "@nestjs/common";
-import { AuthService } from "./auth.service";
-import { LocalAuthGuard } from "./guards/localAuth.guard";
-import { LoginResponse } from "./interfaces/auth.interfaces";
-import { RefreshAuthGuard } from "./guards/refreshAuth.guard";
 import { ZodValidationPipe } from "../common/zodValidation.pipe";
+import { AuthService } from "./auth.service";
+import { JwdAuthGuard } from "./guards/jwtAuth.guard";
+import { LocalAuthGuard } from "./guards/localAuth.guard";
+import { RefreshAuthGuard } from "./guards/refreshAuth.guard";
 
 @Controller('auth')
 export class AuthController{
@@ -25,6 +25,14 @@ export class AuthController{
     @UseGuards(RefreshAuthGuard)
     @Post('refresh')
     async refresh(@Req() req : {user:string}) : Promise<AuthRefreshResponse>{
-        return this.authService.refreshTocken(req.user)
+        return this.authService.refreshToken(req.user)
     }
+
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(JwdAuthGuard)
+    @Post('logout')
+    async logout(@Req() req : {user:string}) : Promise<void>{
+        this.authService.logout(req.user)
+    }
+        
 }

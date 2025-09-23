@@ -11,6 +11,8 @@ import { AppConfigModule } from "../appConfig/appConfig.module";
 import { AppConfigService } from "../appConfig/appConfig.service";
 import { JwtStrategy } from "./strategies/jwt.strategy";
 import { RefreshStrategy } from "./strategies/refreshstrategy";
+import { PermissionsGuard } from "./guards/permissions.guard";
+import { JwdAuthGuard } from "./guards/jwtAuth.guard";
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserEntity]),
