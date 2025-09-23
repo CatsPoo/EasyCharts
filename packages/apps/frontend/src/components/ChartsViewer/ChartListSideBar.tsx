@@ -94,7 +94,7 @@ export function ChartListSidebar({
       })}
     >
       {isMyCharts && (
-        <>
+        <RequirePermissions required={[Permission.CHART_CREATE]}>
           <Tooltip title="Add chart">
             <Fab
               color="primary"
@@ -122,7 +122,7 @@ export function ChartListSidebar({
             description="Are you shure you want to permenently delete chart"
             cancelText="Cancel"
           />
-        </>
+        </RequirePermissions>
       )}
       <List>
         {(chartsMeatadata ?? []).map((chart) => (
