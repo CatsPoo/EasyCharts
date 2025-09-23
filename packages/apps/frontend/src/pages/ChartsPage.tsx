@@ -27,7 +27,7 @@ import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import { useAuth } from "../auth/useAuth";
 
 export function ChartsPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [tab, setTab] = React.useState(0);
   const [selectedId, setSelectedId] = useState<string>("");
   const [editMode, setEditMode] = useState(false);

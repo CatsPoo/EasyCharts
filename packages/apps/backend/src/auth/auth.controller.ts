@@ -1,4 +1,4 @@
-import {AuthRefreshResponse, LoginPayloadSchema } from "@easy-charts/easycharts-types";
+import {AuthRefreshResponse, AuthResponse, LoginPayloadSchema } from "@easy-charts/easycharts-types";
 import { Controller, HttpCode, HttpStatus, Post, Req, UseGuards, UsePipes } from "@nestjs/common";
 import { ZodValidationPipe } from "../common/zodValidation.pipe";
 import { AuthService } from "./auth.service";
@@ -15,7 +15,7 @@ export class AuthController{
     @UsePipes(new ZodValidationPipe(LoginPayloadSchema))
     @UseGuards(LocalAuthGuard)
     @Post('login')
-    async login (@Req() req: {user:string}) : Promise<AuthLoginResponse>{
+    async login (@Req() req: {user:string}) : Promise<AuthResponse>{
         const userId:string = req.user
         return this.authService.login(userId)
     
