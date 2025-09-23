@@ -12,6 +12,7 @@ import { VendorsService } from './vendors.service';
 import { PortEntity } from './entities/port.entity';
 import { PortsController } from './ports.controller';
 import { PortsService } from './ports.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
     imports:[
@@ -21,6 +22,7 @@ import { PortsService } from './ports.service';
             ModelEntity,
             PortEntity
         ]),
+        AuthModule
     ],
     controllers:[
         DevicesController,
