@@ -1,56 +1,85 @@
-import axios from "axios";
-import {
-  beginRefresh,
-  getAccessToken,
-  setAccessToken,
-  setOnAuthFailure,
-} from "./authStore";
-import type { AuthRefreshResponse } from "@easy-charts/easycharts-types";
+// http.ts
+import type { AuthResponse } from "@easy-charts/easycharts-types";
+import axios, { AxiosError, type AxiosInstance } from "axios";
 
-export const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  withCredentials: true, // send refresh httpOnly cookie
-});
+let http: AxiosInstance;
 
-// Inject access token
-http.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) {
-    config.headers = config.headers ?? {};
-    (config.headers as any)["Authorization"] = `Bearer ${token}`;
-  }
-  return config;
-});
+// callbacks provided by AuthProvider
+let getAccessToken: () => string | null;
+let getRefreshToken: () => string | null;
+let performRefresh: (refreshToken: string) => Promise<AuthResponse>;
+let setTokens: (at: string, rt?: string | null) => void;
+let handleLogout: () => void;
 
-// Handle 401 → try refresh once → retry original → else logout
-let hasInstalledFailureHandler = false;
+let isRefreshing = false;
+let refreshPromise: Promise<void> | null = null;
 
-export function installAuthFailureHandler(logoutFn: () => void) {
-  if (!hasInstalledFailureHandler) {
-    setOnAuthFailure(logoutFn);
-    hasInstalledFailureHandler = true;
-  }
+export function createHttp(baseURL = "/api") {
+  if (http) return http;
+
+  http = axios.create({ baseURL });
+
+  // attach Authorization header
+  http.interceptors.request.use((config) => {
+    const token = getAccessToken?.();
+    if (token) {
+      config.headers = config.headers ?? {};
+      (config.headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+    }
+    (config.headers as Record<string, string>)["Accept"] = "application/json";
+    return config;
+  });
+
+  // auto-refresh on 401
+  http.interceptors.response.use(
+    (res) => res,
+    async (error: AxiosError) => {
+      const original = error.config as any;
+      if (error.response?.status !== 401 || original?._retry) {
+        return Promise.reject(error);
+      }
+      original._retry = true;
+
+      const rt = getRefreshToken?.();
+      if (!rt || !performRefresh) {
+        handleLogout?.();
+        return Promise.reject(error);
+      }
+
+      try {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          refreshPromise = (async () => {
+            const data = await performRefresh(rt);
+            setTokens?.(data.token, data.refreshToken ?? null);
+          })().finally(() => {
+            isRefreshing = false;
+            refreshPromise = null;
+          });
+        }
+        await refreshPromise;
+        return http!(original); // retry with new token
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    }
+  );
+
+  return http;
 }
 
-http.interceptors.response.use(
-  (res) => res,
-  async (error) => {
-    const original = error.config;
-    if (!original || original.__isRetry) throw error;
+export function setupHttpAuth(opts: {
+  getAccessToken: () => string | null;
+  getRefreshToken: () => string | null;
+  performRefresh: (refreshToken: string) => Promise<RefreshReturn>;
+  setTokens: (at: string, rt?: string | null) => void;
+  handleLogout: () => void;
+}) {
+  getAccessToken = opts.getAccessToken;
+  getRefreshToken = opts.getRefreshToken;
+  performRefresh = opts.performRefresh;
+  setTokens = opts.setTokens;
+  handleLogout = opts.handleLogout;
+}
 
-    // Only attempt refresh on 401/403 from protected routes
-    const status: number | undefined = error?.response?.status;
-    if (status === 401 || status === 403) {
-      const newToken = await beginRefresh(async () => {
-        const { data } = await http.post<AuthRefreshResponse>("/auth/refresh");
-        setAccessToken(data.token);
-        return data.token;
-      });
-      original.__isRetry = true;
-      original.headers = original.headers ?? {};
-      original.headers["Authorization"] = `Bearer ${newToken}`;
-      return http(original);
-    }
-    throw error
-  }
-);
+export { http };

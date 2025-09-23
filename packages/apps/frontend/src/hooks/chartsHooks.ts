@@ -5,7 +5,7 @@ import { http } from '../api/http';
 
 export async function createChart(dto: ChartCreate): Promise<Chart> {
   try{
-    const { data }= await http.post<Chart>("/api/charts", dto);
+    const { data }= await http.post<Chart>("/charts", dto);
     return data
   }
   catch (err: any) {
@@ -28,7 +28,7 @@ export function useCreateChartMutation() {
 
 export async function getChartsMetadata(): Promise<ChartMetadata[]> {
   try{
-    const {data} = await http.get<ChartMetadata[]>('/api/charts/metadata');
+    const {data} = await http.get<ChartMetadata[]>('/charts/metadata');
     return data
   }
   catch(err:any){
@@ -45,7 +45,7 @@ export function useChartsMetadataQuery() {
 
 export async function getChartById(chartId: string): Promise<Chart> {
   try{
-    const {data} = await http.get<Chart>(`/api/charts/${chartId}`);
+    const {data} = await http.get<Chart>(`/charts/${chartId}`);
     return data
   }
   catch(err:any){
@@ -63,7 +63,7 @@ export function useChartById(id: string) {
 
 export async function updateChart(id: string, dto: ChartUpdate): Promise<Chart> {
   try{
-    const {data} = await http.patch<Chart>(`/api/charts/${id}`, dto);
+    const {data} = await http.patch<Chart>(`/charts/${id}`, dto);
     return data
   }
   catch(err:any){
@@ -81,7 +81,7 @@ export function useUpdateChartMutation() {
       qc.setQueryData(['chart', saved.id], saved);
 
       // AND/OR invalidate so useChartById refetches:
-      qc.invalidateQueries({ queryKey: ['chart', vars.id] });
+      qc.invalidateQueries({ queryKey: ['chart', saved.id] });
 
       // if your list shows names, also refresh metadata list
       qc.invalidateQueries({ queryKey: ['chartsMetadata'] });
@@ -91,7 +91,7 @@ export function useUpdateChartMutation() {
 
 export async function deleteChart(id: string): Promise<void> {
   try{
-    await http.delete<void>(`/api/charts/${id}`);
+    await http.delete<void>(`/charts/${id}`);
   }
   catch(err:any){
     throw new Error(err || `Failed to delete chart)`);

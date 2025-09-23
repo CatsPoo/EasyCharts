@@ -2,6 +2,7 @@ export enum Permission {
   CHART_CREATE = 'chart:create',
   CHART_UPDATE = 'chart:update',
   CHART_DELETE = 'chart:delete',
+  CHART_READ = 'chart:read',
   CHART_SHARE = 'chart:share',
   ASSET_EDIT   = 'asset:edit',
   ASSET_DELETE = 'asset:delete',

@@ -11,6 +11,7 @@ import { PortEntity } from '../devices/entities/port.entity';
 import { LinesModule } from '../lines/lines.module';
 import { PortOnChartEntity } from './entities/portOnChart.entity';
 import { LineOnChartEntity } from './entities/lineonChart.emtity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
     imports: [
@@ -25,7 +26,8 @@ import { LineOnChartEntity } from './entities/lineonChart.emtity';
            LineOnChartEntity       
         ]),
         DevicesModule,
-        LinesModule
+        LinesModule,
+        AuthModule
     ],
     controllers: [ChartsController],
     providers: [ChartsService],
