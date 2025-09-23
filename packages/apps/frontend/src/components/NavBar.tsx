@@ -1,16 +1,15 @@
-import AppBar from '@mui/material/AppBar';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
-import type { Dispatch, SetStateAction } from 'react';
-import { Toolbar } from '@mui/material';
-import {ThemeToggleButton} from './ThemeToggleButton'
+import { Box, Button, Toolbar, Typography } from "@mui/material";
+import AppBar from "@mui/material/AppBar";
+import { useAuth } from "../auth/useAuth";
+import { ThemeToggleButton } from "./ThemeToggleButton";
 
-interface NavBarProps {
-  value: number;
-  onChange: Dispatch<SetStateAction<number>>;
-}
+type NavBarProps = {
+  children?: React.ReactNode;
+};
 
-export function NavBar({ value, onChange }: NavBarProps) {
+export function NavBar({ children }: NavBarProps) {
+  const { user, logout } = useAuth();
+
   return (
     <AppBar
       position="static"
@@ -26,19 +25,70 @@ export function NavBar({ value, onChange }: NavBarProps) {
         transition: "background-color 200ms, color 200ms",
       })}
     >
-      <Toolbar className="w-full flex items-center">
-        <div className="flex-1">
-          <Tabs
-            value={value}
-            onChange={(_, v) => onChange(v)}
-            textColor="inherit"
-            indicatorColor="secondary"
+      <Toolbar
+        sx={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          minHeight: 64,
+        }}
+      >
+        {/* Leftmost: brand */}
+        <Typography
+          variant="h6"
+          sx={{ mr: 2, whiteSpace: "nowrap", lineHeight: 1 }}
+        >
+          EasyCharts
+        </Typography>
+
+        {/* Children live right after the brand */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            minWidth: 0, // allow shrinking if space is tight
+          }}
+        >
+          {children}
+        </Box>
+
+        {/* Spacer pushes the next items to the far right */}
+        <Box sx={{ flexGrow: 1 }} />
+
+        {/* Logout/user box sits to the LEFT of the theme toggle */}
+        {user && (
+          <Box
+            sx={(t) => ({
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              bgcolor: t.palette.background.paper,
+              color: t.palette.text.primary,
+              borderRadius: 2,
+              px: 1.5,
+              py: 0.5,
+              boxShadow: 2,
+              mr: 1,
+            })}
           >
-            <Tab label="My Charts" />
-            <Tab label="Shared Charts" />
-            <Tab label="Assets" />
-          </Tabs>
-        </div>
+            <span style={{ opacity: 0.85, fontSize: 12 }}>
+              {user?.username ?? user?.id ?? "User"}
+            </span>
+            <Button
+              size="small"
+              variant="outlined"
+              color="inherit"
+              onClick={logout}
+              sx={{ borderColor: "divider" }}
+            >
+              Logout
+            </Button>
+          </Box>
+        )}
+
+        {/* Rightmost: theme toggle */}
         <ThemeToggleButton />
       </Toolbar>
     </AppBar>

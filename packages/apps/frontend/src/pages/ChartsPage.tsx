@@ -9,6 +9,8 @@ import {
   FormControlLabel,
   IconButton,
   Switch,
+  Tab,
+  Tabs,
   Toolbar,
 } from "@mui/material";
 import Box from "@mui/material/Box";
@@ -22,8 +24,10 @@ import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { useChartById } from "../hooks/chartsHooks";
 import { ChartEditor } from "../components/ChartEditor/ChartEditor";
+import { useAuth } from "../auth/useAuth";
 
 export function ChartsPage() {
+  const { user, logout } = useAuth();
   const [tab, setTab] = React.useState(0);
   const [selectedId, setSelectedId] = useState<string>("");
   const [editMode, setEditMode] = useState(false);
@@ -103,7 +107,20 @@ export function ChartsPage() {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       {/* Top tabs */}
-      <NavBar value={tab} onChange={setTab} />
+      <NavBar>
+        <div className="flex-1">
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            textColor="inherit"
+            indicatorColor="secondary"
+          >
+            <Tab label="My Charts" />
+            <Tab label="Shared Charts" />
+            <Tab label="Assets" />
+          </Tabs>
+        </div>
+        </NavBar>
 
       <Box sx={{ display: "flex", flex: 1 }}>
         <AnimatePresence initial={false}>
