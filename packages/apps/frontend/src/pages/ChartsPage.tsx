@@ -118,7 +118,9 @@ export function ChartsPage() {
           >
             <Tab label="My Charts" />
             <Tab label="Shared Charts" />
-            <Tab label="Assets" />
+            <RequirePermissions required={[Permission.ASSET_READ]}>
+              <Tab label="Assets" />
+            </RequirePermissions>
           </Tabs>
         </div>
       </NavBar>

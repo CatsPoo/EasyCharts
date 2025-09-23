@@ -57,7 +57,7 @@ export function useListAssets<K extends keyof AssetMap>(
     queryFn: async () => {
       try{
         const qs = toQueryString(params);
-        const { data } = await http.get(`/api/${kind}?${qs}`);
+        const { data } = await http.get(`/${kind}?${qs}`);
         return data
       }
       catch(err:any){ throw new Error("Failed to fetch");}
@@ -74,7 +74,7 @@ export function useCreateAsset<K extends keyof AssetMap>(kind: K) {
     mutationFn: async (dto: Omit<AssetMap[K], 'id'>) => {
 
       try {
-        const { data } = await http.post(`/api/${kind}`, dto);
+        const { data } = await http.post(`/${kind}`, dto);
         return data;
       } catch (err: any) {
         throw new Error("Create failed");
@@ -95,7 +95,7 @@ export function useUpdateAsset<K extends keyof AssetMap>(kind: K) {
       const { id: _omit, ...rest } = data as any;
       const payload = serializeForApi(kind, rest, "update");
       try {
-        const { data } = await http.put(`/api/${kind}/${id}`, payload);
+        const { data } = await http.put(`/${kind}/${id}`, payload);
         return data;
       } catch {
         throw new Error("Update failed");
@@ -112,7 +112,7 @@ export function useDeleteAsset<K extends keyof AssetMap>(kind: K) {
   return useMutation({
     mutationFn: async (id: string) => {
       try {
-        await http.delete(`/api/${kind}/${id}`);
+        await http.delete(`/${kind}/${id}`);
       } catch {
         throw new Error("Delete failed");
       }
