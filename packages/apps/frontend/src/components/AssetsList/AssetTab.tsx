@@ -21,9 +21,10 @@ import {
   useUpdateAsset,
   useDeleteAsset,
 } from "../../hooks/assetsHooks";
-import type { AssetKind, AnyAsset } from "@easy-charts/easycharts-types";
+import { type AssetKind, type AnyAsset, Permission } from "@easy-charts/easycharts-types";
 import { AssetForm } from "./AssetsForm";
 import { ConfirmDialog } from "../DeleteAlertDialog";
+import { RequirePermissions } from "../../auth/RequirePermissions";
 
 export default function AssetTab() {
   const [kind, setKind] = useState<AssetKind>("devices");
@@ -90,16 +91,20 @@ export default function AssetTab() {
         sortable: false,
         renderCell: (params: any) => (
           <Box sx={{ display: "flex", gap: 1 }}>
-            <Button size="small" onClick={() => setEditing(params.row)}>
-              Edit
-            </Button>
-            <Button
-              size="small"
-              color="error"
-              onClick={()=> onRowDeleteClick(params)}
-            >
-              Delete
-            </Button>
+            <RequirePermissions required={[Permission.ASSET_EDIT]}>
+              <Button size="small" onClick={() => setEditing(params.row)}>
+                Edit
+              </Button>
+            </RequirePermissions>
+            <RequirePermissions required={[Permission.ASSET_DELETE]}>
+              <Button
+                size="small"
+                color="error"
+                onClick={() => onRowDeleteClick(params)}
+              >
+                Delete
+              </Button>
+            </RequirePermissions>
           </Box>
         ),
       },
@@ -139,9 +144,11 @@ export default function AssetTab() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <Box sx={{ flex: 1 }} />
-        <Button variant="contained" onClick={() => setCreateOpen(true)}>
-          New {kind.slice(0, -1)}
-        </Button>
+        <RequirePermissions required={[Permission.ASSET_CREATE]}>
+          <Button variant="contained" onClick={() => setCreateOpen(true)}>
+            New {kind.slice(0, -1)}
+          </Button>
+        </RequirePermissions>
       </Toolbar>
 
       <Box sx={{ flex: 1 }}>
