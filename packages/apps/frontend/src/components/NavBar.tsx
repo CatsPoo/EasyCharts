@@ -2,13 +2,18 @@ import { Box, Button, Toolbar, Typography } from "@mui/material";
 import AppBar from "@mui/material/AppBar";
 import { useAuth } from "../auth/useAuth";
 import { ThemeToggleButton } from "./ThemeToggleButton";
+import { RequirePermissions } from "../auth/RequirePermissions";
+import { Permission } from "@easy-charts/easycharts-types";
+import { useNavigate } from "react-router-dom";
+import type { ReactNode } from "react";
 
 type NavBarProps = {
-  children?: React.ReactNode;
+  children?: ReactNode;
 };
 
 export function NavBar({ children }: NavBarProps) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <AppBar
@@ -56,7 +61,11 @@ export function NavBar({ children }: NavBarProps) {
 
         {/* Spacer pushes the next items to the far right */}
         <Box sx={{ flexGrow: 1 }} />
-
+        <RequirePermissions required={[Permission.USER_MANAGE]}>
+          <Button color="inherit" onClick={() => navigate("/users")}>
+            Manage Users
+          </Button>
+        </RequirePermissions>
         {/* Logout/user box sits to the LEFT of the theme toggle */}
         {user && (
           <Box

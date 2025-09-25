@@ -11,8 +11,8 @@ import {
   Post,
   Put,
   Query,
-  UseGuards
-} from '@nestjs/common';
+  UseGuards,
+} from "@nestjs/common";
 import { ZodValidationPipe } from '../common/zodValidation.pipe';
 import { QueryDto } from '../query/dto/query.dto';
 import { VendorsService } from "./vendors.service";

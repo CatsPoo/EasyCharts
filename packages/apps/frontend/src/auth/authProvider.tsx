@@ -32,7 +32,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       getRefreshToken: () => refreshToken,
       performRefresh: async (rt) => {
         const res = await authHttp.post<AuthResponse>("/auth/refresh", rt);
-        if (res.status !== 200 || !res.data?.token) throw new Error("Refresh failed");
+        if (res.status !== 200 || !res.data?.token)
+          throw new Error("Refresh failed");
         return res.data;
       },
       setTokens: (at, rt) => {

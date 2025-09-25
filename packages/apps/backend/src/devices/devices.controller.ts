@@ -25,7 +25,7 @@ import { ZodValidationPipe } from '../common/zodValidation.pipe';
 import { QueryDto } from '../query/dto/query.dto';
 import { DevicesService } from './devices.service';
 import { RequirePermissions } from "../auth/decorators/permissions.decorator";
-@UseGuards(JwdAuthGuard,PermissionsGuard)
+@UseGuards(JwdAuthGuard, PermissionsGuard)
 @Controller("devices")
 export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
@@ -36,7 +36,6 @@ export class DevicesController {
   create(@Body(new ZodValidationPipe(DeviceCreateSchema)) dto: DeviceCreate) {
     return this.devicesService.createDevice(dto);
   }
-
 
   @RequirePermissions(Permission.ASSET_READ)
   @Get()

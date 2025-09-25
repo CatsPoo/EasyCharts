@@ -106,7 +106,7 @@ export function ChartsPage() {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh",width:"100Vw" }}>
       {/* Top tabs */}
       <NavBar>
         <div className="flex-1">
