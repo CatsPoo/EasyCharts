@@ -1,8 +1,8 @@
 // AuthProvider.tsx
+import type { AuthResponse, User } from "@easy-charts/easycharts-types";
 import axios from "axios";
 import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { createHttp, setupHttpAuth } from "../api/http";
-import type {User, AuthResponse } from "@easy-charts/easycharts-types";
 
 type AuthContextType = {
   isAuthenticated: boolean;

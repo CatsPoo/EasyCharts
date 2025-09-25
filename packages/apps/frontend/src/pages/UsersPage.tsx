@@ -1,47 +1,58 @@
-import {
-  Box,
-  Button,
-  Checkbox,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Toolbar,
-  Typography,
-} from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
+import { Permission, type User, type UserUpdate } from "@easy-charts/easycharts-types";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { useEffect, useMemo, useState } from "react";
-import { http } from "../api/http"
-import { type User,Permission, type UserUpdate } from "@easy-charts/easycharts-types";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import {
+    Box,
+    Button,
+    Checkbox,
+    IconButton,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    Toolbar,
+    Typography,
+} from "@mui/material";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { http } from "../api/http";
+import { LoadingOverlay } from "../components/LoadingOverlay";
 import { NavBar } from "../components/NavBar";
+import { useUpdateUserMutation } from "../hooks/usersHooks";
 
 
 export function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const navigate = useNavigate()
+  const { mutateAsync:updateUserMut, isPending : isUpdateUserPanding, error } = useUpdateUserMutation()
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
   useEffect(() => {
-    http.get<User[]>("/users").then((res) => setUsers(res.data));
+    setIsLoading(true)
+    http.get<User[]>("/users").then((res) => {
+      setUsers(res.data);
+      setIsLoading(false)
+    });
   }, []);
 
   const togglePermission = async (userId: string, perm: Permission, has: boolean) => {
     const user : User | undefined = users.find(u=>u.id === userId)
     if(!user) return
 
-    if(!has) user.permissions = user.permissions.filter(p => p === perm)
+    if(!has) user.permissions = user.permissions.filter(p => p !== perm)
     else if(!user.permissions.find(p=> p === perm)) user.permissions.push(perm)
 
     try{
         const updateUserPayload : UserUpdate = {
             permissions:user.permissions
         }
-        const {data:updatedUser} = await http.patch<User>(`/users/${userId}`,updateUserPayload)
+        const updatedUser: User = await updateUserMut({
+          id: userId,
+          data: updateUserPayload,
+        });
         setUsers((prev) => prev.map((u) => (u.id === userId ? updatedUser : u)));
     }catch{
         throw new Error('unable to change user permition')
@@ -111,6 +122,7 @@ export function UsersPage() {
           Back to Charts
         </Button>
       </Box>
+      <LoadingOverlay open={isUpdateUserPanding || isLoading} label="Loading…" />;
     </Box>
   );
 }
