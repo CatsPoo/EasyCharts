@@ -25,11 +25,6 @@ import { NavBar } from "../components/NavBar";
 export function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const navigate = useNavigate()
-  const userPermitions : Map<string,Set<Permission>> = useMemo(()=>{
-    const index = new Map<string, Set<Permission>>();
-  for (const u of users) index.set(u.id, new Set(u.permissions));
-  return index;
-  },[users])
 
   useEffect(() => {
     http.get<User[]>("/users").then((res) => setUsers(res.data));
@@ -39,11 +34,14 @@ export function UsersPage() {
     const user : User | undefined = users.find(u=>u.id === userId)
     if(!user) return
 
-    if(!has) user.permissions.filter(p => p === perm)
+    if(!has) user.permissions = user.permissions.filter(p => p === perm)
     else if(!user.permissions.find(p=> p === perm)) user.permissions.push(perm)
 
     try{
-        const {data:updatedUser} = await http.patch<User>(`/users/${userId}`,user)
+        const updateUserPayload : UserUpdate = {
+            permissions:user.permissions
+        }
+        const {data:updatedUser} = await http.patch<User>(`/users/${userId}`,updateUserPayload)
         setUsers((prev) => prev.map((u) => (u.id === userId ? updatedUser : u)));
     }catch{
         throw new Error('unable to change user permition')

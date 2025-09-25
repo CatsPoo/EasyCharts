@@ -58,12 +58,11 @@ export class UsersController {
 
   @RequirePermissions(Permission.USER_MANAGE)
   @Patch(":id")
-  @UsePipes(new ZodValidationPipe(UserUpdateSchema))
   async updateChart(
-    @Param("id") id: string,
-    @Body() body: UserUpdate,
+    @Param("id",new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(UserUpdateSchema)) body: UserUpdate,
   ) {
-    this.userService.updateUser(id, body);
+    return this.userService.updateUser(id, body);
   }
 
 }
