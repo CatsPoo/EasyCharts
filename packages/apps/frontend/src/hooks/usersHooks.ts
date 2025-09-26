@@ -66,3 +66,20 @@ export function useCreateUserMutation() {
     },
   });
 }
+
+export async function deleteUser(id: string): Promise<void> {
+  try{
+    await http.delete(`/users/${id}`)
+  }
+  catch(err:any){
+    throw new Error(err || `Failed to delete user ${err}`);
+  }
+}
+
+export function useDeleteUserMutation() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => deleteUser(id)
+  });
+}

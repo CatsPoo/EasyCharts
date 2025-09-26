@@ -21,20 +21,27 @@ import { useNavigate } from "react-router-dom";
 import { http } from "../api/http";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { NavBar } from "../components/NavBar";
-import { useCreateUserMutation, useUpdateUserMutation } from "../hooks/usersHooks";
+import { useCreateUserMutation, useDeleteUserMutation, useUpdateUserMutation } from "../hooks/usersHooks";
 import { UserDialog } from "../components/UsersManagment/UserDialog";
 import type { SubmitPayload } from "../components/UsersManagment/interfaces";
+import { ConfirmDialog } from "../components/DeleteAlertDialog";
+import { useAuth } from "../auth/authProvider";
 
 
 export function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isUserDialogOpen,setUserDialogOpen] = useState<boolean>(false)
+  const [isDeleteDialogOpen,setDeleteDialogOpen] = useState<boolean>(false)
   const [editUser,setEditUser] = useState<User | null>(null)
+
+  const navigate = useNavigate()
+
+  const {user} = useAuth()
 
   const { mutateAsync:updateUserMut, isPending : isUpdateUserPanding} = useUpdateUserMutation()
   const { mutateAsync:createUserMut, isPending : isCreateUserPanding} = useCreateUserMutation()
+  const { mutateAsync:deleteUserMut, isPending : isDeleteUserPanding} = useDeleteUserMutation()
 
   const updateUser = useCallback(
     async (userId:string, updateUserPayload: UserUpdate) : Promise<void>=> {
@@ -76,13 +83,36 @@ export function UsersPage() {
   };
 
   const onEditHandle = useCallback((user:User)=>{
-    setEditUser(user)
-    setUserDialogOpen(true)
+    setUserDialogOpen(true);
+    setEditUser(user);
   },[])
 
   const onAddHandle = useCallback(()=>{
+    setUserDialogOpen(true);
+    setEditUser(null);
+  },[])
+
+  const onDeleteHandle = useCallback((user:User)=>{
+    setEditUser(user)
+    setDeleteDialogOpen(true)
+
+  },[])
+
+  const onDeleteDialogConfirm = useCallback(async () => {
+    if (!editUser?.id) return;
+    try {
+      await deleteUserMut({ id: editUser?.id });
+      setUsers(prev=>prev.filter(u=>u.id !== editUser.id))
+      setEditUser(null)
+      setDeleteDialogOpen(false);
+    } catch {
+      /* empty */
+    }
+  }, [deleteUserMut, editUser]);
+
+  const onDeleteDialogClose = useCallback(()=>{
     setEditUser(null)
-    setUserDialogOpen(true)
+    setDeleteDialogOpen(false)
   },[])
 
   const onUserDialogSubmit = useCallback( async (payload : SubmitPayload) => {
@@ -122,15 +152,25 @@ export function UsersPage() {
   },[])
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh",width:"100Vw" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        width: "100Vw",
+      }}
+    >
       <NavBar />
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
         <Typography variant="h6">User Management</Typography>
-        <Button variant="contained" onClick={() => {setUserDialogOpen(true); setEditUser(null)}} startIcon={<AddIcon />}>
+        <Button
+          variant="contained"
+          onClick={onAddHandle}
+          startIcon={<AddIcon />}
+        >
           Create User
         </Button>
       </Toolbar>
-
       <Table>
         <TableHead>
           <TableRow>
@@ -150,32 +190,31 @@ export function UsersPage() {
               {Object.values(Permission).map((perm) => (
                 <TableCell key={perm}>
                   <Checkbox
-                    checked={
-                      u.permissions?.includes(perm) ?? false
-                    }
+                    checked={u.permissions?.includes(perm) ?? false}
                     onChange={() =>
                       togglePermission(
                         u.id,
                         perm,
-                        ! u.permissions?.includes(perm)
+                        !u.permissions?.includes(perm)
                       )
                     }
                   />
                 </TableCell>
               ))}
               <TableCell>
-                <IconButton onClick={() => {setUserDialogOpen(true); setEditUser(u)}}>
+                <IconButton onClick={() => onEditHandle(u)}>
                   <EditIcon />
                 </IconButton>
-                <IconButton color="error">
-                  <DeleteIcon />
-                </IconButton>
+                {u.id !== user?.id && (
+                  <IconButton color="error" onClick={() => onDeleteHandle(u)}>
+                    <DeleteIcon />
+                  </IconButton>
+                )}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-
       <Box mt={2}>
         <Button
           startIcon={<ArrowBackIcon />}
@@ -184,8 +223,29 @@ export function UsersPage() {
           Back to Charts
         </Button>
       </Box>
-      <LoadingOverlay open={isUpdateUserPanding || isLoading} label="Loading…" />;
-      <UserDialog open={isUserDialogOpen} onClose={onUserDialoClose} onSubmit={onUserDialogSubmit} initial={editUser ?? {}}/>
+      <LoadingOverlay
+        open={
+          isUpdateUserPanding ||
+          isUpdateUserPanding ||
+          isDeleteUserPanding ||
+          isLoading
+        }
+        label="Loading…"
+      />
+      ;
+      <UserDialog
+        open={isUserDialogOpen}
+        onClose={onUserDialoClose}
+        onSubmit={onUserDialogSubmit}
+        initial={editUser ?? {}}
+      />
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onCancel={onDeleteDialogClose}
+        onConfirm={onDeleteDialogConfirm}
+        confirmColor="error"
+        title='Are you shure you want to delete user'
+      />
     </Box>
   );
 }
