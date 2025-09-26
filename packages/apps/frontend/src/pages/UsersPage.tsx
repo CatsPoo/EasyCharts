@@ -1,4 +1,4 @@
-import { Permission, type User, type UserUpdate } from "@easy-charts/easycharts-types";
+import { Permission, type User, type UserCreate, type UserUpdate } from "@easy-charts/easycharts-types";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -16,20 +16,36 @@ import {
     Toolbar,
     Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { http } from "../api/http";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { NavBar } from "../components/NavBar";
-import { useUpdateUserMutation } from "../hooks/usersHooks";
+import { useCreateUserMutation, useUpdateUserMutation } from "../hooks/usersHooks";
+import { UserDialog } from "../components/UsersManagment/UserDialog";
+import type { SubmitPayload } from "../components/UsersManagment/interfaces";
 
 
 export function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const navigate = useNavigate()
-  const { mutateAsync:updateUserMut, isPending : isUpdateUserPanding, error } = useUpdateUserMutation()
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [isUserDialogOpen,setUserDialogOpen] = useState<boolean>(false)
+  const [editUser,setEditUser] = useState<User | null>(null)
 
+  const { mutateAsync:updateUserMut, isPending : isUpdateUserPanding} = useUpdateUserMutation()
+  const { mutateAsync:createUserMut, isPending : isCreateUserPanding} = useCreateUserMutation()
+
+  const updateUser = useCallback(
+    async (userId:string, updateUserPayload: UserUpdate) : Promise<void>=> {
+      const updatedUser: User = await updateUserMut({
+        id: userId,
+        data: updateUserPayload,
+      });
+      setUsers((prev) => prev.map((u) => (u.id === userId ? updatedUser : u)));
+    },
+    [updateUserMut]
+  );
   useEffect(() => {
     setIsLoading(true)
     http.get<User[]>("/users").then((res) => {
@@ -59,12 +75,58 @@ export function UsersPage() {
     }
   };
 
+  const onEditHandle = useCallback((user:User)=>{
+    setEditUser(user)
+    setUserDialogOpen(true)
+  },[])
+
+  const onAddHandle = useCallback(()=>{
+    setEditUser(null)
+    setUserDialogOpen(true)
+  },[])
+
+  const onUserDialogSubmit = useCallback( async (payload : SubmitPayload) => {
+    const {username,password,isActive,permissions} = payload
+    try {
+      if (editUser) {
+        const updateUserPayload: UserUpdate = {
+          username,
+          password,
+          isActive,
+          permissions,
+        };
+        await updateUser(editUser.id, updateUserPayload);
+      } else {
+        const createUserPayload: UserCreate = {
+          username,
+          password: password ?? "",
+          displayName: username,
+          isActive,
+          permissions,
+          refreshTokenHash: "",
+        };
+
+        const newUser: User = await createUserMut({
+          data: createUserPayload,
+        });
+        setUsers((prev) => [...prev, newUser]);
+      }
+      setEditUser(null)
+      setUserDialogOpen(false)
+    } catch { /* empty */ }
+  }, [createUserMut, editUser, updateUser]);
+
+  const onUserDialoClose = useCallback(()=>{
+    setEditUser(null)
+    setUserDialogOpen(false)
+  },[])
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh",width:"100Vw" }}>
       <NavBar />
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
         <Typography variant="h6">User Management</Typography>
-        <Button variant="contained" startIcon={<AddIcon />}>
+        <Button variant="contained" onClick={() => {setUserDialogOpen(true); setEditUser(null)}} startIcon={<AddIcon />}>
           Create User
         </Button>
       </Toolbar>
@@ -102,7 +164,7 @@ export function UsersPage() {
                 </TableCell>
               ))}
               <TableCell>
-                <IconButton>
+                <IconButton onClick={() => {setUserDialogOpen(true); setEditUser(u)}}>
                   <EditIcon />
                 </IconButton>
                 <IconButton color="error">
@@ -123,6 +185,7 @@ export function UsersPage() {
         </Button>
       </Box>
       <LoadingOverlay open={isUpdateUserPanding || isLoading} label="Loading…" />;
+      <UserDialog open={isUserDialogOpen} onClose={onUserDialoClose} onSubmit={onUserDialogSubmit} initial={editUser ?? {}}/>
     </Box>
   );
 }

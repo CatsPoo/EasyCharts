@@ -1,4 +1,4 @@
-import type { User, UserUpdate } from "@easy-charts/easycharts-types";
+import type { User, UserCreate, UserUpdate } from "@easy-charts/easycharts-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "../api/http";
 
@@ -30,6 +30,33 @@ export function useUpdateUserMutation() {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UserUpdate }) => updateUser(id, data),
+    onSuccess: (saved, vars) => {
+      // EITHER directly update cache to avoid a refetch:
+      qc.setQueryData(['user', saved.id], saved);
+
+      // AND/OR invalidate so useChartById refetches:
+      qc.invalidateQueries({ queryKey: ['user', saved.id] });
+    },
+  });
+}
+
+
+export async function createuser(dto: UserCreate): Promise<User> {
+  try{
+    const {data} = await http.post<User>(`/users/`,dto)
+    return data
+  }
+  catch(err:any){
+    throw new Error(err || `Failed to create user ${err}`);
+  }
+}
+
+
+export function useCreateUserMutation() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ data }: { data: UserCreate }) => createuser(data),
     onSuccess: (saved, vars) => {
       // EITHER directly update cache to avoid a refetch:
       qc.setQueryData(['user', saved.id], saved);
