@@ -1,39 +1,11 @@
-// src/App.tsx
-import React from "react";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { LoginPage } from "./pages/LoginPage";
-import { ChartsPage } from "./pages/ChartsPage";
-import { ReactFlowProvider } from "reactflow";
-import { ThemeModeProvider } from "./contexts/ThemeModeContext";
+import { BrowserRouter } from "react-router-dom";
+import { AppRoutes } from "./AppRoute";
 
-const ProtectedShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Keep your existing providers for the main app pages
+
+export default function App() {
   return (
-    <div className="w-screen h-screen">
-      <ReactFlowProvider>{children}</ReactFlowProvider>
-    </div>
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
-};
-
-const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
-  {
-    element: <ProtectedRoute />,
-    children: [
-      {
-        index: true,
-        element: (
-          <ProtectedShell>
-            <ChartsPage />
-          </ProtectedShell>
-        ),
-      },
-      // Add more protected routes here if you add more pages later
-    ],
-  },
-]);
-
-export const App: React.FC = () => <RouterProvider router={router} />;
-
-export default App;
+}

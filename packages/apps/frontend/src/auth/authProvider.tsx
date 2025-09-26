@@ -1,8 +1,8 @@
 // AuthProvider.tsx
+import type { AuthResponse, User } from "@easy-charts/easycharts-types";
 import axios from "axios";
 import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { createHttp, setupHttpAuth } from "../api/http";
-import type {User, AuthResponse } from "@easy-charts/easycharts-types";
 
 type AuthContextType = {
   isAuthenticated: boolean;
@@ -32,7 +32,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       getRefreshToken: () => refreshToken,
       performRefresh: async (rt) => {
         const res = await authHttp.post<AuthResponse>("/auth/refresh", rt);
-        if (res.status !== 200 || !res.data?.token) throw new Error("Refresh failed");
+        if (res.status !== 200 || !res.data?.token)
+          throw new Error("Refresh failed");
         return res.data;
       },
       setTokens: (at, rt) => {

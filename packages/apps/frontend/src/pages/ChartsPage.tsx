@@ -105,8 +105,16 @@ export function ChartsPage() {
     }
   }
 
+  
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        width: "100Vw",
+      }}
+    >
       {/* Top tabs */}
       <NavBar>
         <div className="flex-1">
@@ -118,9 +126,7 @@ export function ChartsPage() {
           >
             <Tab label="My Charts" />
             <Tab label="Shared Charts" />
-            <RequirePermissions required={[Permission.ASSET_READ]}>
-              <Tab label="Assets" />
-            </RequirePermissions>
+            <Tab label="Assets" />
           </Tabs>
         </div>
       </NavBar>

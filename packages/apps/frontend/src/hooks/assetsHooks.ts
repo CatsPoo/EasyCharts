@@ -5,7 +5,6 @@ import { http } from '../api/http';
 // helpful alias
 type ListResponse<K extends keyof AssetMap> = { rows: Array<AssetMap[K]>; total: number };
 
-
 function serializeForApi(kind: keyof AssetMap, data: any, mode: 'create' | 'update') {
   switch (kind) {
     case 'vendors': {
