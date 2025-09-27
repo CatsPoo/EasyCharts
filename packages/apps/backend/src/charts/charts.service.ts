@@ -198,7 +198,7 @@ export class ChartsService {
   }
   async getAllUserChartsMetadata(userId: string): Promise<ChartMetadata[]> {
     const charts = await this.chartRepo.find({
-      //where: { createdById: userId },
+      where: { createdById: userId },
     });
 
     return charts.map((c) => {
