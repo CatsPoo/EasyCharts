@@ -46,7 +46,7 @@ export class ChartEntity {
   @Column({ name: "locked_by_id", type: "uuid",nullable:true,default:null })
   lockedById?: string | null;
 
-  @ManyToOne(() => UserEntity, {onDelete: "SET NULL", eager: false })
+  @ManyToOne(() => UserEntity, {onDelete: "SET NULL", eager: true })
   @JoinColumn({ name: "locked_by_id" })
   lockedBy!: Relation<UserEntity>;
 

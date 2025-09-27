@@ -1,10 +1,61 @@
+import { LockState, type ChartLock } from "@easy-charts/easycharts-types";
 import { http } from "../api/http";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 
-export const locChart = async (id: string): Promise<ChartLock> => {
+export const fetchLock = async (id: string): Promise<ChartLock> => {
+  const { data } = await http.get<ChartLock>(`/charts/${id}/lock`);
+  return data;
+};
+
+export const lockChart = async (id: string): Promise<ChartLock> => {
   const { data } = await http.patch<ChartLock>(`/charts/${id}/lock`);
   return data;
 };
-export const releaseLock = async (id: string): Promise<void> => {
+
+export const unlockChart = async (id: string): Promise<void> => {
   await http.patch(`/charts/${id}/unlock`);
 };
+
+export function useChartLock(userId:string,chartId?: string) {
+  const qc = useQueryClient();
+
+  const lockQ = useQuery({
+    queryKey: ["chartLock", chartId],
+    queryFn: () => fetchLock(chartId!),
+    enabled: !!chartId,
+    refetchInterval: 15000,
+    staleTime: 10000,
+  });
+
+  const acquireMut = useMutation({
+    mutationKey: ["acquireLock", chartId],
+    mutationFn: () => lockChart(chartId!),
+  });
+
+  const releaseMut = useMutation({
+    mutationKey: ["releaseLock", chartId],
+    mutationFn: () => unlockChart(chartId!),
+  });
+
+  const calcLockState = useMemo(()=>{
+    return !lockQ.data?.lockedById ? LockState.UNLOCKED :
+    lockQ.data.lockedById === userId ? LockState.MINE :
+    LockState.OTHERs
+  },[lockQ, userId])
+
+  return {
+    lock: 
+    {...lockQ.data,
+        state:calcLockState
+    } as ChartLock,
+    isLoading: lockQ.isLoading,
+    refetch: lockQ.refetch,
+    lockChart: () => acquireMut.mutateAsync(),
+    unlockChart: () => releaseMut.mutateAsync(),
+    locking: acquireMut.isPending,
+    unlocking: releaseMut.isPending,
+    
+  };
+}

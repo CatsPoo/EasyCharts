@@ -4,7 +4,6 @@ import {
   HandleInfo,
   Line,
   LineOnChart,
-  LockState,
   Port,
   SIDES,
   type Chart,
@@ -13,7 +12,7 @@ import {
   type ChartUpdate,
   type DeviceOnChart,
   type Handles,
-  type Side,
+  type Side
 } from "@Easy-charts/easycharts-types";
 import {
   BadRequestException,
@@ -25,15 +24,15 @@ import { DataSource, In, Not, Repository } from "typeorm";
 import { DevicesService } from "../devices/devices.service";
 import { DeviceEntity } from "../devices/entities/device.entity";
 import { PortEntity } from "../devices/entities/port.entity";
+import { PortsService } from "../devices/ports.service";
 import { LineEntity } from "../lines/entities/line.entity";
 import { LinessService } from "../lines/lines.service";
 import { ChartEntity } from "./entities/chart.entity";
 import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
 import { LineOnChartEntity } from "./entities/lineonChart.emtity";
 import { PortOnChartEntity } from "./entities/portOnChart.entity";
-import { PortsService } from "../devices/ports.service";
 import { ChartIsLockedExeption } from "./exeptions/chartIsLocked.exeption";
-import {ChartNotFoundExeption } from "./exeptions/chartNotFound.exeption";
+import { ChartNotFoundExeption } from "./exeptions/chartNotFound.exeption";
 @Injectable()
 export class ChartsService {
   constructor(
@@ -82,9 +81,9 @@ export class ChartsService {
   getLockFromChartEntity = (chartEntiy:ChartEntity) : ChartLock =>{
     return {
       chartId:chartEntiy.id,
-      lockedAt:chartEntiy.lockedAt,
-      lockedById:chartEntiy.lockedById,
-      lockedByName:chartEntiy.lockedBy.username ?? "",
+      lockedAt:chartEntiy.lockedAt ?? null,
+      lockedById:chartEntiy.lockedById ?? null,
+      lockedByName:chartEntiy.lockedBy ? chartEntiy.lockedBy.username :  "",
     } as ChartLock
   }
 
@@ -454,7 +453,6 @@ export class ChartsService {
     }
     return {
       chartId,
-      state:LockState.MINE,
       lockedById:chart.lockedById,
       lockedByName:chart.lockedBy.username,
       lockedAt:chart.lockedAt

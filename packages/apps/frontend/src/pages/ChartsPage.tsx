@@ -1,4 +1,4 @@
-import { Permission, type Chart } from "@easy-charts/easycharts-types";
+import { LockState, Permission, type Chart } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   Alert,
@@ -21,10 +21,11 @@ import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/cha
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
-import { lockChart, unlockChart, useChartById } from "../hooks/chartsHooks";
 import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import { useAuth } from "../auth/useAuth";
 import { RequirePermissions } from "../auth/RequirePermissions";
+import { useChartLock } from "../hooks/chartsLockHooks";
+import { useChartById } from "../hooks/chartsHooks";
 
 export function ChartsPage() {
   const { user } = useAuth();
@@ -40,6 +41,7 @@ export function ChartsPage() {
 
   const chartEditorRef = useRef<ChartEditorHandle>(null);
 
+  const {lock,lockChart,unlockChart,locking,unlocking,refetch,isLoading} = useChartLock(selectedId)
   const readonly = false;
 
   const nope = useCallback(()=>{return} ,[])
@@ -48,9 +50,9 @@ export function ChartsPage() {
   }, [tab]);
 
   const onEditChartdialogClose = useCallback(async ()=>{
-    if(editChart?.id) await unlockChart(editChart?.id)
+    if(editChart?.id) await unlockChart()
     setDialogOpen(false)
-  },[editChart?.id])
+  },[editChart?.id, unlockChart])
 
 
   const {
@@ -61,8 +63,9 @@ export function ChartsPage() {
 
   const onEditSwitchToggle = useCallback((newVal:boolean)=>{
     setEditMode(newVal)
-    if(editChart?.id && newVal) lockChart(editChart?.id)
-  },[editChart?.id])
+    if(editChart?.id && newVal) lockChart()
+  },[editChart?.id, lockChart])
+
   const handleEdit = (chartId: string) => {
     setSelectedId(chartId);
     setEditMode(false);
@@ -112,13 +115,6 @@ export function ChartsPage() {
       setSaving(false);
     }
   }
-
-  const isChartLocked = useCallback(()=>{
-    if(!editChart) return false
-    if(!editChart.lockedById) return false
-    return editChart.lockedById !== user?.id
-  },[editChart, user?.id])
-
   
   return (
     <Box
@@ -229,7 +225,7 @@ export function ChartsPage() {
               }}
             >
               <RequirePermissions required={[Permission.CHART_UPDATE]}>
-                {!readonly && !isChartLocked() ? (
+                {!readonly && lock.state !== LockState.OTHERs ? (
                   <FormControlLabel
                     style={{ background: "#7676c4" }}
                     control={
@@ -263,7 +259,7 @@ export function ChartsPage() {
             key={`edit-${editChart.id}-${editMode}`}
             chart={editChart}
             setChart={setEditChart}
-            editMode={!isChartLocked() && editMode}
+            editMode={lock.state !== LockState.OTHERs && editMode}
             setMadeChanges={setEditorMadeChanges}
             ref={chartEditorRef}
           />
