@@ -6,6 +6,7 @@ import {
   Button,
   CircularProgress,
   Dialog,
+  Fade,
   FormControlLabel,
   IconButton,
   Switch,
@@ -26,6 +27,9 @@ import { useAuth } from "../auth/useAuth";
 import { RequirePermissions } from "../auth/RequirePermissions";
 import { useChartLock } from "../hooks/chartsLockHooks";
 import { useChartById } from "../hooks/chartsHooks";
+import { Chip, Tooltip, Stack, Collapse } from "@mui/material";
+import LockIcon from "@mui/icons-material/Lock";
+import LockOpenIcon from "@mui/icons-material/LockOpen";
 
 export function ChartsPage() {
   const { user } = useAuth();
@@ -115,6 +119,56 @@ export function ChartsPage() {
       setSaving(false);
     }
   }
+
+  function LockStatusChip({ lock, isLoading, locking, unlocking }: LockStatusChipProps) {
+  // show spinner while any lock action is in-flight
+  if (isLoading || locking || unlocking) {
+    return (
+      <Chip
+        variant="outlined"
+        color={locking ? "info" : unlocking ? "default" : "default"}
+        icon={
+          <Fade in>
+            <CircularProgress size={14} thickness={5} />
+          </Fade>
+        }
+        label={locking ? "Acquiring…" : unlocking ? "Releasing…" : "Loading…"}
+        sx={{ ".MuiChip-icon": { mr: 0.5 } }}
+      />
+    );
+  }
+
+  if (!lock || lock.state === LockState.UNLOCKED) {
+    return <Chip size="small" label="Unlocked" variant="outlined" />;
+  }
+
+  if (lock.state === LockState.MINE) {
+    return (
+      <Tooltip title="You hold the edit lock">
+        <Chip
+          size="small"
+          icon={<LockOpenIcon />}
+          label="Locked by you"
+          color="success"
+          variant="filled"
+          sx={{ fontWeight: 600 }}
+        />
+      </Tooltip>
+    );
+  }
+  return (
+    <Tooltip title={`Locked by ${lock.lockedByName ?? "another user"}`}>
+      <Chip
+        size="small"
+        icon={<LockIcon />}
+        label={`Locked by ${lock.lockedByName ?? "someone"}`}
+        color="warning"
+        variant="filled"
+        sx={{ fontWeight: 600 }}
+      />
+    </Tooltip>
+  );
+}
   
   return (
     <Box
@@ -224,16 +278,29 @@ export function ChartsPage() {
                 height: 41,
               }}
             >
+              <LockStatusChip
+                lock={lock}
+                isLoading={isLoading}
+                locking={locking}
+                unlocking={unlocking}
+              />
               <RequirePermissions required={[Permission.CHART_UPDATE]}>
-                {
-                !readonly && lock.state !== LockState.OTHERs ? (
+                {!readonly &&
+                lock?.state !== LockState.OTHERs /* or OTHERs */ ? (
                   <FormControlLabel
-                    style={{ background: "#7676c4" }}
+                    sx={{
+                      ml: 1,
+                      px: 1,
+                      borderRadius: 1,
+                      bgcolor: "#7676c4",
+                      color: "white",
+                      "& .MuiFormControlLabel-label": { fontWeight: 600 },
+                    }}
                     control={
                       <Switch
                         checked={editMode}
                         onChange={(e) => onEditSwitchToggle(e.target.checked)}
-                        color="primary"
+                        color="default"
                       />
                     }
                     label={editMode ? "Edit Mode" : "View Mode"}
@@ -254,6 +321,19 @@ export function ChartsPage() {
             )}
           </Toolbar>
         </AppBar>
+        <Collapse in={!!lock && lock.state !== LockState.UNLOCKED}>
+          {lock?.state === LockState.MINE ? (
+            <Alert severity="success" sx={{ borderRadius: 0 }}>
+              You’re editing this chart. Others are in read-only mode.
+            </Alert>
+          ) : lock?.state === LockState.OTHERs ? (
+            <Alert severity="warning" sx={{ borderRadius: 0 }}>
+              This chart is locked by{" "}
+              <strong>{lock.lockedByName ?? "another user"}</strong>. You can
+              view but cannot edit.
+            </Alert>
+          ) : null}
+        </Collapse>
 
         {editChart && (
           <ChartEditor
