@@ -5,31 +5,29 @@ import {
   AppBar,
   Button,
   CircularProgress,
+  Collapse,
   Dialog,
-  Fade,
   FormControlLabel,
   IconButton,
   Switch,
   Tab,
   Tabs,
-  Toolbar,
+  Toolbar
 } from "@mui/material";
 import Box from "@mui/material/Box";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RequirePermissions } from "../auth/RequirePermissions";
+import { useAuth } from "../auth/useAuth";
 import AssetTab from "../components/AssetsList/AssetTab";
+import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/chartEditorHandle.interfaces";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
-import { ChartEditor } from "../components/ChartEditor/ChartEditor";
-import { useAuth } from "../auth/useAuth";
-import { RequirePermissions } from "../auth/RequirePermissions";
-import { useChartLock } from "../hooks/chartsLockHooks";
 import { useChartById } from "../hooks/chartsHooks";
-import { Chip, Tooltip, Stack, Collapse } from "@mui/material";
-import LockIcon from "@mui/icons-material/Lock";
-import LockOpenIcon from "@mui/icons-material/LockOpen";
+import { useChartLock } from "../hooks/chartsLockHooks";
+import { LockStatusChip } from "../components/ChartEditor/LockStatusClip";
 
 export function ChartsPage() {
   const { user } = useAuth();
@@ -119,56 +117,6 @@ export function ChartsPage() {
       setSaving(false);
     }
   }
-
-  function LockStatusChip({ lock, isLoading, locking, unlocking }: LockStatusChipProps) {
-  // show spinner while any lock action is in-flight
-  if (isLoading || locking || unlocking) {
-    return (
-      <Chip
-        variant="outlined"
-        color={locking ? "info" : unlocking ? "default" : "default"}
-        icon={
-          <Fade in>
-            <CircularProgress size={14} thickness={5} />
-          </Fade>
-        }
-        label={locking ? "Acquiring…" : unlocking ? "Releasing…" : "Loading…"}
-        sx={{ ".MuiChip-icon": { mr: 0.5 } }}
-      />
-    );
-  }
-
-  if (!lock || lock.state === LockState.UNLOCKED) {
-    return <Chip size="small" label="Unlocked" variant="outlined" />;
-  }
-
-  if (lock.state === LockState.MINE) {
-    return (
-      <Tooltip title="You hold the edit lock">
-        <Chip
-          size="small"
-          icon={<LockOpenIcon />}
-          label="Locked by you"
-          color="success"
-          variant="filled"
-          sx={{ fontWeight: 600 }}
-        />
-      </Tooltip>
-    );
-  }
-  return (
-    <Tooltip title={`Locked by ${lock.lockedByName ?? "another user"}`}>
-      <Chip
-        size="small"
-        icon={<LockIcon />}
-        label={`Locked by ${lock.lockedByName ?? "someone"}`}
-        color="warning"
-        variant="filled"
-        sx={{ fontWeight: 600 }}
-      />
-    </Tooltip>
-  );
-}
   
   return (
     <Box
