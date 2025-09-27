@@ -24,16 +24,28 @@ export class ChartEntity {
   @Column({ nullable: false, default: "" })
   description!: string;
 
-  @CreateDateColumn({ name: "created_at", type: "timestamptz", default: () => "CURRENT_TIMESTAMP" })
+  @CreateDateColumn({
+    name: "created_at",
+    type: "timestamptz",
+    default: () => "CURRENT_TIMESTAMP",
+  })
   createdAt!: Date;
 
-   @Index("idx_charts_created_by")
+  @Index("idx_charts_created_by")
   @Column({ name: "created_by_id", type: "uuid" })
   createdById!: string;
 
-  @ManyToOne(() => UserEntity, {onDelete: "CASCADE", eager: false })
+  @ManyToOne(() => UserEntity, { onDelete: "CASCADE", eager: false })
   @JoinColumn({ name: "created_by_id" })
   createdBy!: Relation<UserEntity>;
+
+  @Index("idx_charts_created_by")
+  @Column({ name: "locked_by_id", type: "uuid",nullable:true,default:null })
+  lockedById?: string | null;
+
+  @ManyToOne(() => UserEntity, {onDelete: "SET NULL", eager: false })
+  @JoinColumn({ name: "locked_by_id" })
+  lockedBy!: Relation<UserEntity>;
 
   @OneToMany(() => DeviceOnChartEntity, (doc) => doc.chart, {
     cascade: ["insert", "update"],
