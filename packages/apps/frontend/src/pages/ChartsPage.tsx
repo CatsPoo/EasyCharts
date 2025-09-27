@@ -15,21 +15,20 @@ import {
 } from "@mui/material";
 import Box from "@mui/material/Box";
 import { AnimatePresence, motion } from "framer-motion";
-import * as React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AssetTab from "../components/AssetsList/AssetTab";
 import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/chartEditorHandle.interfaces";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
-import { useChartById } from "../hooks/chartsHooks";
+import { lockChart, unlockChart, useChartById } from "../hooks/chartsHooks";
 import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import { useAuth } from "../auth/useAuth";
 import { RequirePermissions } from "../auth/RequirePermissions";
 
 export function ChartsPage() {
   const { user } = useAuth();
-  const [tab, setTab] = React.useState(0);
+  const [tab, setTab] = useState(0);
   const [selectedId, setSelectedId] = useState<string>("");
   const [editMode, setEditMode] = useState(false);
 
@@ -39,23 +38,31 @@ export function ChartsPage() {
   const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
 
-  const chartEditorRef = React.useRef<ChartEditorHandle>(null);
+  const chartEditorRef = useRef<ChartEditorHandle>(null);
 
   const readonly = false;
 
-  const nope = React.useCallback(()=>{return} ,[])
+  const nope = useCallback(()=>{return} ,[])
   useEffect(() => {
     setSelectedId("");
   }, [tab]);
 
-  // Find the chart object for the currently selected ID (or undefined)
-  //const selectedChart: Chart | undefined = getChart(selectedId);
+  const onEditChartdialogClose = useCallback(async ()=>{
+    if(editChart?.id) await unlockChart(editChart?.id)
+    setDialogOpen(false)
+  },[editChart?.id])
+
+
   const {
     data: selectedChart,
     isLoading: isSelectedChartLoading,
     error: selectedChartError,
   } = useChartById(selectedId ?? "");
 
+  const onEditSwitchToggle = useCallback((newVal:boolean)=>{
+    setEditMode(newVal)
+    if(editChart?.id && newVal) lockChart(editChart?.id)
+  },[editChart?.id])
   const handleEdit = (chartId: string) => {
     setSelectedId(chartId);
     setEditMode(false);
@@ -70,7 +77,7 @@ export function ChartsPage() {
     }
   }, [dialogOpen, selectedChart]);
 
-  const handleDialogClose = () => {
+  const handleDialogClose = async  () => {
     if (editorMageChanges) {
       const leave = window.confirm(
         "You have unsaved changes. Are you sure you want to close without saving?"
@@ -79,6 +86,7 @@ export function ChartsPage() {
         return;
       }
     }
+    if(editChart?.id) await unlockChart(editChart?.id)
     setDialogOpen(false);
     setSelectedId("");
     setEditMode(false);
@@ -104,6 +112,12 @@ export function ChartsPage() {
       setSaving(false);
     }
   }
+
+  const isChartLocked = useCallback(()=>{
+    if(!editChart) return false
+    if(!editChart.lockedById) return false
+    return editChart.lockedById !== user?.id
+  },[editChart, user?.id])
 
   
   return (
@@ -192,7 +206,7 @@ export function ChartsPage() {
           </Box>
         )}
       </Box>
-      <Dialog fullScreen open={dialogOpen} onClose={() => setDialogOpen(false)}>
+      <Dialog fullScreen open={dialogOpen} onClose={onEditChartdialogClose}>
         <AppBar position="relative">
           <Toolbar>
             <IconButton
@@ -215,13 +229,13 @@ export function ChartsPage() {
               }}
             >
               <RequirePermissions required={[Permission.CHART_UPDATE]}>
-                {!readonly ? (
+                {!readonly && !isChartLocked() ? (
                   <FormControlLabel
                     style={{ background: "#7676c4" }}
                     control={
                       <Switch
                         checked={editMode}
-                        onChange={(e) => setEditMode(e.target.checked)}
+                        onChange={(e) => onEditSwitchToggle(e.target.checked)}
                         color="primary"
                       />
                     }
@@ -249,7 +263,7 @@ export function ChartsPage() {
             key={`edit-${editChart.id}-${editMode}`}
             chart={editChart}
             setChart={setEditChart}
-            editMode={editMode}
+            editMode={!isChartLocked() && editMode}
             setMadeChanges={setEditorMadeChanges}
             ref={chartEditorRef}
           />

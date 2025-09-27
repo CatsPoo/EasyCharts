@@ -19,7 +19,8 @@ export const ChartSchema = IdentifiableSchema.extend({
   devicesOnChart: z.array(DeviceOnChartSchema),
   linesOnChart: z.array(LineOnChartSchema),
   createdAt:z.date(),
-  createdById:z.string()
+  createdById:z.string(),
+  lockedById : z.string().nullable().default(null)
 });
 
 export const ChartCreateSchema = z.object({
