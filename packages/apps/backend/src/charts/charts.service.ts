@@ -1,8 +1,10 @@
 // src/charts/charts.service.ts
 import {
+  ChartLock,
   HandleInfo,
   Line,
   LineOnChart,
+  LockState,
   Port,
   SIDES,
   type Chart,
@@ -77,6 +79,15 @@ export class ChartsService {
     return bySide;
   }
 
+  getLockFromChartEntity = (chartEntiy:ChartEntity) : ChartLock =>{
+    return {
+      chartId:chartEntiy.id,
+      lockedAt:chartEntiy.lockedAt,
+      lockedById:chartEntiy.lockedById,
+      lockedByName:chartEntiy.lockedBy.username ?? "",
+    } as ChartLock
+  }
+
   convertDeviceOnChartEntity = async (
     deviceonChartEntity: DeviceOnChartEntity
   ): Promise<DeviceOnChart> => {
@@ -118,6 +129,7 @@ export class ChartsService {
     return {
       devicesOnChart: convertedDeviceOnCharts,
       linesOnChart: convertedLinesOnChart,
+      lock: this.getLockFromChartEntity(chartEnrity),
       ...chartData,
     } as Chart;
   };
@@ -173,25 +185,35 @@ export class ChartsService {
     return this.convertChartEntityToChart(newChart);
   }
 
+  convertChartToChartMetadata(chartEntity:ChartEntity) : ChartMetadata{
+      const {createdAt,createdById,description,id,name} = chartEntity
+      return {
+        createdAt,
+        createdById,
+        description,
+        id,
+        name,
+        lock:this.getLockFromChartEntity(chartEntity)
+      } as ChartMetadata
+  }
   async getAllUserChartsMetadata(userId: string): Promise<ChartMetadata[]> {
     const charts = await this.chartRepo.find({
-      select: ["id", "name", "description"],
       where: { createdById: userId },
     });
-
-    return charts as ChartMetadata[];
+    
+    return charts.map(c=>{
+      return this.convertChartToChartMetadata(c)
+    }) as ChartMetadata[]
   }
   async getChartMetadataById(id: string): Promise<ChartMetadata> {
     const chart = await this.chartRepo.findOne({
       where: { id },
-      select: ["id", "name", "description"], // Only the metadata fields
     });
 
     if (!chart) {
       throw new NotFoundException(`Chart with ID ${id} not found`);
     }
-
-    return chart as ChartMetadata;
+    return this.convertChartToChartMetadata(chart)
   }
 
   async updateChart(chartId: string, dto: ChartUpdate,userId:string): Promise<Chart> {
@@ -419,16 +441,25 @@ export class ChartsService {
       .then(() => this.portsService.recomputePortsInUse());
   }
 
-  async lockChart(chartId:string,userId:string) : Promise<void>{
-    const chart : ChartEntity | null = await this.chartRepo.findOne({where:{id:chartId}})
+  async lockChart(chartId:string,userId:string) : Promise<ChartLock>{
+    const chart : ChartEntity | null = await this.chartRepo.findOne({where:{id:chartId},relations:{createdBy:true}})
     if(!chart)
       throw new ChartNotFoundExeption(chartId)
     if(chart.lockedById && chart.lockedById !== userId)
       throw new ChartIsLockedExeption(chartId,chart.lockedById)
-    if(chart.lockedById && chart.lockedById === userId) return
+    if(!chart.lockedById){
+      chart.lockedById = userId;
+      chart.lockedAt = new Date();
+      await this.chartRepo.save(chart);
+    }
+    return {
+      chartId,
+      state:LockState.MINE,
+      lockedById:chart.lockedById,
+      lockedByName:chart.lockedBy.username,
+      lockedAt:chart.lockedAt
+    } as ChartLock
 
-    chart.lockedById = userId
-    this .chartRepo.save(chart)
   }
 
   async unlockChart(chartId:string,userId:string) : Promise<void>{
@@ -442,6 +473,7 @@ export class ChartsService {
       throw new BadRequestException(`Chart ${chartId} already locked by user ${chart.lockedById}`)
 
     chart.lockedById = null
+    chart.lockedAt = null
     this .chartRepo.save(chart)
   }
 }

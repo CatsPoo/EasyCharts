@@ -39,6 +39,9 @@ export class ChartEntity {
   @JoinColumn({ name: "created_by_id" })
   createdBy!: Relation<UserEntity>;
 
+  @Column({ name: "locked_at", type: "timestamptz",nullable:true })
+  lockedAt:Date | null
+
   @Index("idx_charts_created_by")
   @Column({ name: "locked_by_id", type: "uuid",nullable:true,default:null })
   lockedById?: string | null;
