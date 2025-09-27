@@ -14,6 +14,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Req,
   UseGuards,
   UsePipes,
   ValidationPipe,
@@ -39,8 +40,8 @@ export class ChartsController {
 
   @RequirePermissions(Permission.CHART_READ)
   @Get("metadata")
-  async getAllChartMetadata(): Promise<ChartMetadata[]> {
-    return this.chartService.getAllChartsMetadata();
+  async getAllChartMetadata(@Req() req: {user:string}): Promise<ChartMetadata[]> {
+    return this.chartService.getAllUserChartsMetadata(req.user);
   }
 
   @RequirePermissions(Permission.CHART_READ)
@@ -60,8 +61,8 @@ export class ChartsController {
   @RequirePermissions(Permission.CHART_CREATE)
   @Post()
   @UsePipes(new ZodValidationPipe(ChartCreateSchema))
-  create(@Body() dto: ChartCreate) {
-    return this.chartService.createChart(dto);
+  create(@Body() dto: ChartCreate,@Req() req: {user:string}) {
+    return this.chartService.createChart(req.user, dto);
   }
 
   @RequirePermissions(Permission.CHART_DELETE)

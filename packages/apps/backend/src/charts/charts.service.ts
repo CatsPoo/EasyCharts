@@ -94,7 +94,6 @@ export class ChartsService {
     } as LineOnChart;
   }
 
-  //TODO all lines to convertion function
   convertChartEntityToChart = async (chartEnrity: ChartEntity): Promise<Chart> => {
     const { devicesOnChart,linesOnChart, ...chartData } = chartEnrity;
     const convertedDeviceOnCharts : DeviceOnChart[] = []
@@ -149,11 +148,11 @@ export class ChartsService {
     return await this.convertChartEntityToChart(chart);
   }
 
-  //TODO Add lines to create dto
-  async createChart(dto: ChartCreate): Promise<Chart> {
+  async createChart(createdById:string,dto: ChartCreate): Promise<Chart> {
     const chart: ChartEntity = this.chartRepo.create({
       name: dto.name,
       description: dto.description,
+      createdById,
       devicesOnChart: dto.devicesOnChart.map((dl) => ({
         deviceId: dl.device.id,
         position: dl.position,
@@ -163,9 +162,10 @@ export class ChartsService {
     return this.convertChartEntityToChart(newChart);
   }
 
-  async getAllChartsMetadata(): Promise<ChartMetadata[]> {
+  async getAllUserChartsMetadata(userId:string): Promise<ChartMetadata[]> {
     const charts = await this.chartRepo.find({
       select: ["id", "name", "description"],
+      where:{createdById : userId}
     });
 
     return charts as ChartMetadata[];
