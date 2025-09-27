@@ -39,16 +39,15 @@ export function useChartLock(userId:string,chartId?: string) {
     mutationFn: () => unlockChart(chartId!),
   });
 
-  const calcLockState = useMemo(()=>{
-    return !lockQ.data?.lockedById ? LockState.UNLOCKED :
-    lockQ.data.lockedById === userId ? LockState.MINE :
-    LockState.OTHERs
-  },[lockQ, userId])
 
   return {
-    lock: 
-    {...lockQ.data,
-        state:calcLockState
+    lock: {
+      ...lockQ.data,
+      state: !lockQ.data?.lockedById
+        ? LockState.UNLOCKED
+        : lockQ.data.lockedById === userId
+        ? LockState.MINE
+        : LockState.OTHERs,
     } as ChartLock,
     isLoading: lockQ.isLoading,
     refetch: lockQ.refetch,
@@ -56,6 +55,5 @@ export function useChartLock(userId:string,chartId?: string) {
     unlockChart: () => releaseMut.mutateAsync(),
     locking: acquireMut.isPending,
     unlocking: releaseMut.isPending,
-    
   };
 }

@@ -41,7 +41,7 @@ export function ChartsPage() {
 
   const chartEditorRef = useRef<ChartEditorHandle>(null);
 
-  const {lock,lockChart,unlockChart,locking,unlocking,refetch,isLoading} = useChartLock(selectedId)
+  const {lock,lockChart,unlockChart,locking,unlocking,refetch,isLoading} = useChartLock(user!.id,selectedId || undefined)
   const readonly = false;
 
   const nope = useCallback(()=>{return} ,[])
@@ -50,9 +50,9 @@ export function ChartsPage() {
   }, [tab]);
 
   const onEditChartdialogClose = useCallback(async ()=>{
-    if(editChart?.id) await unlockChart()
+    if(lock.state === LockState.MINE) await unlockChart()
     setDialogOpen(false)
-  },[editChart?.id, unlockChart])
+  },[lock.state, unlockChart])
 
 
   const {
@@ -89,7 +89,7 @@ export function ChartsPage() {
         return;
       }
     }
-    if(editChart?.id) await unlockChart(editChart?.id)
+    if(lock.state === LockState.MINE) await unlockChart()
     setDialogOpen(false);
     setSelectedId("");
     setEditMode(false);
@@ -225,7 +225,8 @@ export function ChartsPage() {
               }}
             >
               <RequirePermissions required={[Permission.CHART_UPDATE]}>
-                {!readonly && lock.state !== LockState.OTHERs ? (
+                {
+                !readonly && lock.state !== LockState.OTHERs ? (
                   <FormControlLabel
                     style={{ background: "#7676c4" }}
                     control={
