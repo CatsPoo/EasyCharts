@@ -43,7 +43,7 @@ export function ChartsPage() {
 
   const chartEditorRef = useRef<ChartEditorHandle>(null);
 
-  const {lock,lockChart,unlockChart,locking,unlocking,refetch,isLoading} = useChartLock(user!.id,selectedId || undefined)
+  const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,refetch,isLoading} = useChartLock(user!.id,selectedId || undefined)
   const readonly = false;
 
   const nope = useCallback(()=>{return} ,[])
@@ -52,9 +52,8 @@ export function ChartsPage() {
   }, [tab]);
 
   const onEditChartdialogClose = useCallback(async ()=>{
-    if(lock.state === LockState.MINE) await unlockChart()
-    setDialogOpen(false)
-  },[lock.state, unlockChart])
+    if(lockState === LockState.MINE) await unlockChart()
+  },[lockState, unlockChart])
 
 
   const {
@@ -63,10 +62,20 @@ export function ChartsPage() {
     error: selectedChartError,
   } = useChartById(selectedId ?? "");
 
-  const onEditSwitchToggle = useCallback((newVal:boolean)=>{
-    setEditMode(newVal)
-    if(editChart?.id && newVal) lockChart()
-  },[editChart?.id, lockChart])
+  const onEditSwitchToggle = useCallback(async (checked:boolean)=>{
+    try {
+      if (checked) {
+        await lockChart();
+        setEditMode(true);
+      } else {
+        await unlockChart();
+        setEditMode(false);
+      }
+    } catch (e) {
+      // optional: toast error
+      console.error(e);
+    }
+  },[lockChart, unlockChart])
 
   const handleEdit = (chartId: string) => {
     setSelectedId(chartId);
@@ -91,7 +100,7 @@ export function ChartsPage() {
         return;
       }
     }
-    if(lock.state === LockState.MINE) await unlockChart()
+    if(lockState === LockState.MINE) await unlockChart()
     setDialogOpen(false);
     setSelectedId("");
     setEditMode(false);
@@ -107,6 +116,7 @@ export function ChartsPage() {
       if( ! saved)
         throw new Error('Unable to save the chart')
       // do any parent-side updates you want
+      await unlockChart()
       setSelectedId(saved.id);
       setDialogOpen(false);
       setEditorMadeChanges(false);
@@ -204,7 +214,7 @@ export function ChartsPage() {
           </Box>
         )}
       </Box>
-      <Dialog fullScreen open={dialogOpen} onClose={onEditChartdialogClose}>
+      <Dialog fullScreen open={dialogOpen}>
         <AppBar position="relative">
           <Toolbar>
             <IconButton
@@ -228,13 +238,14 @@ export function ChartsPage() {
             >
               <LockStatusChip
                 lock={lock}
+                lockState={lockState}
                 isLoading={isLoading}
                 locking={locking}
                 unlocking={unlocking}
               />
               <RequirePermissions required={[Permission.CHART_UPDATE]}>
                 {!readonly &&
-                lock?.state !== LockState.OTHERs /* or OTHERs */ ? (
+                lockState !== LockState.OTHERs /* or OTHERs */ ? (
                   <FormControlLabel
                     sx={{
                       ml: 1,
@@ -248,6 +259,7 @@ export function ChartsPage() {
                       <Switch
                         checked={editMode}
                         onChange={(e) => onEditSwitchToggle(e.target.checked)}
+                        disabled={locking || unlocking}
                         color="default"
                       />
                     }
@@ -269,15 +281,15 @@ export function ChartsPage() {
             )}
           </Toolbar>
         </AppBar>
-        <Collapse in={!!lock && lock.state !== LockState.UNLOCKED}>
-          {lock?.state === LockState.MINE ? (
+        <Collapse in={!!lock && lockState !== LockState.UNLOCKED}>
+          {lockState === LockState.MINE ? (
             <Alert severity="success" sx={{ borderRadius: 0 }}>
               You’re editing this chart. Others are in read-only mode.
             </Alert>
-          ) : lock?.state === LockState.OTHERs ? (
+          ) : lockState === LockState.OTHERs ? (
             <Alert severity="warning" sx={{ borderRadius: 0 }}>
               This chart is locked by{" "}
-              <strong>{lock.lockedByName ?? "another user"}</strong>. You can
+              <strong>{lock?.lockedByName ?? "another user"}</strong>. You can
               view but cannot edit.
             </Alert>
           ) : null}
@@ -288,7 +300,7 @@ export function ChartsPage() {
             key={`edit-${editChart.id}-${editMode}`}
             chart={editChart}
             setChart={setEditChart}
-            editMode={lock.state !== LockState.OTHERs && editMode}
+            editMode={lockState !== LockState.OTHERs && editMode}
             setMadeChanges={setEditorMadeChanges}
             ref={chartEditorRef}
           />
