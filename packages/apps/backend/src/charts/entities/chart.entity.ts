@@ -12,6 +12,7 @@ import {
 import { DeviceOnChartEntity } from "./deviceOnChart.entityEntity";
 import { LineOnChartEntity } from "./lineonChart.emtity";
 import { UserEntity } from "../../auth/entities/user.entity";
+import { BondOnChartEntity } from "./BondOnChart.emtity";
 
 @Entity({ name: "charts" })
 export class ChartEntity {
@@ -60,4 +61,10 @@ export class ChartEntity {
     orphanedRowAction: "delete",
   })
   linesOnChart!: Relation<LineOnChartEntity[]>;
+
+  @OneToMany(() => BondOnChartEntity, (boc) => boc.chart, {
+    cascade: ["insert", "update"],
+    orphanedRowAction: "delete",
+  })
+  bondOnChart!: Relation<BondOnChartEntity[]>;
 }

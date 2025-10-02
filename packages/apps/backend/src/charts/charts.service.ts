@@ -1,5 +1,6 @@
 // src/charts/charts.service.ts
 import {
+  BondOnChart,
   ChartLock,
   HandleInfo,
   Line,
@@ -34,6 +35,8 @@ import { PortOnChartEntity } from "./entities/portOnChart.entity";
 import { ChartIsLockedExeption } from "./exeptions/chartIsLocked.exeption";
 import { ChartNotFoundExeption } from "./exeptions/chartNotFound.exeption";
 import { ChartLockFeilds } from "./chartLockes.types";
+import { BondOnChartEntity } from "./entities/BondOnChart.emtity";
+
 @Injectable()
 export class ChartsService {
   constructor(
@@ -44,7 +47,7 @@ export class ChartsService {
 
     private readonly devicesService: DevicesService,
     private readonly linesService: LinessService,
-    private readonly portsService: PortsService
+    private readonly portsService: PortsService,
   ) {}
 
   convertPortEntityToPort(portEntity: PortEntity): Port {
@@ -112,10 +115,17 @@ export class ChartsService {
     } as LineOnChart;
   };
 
+  convertBondOnChartEntity(bondonChartEntity : BondOnChartEntity) : BondOnChart{
+    return {
+      bond: this.linesService.convertBondEntitytoBond(bondonChartEntity.bond),
+      chartId:bondonChartEntity.chartId
+    } as BondOnChart
+  }
+
   convertChartEntityToChart = async (
     chartEnrity: ChartEntity
   ): Promise<Chart> => {
-    const { devicesOnChart, linesOnChart, ...chartData } = chartEnrity;
+    const { devicesOnChart, linesOnChart,bondOnChart, ...chartData } = chartEnrity;
     const convertedDeviceOnCharts: DeviceOnChart[] = [];
     for (const dl of devicesOnChart) {
       convertedDeviceOnCharts.push(await this.convertDeviceOnChartEntity(dl));
@@ -126,10 +136,15 @@ export class ChartsService {
       convertedLinesOnChart.push(await this.convertLineonChartEntity(ll));
     }
 
+    const convertedBondOnChart : BondOnChart[] = []
+    for(const bond of bondOnChart){
+      convertedBondOnChart.push(this.convertBondOnChartEntity(bond))
+    }
     return {
       devicesOnChart: convertedDeviceOnCharts,
       linesOnChart: convertedLinesOnChart,
       lock: this.getLockFromChartEntity(chartEnrity),
+      bondsOnChart:convertedBondOnChart,
       ...chartData,
     } as Chart;
   };
@@ -229,6 +244,7 @@ export class ChartsService {
       const portRepo = manager.getRepository(PortEntity);
       const lineRepo = manager.getRepository(LineEntity);
       const locRepo = manager.getRepository(LineOnChartEntity);
+      const bocRepo = manager.getRepository(BondOnChartEntity)
 
       // ---- 0) Load chart
       const chart = await chartsRepo.findOne({
@@ -397,6 +413,19 @@ export class ChartsService {
           chartId: chartId,
           lineId: Not(In(dto.linesOnChart.map((loc) => loc.line.id))),
         });
+        
+
+        //Bonds
+
+        if(dto.bondsOnChart){
+          for(const boc of dto.bondsOnChart){
+            const requiredMembers : LineEntity[] = await lineRepo.findBy({id:In(boc.bond.membersLines)})
+            if(requiredMembers.length !== boc.bond.membersLines.length) throw new BadRequestException(`One or more from requested members of bond ${boc.bond.id} doesn't exist`)
+            if(! this.linesService.getBondById(boc.bond.id)) await this.linesService.createEmptyBond(boc.bond)
+            await this.linesService.updateBond(boc.bond.id,boc.bond)
+          }
+        }
+
 
         // delete entities permenantly from db
         if (dto.deletes) {
