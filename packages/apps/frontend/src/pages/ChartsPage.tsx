@@ -1,30 +1,37 @@
-import { type Chart } from "@easy-charts/easycharts-types";
+import { LockState, Permission, type Chart } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   Alert,
   AppBar,
   Button,
   CircularProgress,
+  Collapse,
   Dialog,
   FormControlLabel,
   IconButton,
   Switch,
-  Toolbar,
+  Tab,
+  Tabs,
+  Toolbar
 } from "@mui/material";
 import Box from "@mui/material/Box";
 import { AnimatePresence, motion } from "framer-motion";
-import * as React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { RequirePermissions } from "../auth/RequirePermissions";
+import { useAuth } from "../auth/useAuth";
 import AssetTab from "../components/AssetsList/AssetTab";
+import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/chartEditorHandle.interfaces";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { useChartById } from "../hooks/chartsHooks";
-import { ChartEditor } from "../components/ChartEditor/ChartEditor";
+import { useChartLock } from "../hooks/chartsLockHooks";
+import { LockStatusChip } from "../components/ChartEditor/LockStatusClip";
 
 export function ChartsPage() {
-  const [tab, setTab] = React.useState(0);
+  const { user } = useAuth();
+  const [tab, setTab] = useState(0);
   const [selectedId, setSelectedId] = useState<string>("");
   const [editMode, setEditMode] = useState(false);
 
@@ -34,22 +41,41 @@ export function ChartsPage() {
   const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
 
-  const chartEditorRef = React.useRef<ChartEditorHandle>(null);
+  const chartEditorRef = useRef<ChartEditorHandle>(null);
 
+  const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,refetch,isLoading} = useChartLock(user!.id,selectedId || undefined)
   const readonly = false;
 
-  const nope = React.useCallback(()=>{return} ,[])
+  const nope = useCallback(()=>{return} ,[])
   useEffect(() => {
     setSelectedId("");
   }, [tab]);
 
-  // Find the chart object for the currently selected ID (or undefined)
-  //const selectedChart: Chart | undefined = getChart(selectedId);
+  const onEditChartdialogClose = useCallback(async ()=>{
+    if(lockState === LockState.MINE) await unlockChart()
+  },[lockState, unlockChart])
+
+
   const {
     data: selectedChart,
     isLoading: isSelectedChartLoading,
     error: selectedChartError,
   } = useChartById(selectedId ?? "");
+
+  const onEditSwitchToggle = useCallback(async (checked:boolean)=>{
+    try {
+      if (checked) {
+        await lockChart();
+        setEditMode(true);
+      } else {
+        await unlockChart();
+        setEditMode(false);
+      }
+    } catch (e) {
+      // optional: toast error
+      console.error(e);
+    }
+  },[lockChart, unlockChart])
 
   const handleEdit = (chartId: string) => {
     setSelectedId(chartId);
@@ -65,7 +91,7 @@ export function ChartsPage() {
     }
   }, [dialogOpen, selectedChart]);
 
-  const handleDialogClose = () => {
+  const handleDialogClose = async  () => {
     if (editorMageChanges) {
       const leave = window.confirm(
         "You have unsaved changes. Are you sure you want to close without saving?"
@@ -74,6 +100,7 @@ export function ChartsPage() {
         return;
       }
     }
+    if(lockState === LockState.MINE) await unlockChart()
     setDialogOpen(false);
     setSelectedId("");
     setEditMode(false);
@@ -89,6 +116,7 @@ export function ChartsPage() {
       if( ! saved)
         throw new Error('Unable to save the chart')
       // do any parent-side updates you want
+      await unlockChart()
       setSelectedId(saved.id);
       setDialogOpen(false);
       setEditorMadeChanges(false);
@@ -99,11 +127,31 @@ export function ChartsPage() {
       setSaving(false);
     }
   }
-
+  
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        width: "100Vw",
+      }}
+    >
       {/* Top tabs */}
-      <NavBar value={tab} onChange={setTab} />
+      <NavBar>
+        <div className="flex-1">
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            textColor="inherit"
+            indicatorColor="secondary"
+          >
+            <Tab label="My Charts" />
+            <Tab label="Shared Charts" />
+            <Tab label="Assets" />
+          </Tabs>
+        </div>
+      </NavBar>
 
       <Box sx={{ display: "flex", flex: 1 }}>
         <AnimatePresence initial={false}>
@@ -148,7 +196,7 @@ export function ChartsPage() {
               <ChartEditor
                 key={selectedChart.id}
                 chart={selectedChart}
-                setChart={nope} 
+                setChart={nope}
                 editMode={false}
                 setMadeChanges={nope}
               />
@@ -166,7 +214,7 @@ export function ChartsPage() {
           </Box>
         )}
       </Box>
-      <Dialog fullScreen open={dialogOpen} onClose={() => setDialogOpen(false)}>
+      <Dialog fullScreen open={dialogOpen}>
         <AppBar position="relative">
           <Toolbar>
             <IconButton
@@ -188,19 +236,37 @@ export function ChartsPage() {
                 height: 41,
               }}
             >
-              {!readonly ? (
-                <FormControlLabel
-                  style={{ background: "#7676c4" }}
-                  control={
-                    <Switch
-                      checked={editMode}
-                      onChange={(e) => setEditMode(e.target.checked)}
-                      color="primary"
-                    />
-                  }
-                  label={editMode ? "Edit Mode" : "View Mode"}
-                />
-              ) : null}
+              <LockStatusChip
+                lock={lock}
+                lockState={lockState}
+                isLoading={isLoading}
+                locking={locking}
+                unlocking={unlocking}
+              />
+              <RequirePermissions required={[Permission.CHART_UPDATE]}>
+                {!readonly &&
+                lockState !== LockState.OTHERs /* or OTHERs */ ? (
+                  <FormControlLabel
+                    sx={{
+                      ml: 1,
+                      px: 1,
+                      borderRadius: 1,
+                      bgcolor: "#7676c4",
+                      color: "white",
+                      "& .MuiFormControlLabel-label": { fontWeight: 600 },
+                    }}
+                    control={
+                      <Switch
+                        checked={editMode}
+                        onChange={(e) => onEditSwitchToggle(e.target.checked)}
+                        disabled={locking || unlocking}
+                        color="default"
+                      />
+                    }
+                    label={editMode ? "Edit Mode" : "View Mode"}
+                  />
+                ) : null}
+              </RequirePermissions>
               <ThemeToggleButton />
             </div>
             {editMode && (
@@ -215,13 +281,26 @@ export function ChartsPage() {
             )}
           </Toolbar>
         </AppBar>
+        <Collapse in={!!lock && lockState !== LockState.UNLOCKED}>
+          {lockState === LockState.MINE ? (
+            <Alert severity="success" sx={{ borderRadius: 0 }}>
+              You’re editing this chart. Others are in read-only mode.
+            </Alert>
+          ) : lockState === LockState.OTHERs ? (
+            <Alert severity="warning" sx={{ borderRadius: 0 }}>
+              This chart is locked by{" "}
+              <strong>{lock?.lockedByName ?? "another user"}</strong>. You can
+              view but cannot edit.
+            </Alert>
+          ) : null}
+        </Collapse>
 
         {editChart && (
           <ChartEditor
             key={`edit-${editChart.id}-${editMode}`}
             chart={editChart}
             setChart={setEditChart}
-            editMode={editMode}
+            editMode={lockState !== LockState.OTHERs && editMode}
             setMadeChanges={setEditorMadeChanges}
             ref={chartEditorRef}
           />

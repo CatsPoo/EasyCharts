@@ -1,19 +1,18 @@
 import { type Chart, type ChartMetadata, type ChartCreate, type ChartUpdate, ChartUpdateSchema } from '@easy-charts/easycharts-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { http } from '../api/http';
 
 
 export async function createChart(dto: ChartCreate): Promise<Chart> {
-  const res = await fetch(`api/charts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(dto),
-    credentials: "include",
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || `Failed to create chart (${res.status})`);
+  try{
+    const { data }= await http.post<Chart>("/charts", dto);
+    return data
   }
-  return res.json();
+  catch (err: any) {
+    // Nice error extraction (works with NestJS's { message } or { message: string[] })
+    const m = err?.response?.data?.message ?? err?.message ?? "Failed to create chart";
+    throw new Error(Array.isArray(m) ? m.join(", ") : m);
+  }
 }
 
 export function useCreateChartMutation() {
@@ -28,11 +27,13 @@ export function useCreateChartMutation() {
 }
 
 export async function getChartsMetadata(): Promise<ChartMetadata[]> {
-  const response = await fetch('/api/charts/metadata'); // adjust base path if needed
-  if (!response.ok) {
+  try{
+    const {data} = await http.get<ChartMetadata[]>('/charts/metadata');
+    return data
+  }
+  catch(err:any){
     throw new Error('Failed to fetch chart metadata');
   }
-  return await response.json();
 }
 
 export function useChartsMetadataQuery() {
@@ -43,11 +44,13 @@ export function useChartsMetadataQuery() {
 }
 
 export async function getChartById(chartId: string): Promise<Chart> {
-  const response = await fetch(`/api/charts/${chartId}`);
-  if (!response.ok) {
+  try{
+    const {data} = await http.get<Chart>(`/charts/${chartId}`);
+    return data
+  }
+  catch(err:any){
     throw new Error(`Failed to fetch metadata for chart ID: ${chartId}`);
   }
-  return await response.json() as Chart;
 }
 
 export function useChartById(id: string) {
@@ -58,17 +61,14 @@ export function useChartById(id: string) {
   });
 }
 
-export async function updateChart(id: string, data: ChartUpdate): Promise<Chart> {
-  const res = await fetch(`/api/charts/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || `Failed to update chart (${res.status})`);
+export async function updateChart(id: string, dto: ChartUpdate): Promise<Chart> {
+  try{
+    const {data} = await http.patch<Chart>(`/charts/${id}`, dto);
+    return data
   }
-   return (await res.json()) as Chart;
+  catch(err:any){
+    throw new Error(err || `Failed to update chart ${err}`);
+  }
 }
 
 export function useUpdateChartMutation() {
@@ -81,7 +81,7 @@ export function useUpdateChartMutation() {
       qc.setQueryData(['chart', saved.id], saved);
 
       // AND/OR invalidate so useChartById refetches:
-      qc.invalidateQueries({ queryKey: ['chart', vars.id] });
+      qc.invalidateQueries({ queryKey: ['chart', saved.id] });
 
       // if your list shows names, also refresh metadata list
       qc.invalidateQueries({ queryKey: ['chartsMetadata'] });
@@ -90,13 +90,11 @@ export function useUpdateChartMutation() {
 }
 
 export async function deleteChart(id: string): Promise<void> {
-  const res = await fetch(`/api/charts/${id}`, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || `Failed to delete chart (${res.status})`);
+  try{
+    await http.delete<void>(`/charts/${id}`);
+  }
+  catch(err:any){
+    throw new Error(err || `Failed to delete chart)`);
   }
 }
 
@@ -115,5 +113,3 @@ export function useDeleteChartMutation() {
     },
   });
 }
-
-

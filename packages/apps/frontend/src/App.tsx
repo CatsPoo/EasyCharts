@@ -1,17 +1,11 @@
-import { ReactFlowProvider } from "reactflow";
-import { ThemeModeProvider } from "./contexts/ThemeModeContext";
-import { ChartsPage } from "./pages/ChartsPage";
+import { BrowserRouter } from "react-router-dom";
+import { AppRoutes } from "./AppRoute";
 
-function App() {
+
+export default function App() {
   return (
-    <ThemeModeProvider>
-      <div className="w-screen h-screen">
-        <ReactFlowProvider>
-          <ChartsPage />
-        </ReactFlowProvider>
-      </div>
-    </ThemeModeProvider>
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
 }
-
-export default App;

@@ -1,4 +1,4 @@
-import type { ChartCreate } from "@easy-charts/easycharts-types";
+import { Permission, type ChartCreate } from "@easy-charts/easycharts-types";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import { Fab, IconButton, LinearProgress, Tooltip } from "@mui/material";
@@ -16,6 +16,7 @@ import {
 import { CreateChartDialog } from "../CreateChartDialog";
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { ConfirmDialog } from "../DeleteAlertDialog";
+import { RequirePermissions } from "../../auth/RequirePermissions";
 
 interface chartsSidebarProps {
   onSelect: (Chartid: string) => void;
@@ -76,7 +77,9 @@ export function ChartListSidebar({
     
   },[deletemut, onSelect, pandingChartToDelete])
   
-  return (isChartsMetadataLoading)? <LinearProgress /> :(
+  return isChartsMetadataLoading ? (
+    <LinearProgress />
+  ) : (
     <Box
       sx={(t) => ({
         width: "100%",
@@ -91,7 +94,7 @@ export function ChartListSidebar({
       })}
     >
       {isMyCharts && (
-        <>
+        <RequirePermissions required={[Permission.CHART_CREATE]}>
           <Tooltip title="Add chart">
             <Fab
               color="primary"
@@ -111,15 +114,15 @@ export function ChartListSidebar({
           />
           {/*when user system with permition will be build, move this dialog to privilaged component area */}
           <ConfirmDialog
-          onCancel={onDeleteDialogClose}
-          onConfirm={onDeleteDialogConfirm}
-          open={openDeleteDialog}
-          confirmText="Delete"
-          confirmColor="error"
-          description="Are you shure you want to permenently delete chart"
-          cancelText="Cancel"/>
-        
-        </>
+            onCancel={onDeleteDialogClose}
+            onConfirm={onDeleteDialogConfirm}
+            open={openDeleteDialog}
+            confirmText="Delete"
+            confirmColor="error"
+            description="Are you shure you want to permenently delete chart"
+            cancelText="Cancel"
+          />
+        </RequirePermissions>
       )}
       <List>
         {(chartsMeatadata ?? []).map((chart) => (
@@ -128,10 +131,11 @@ export function ChartListSidebar({
             disablePadding
             secondaryAction={
               <div>
-                {/*when user system with permition will be build, move this dialog to privilaged component area */}
-                <IconButton edge="end" onClick={() => onDelete(chart.id)}>
-                  <DeleteForeverIcon/>
-                </IconButton>
+                <RequirePermissions required={[Permission.CHART_DELETE]}>
+                  <IconButton edge="end" onClick={() => onDelete(chart.id)}>
+                    <DeleteForeverIcon />
+                  </IconButton>
+                </RequirePermissions>
                 <IconButton edge="end" onClick={() => onEdit(chart.id)}>
                   <ArrowForwardIosIcon />
                 </IconButton>

@@ -12,33 +12,25 @@ import { VendorsService } from './vendors.service';
 import { PortEntity } from './entities/port.entity';
 import { PortsController } from './ports.controller';
 import { PortsService } from './ports.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-    imports:[
-        TypeOrmModule.forFeature([
-            DeviceEntity,
-            VendorEntity,
-            ModelEntity,
-            PortEntity
-        ]),
-    ],
-    controllers:[
-        DevicesController,
-        VendorsController,
-        ModelsController,
-        PortsController
-    ],
-    providers:[
-        DevicesService,
-        VendorsService,
-        ModelsService,
-        PortsService
-    ],
-    exports:[
-        DevicesService,
-        VendorsService,
-        ModelsService,
-        PortsService
-    ]
+  imports: [
+    TypeOrmModule.forFeature([
+      DeviceEntity,
+      VendorEntity,
+      ModelEntity,
+      PortEntity,
+    ]),
+    AuthModule,
+  ],
+  controllers: [
+    DevicesController,
+    VendorsController,
+    ModelsController,
+    PortsController,
+  ],
+  providers: [DevicesService, VendorsService, ModelsService, PortsService],
+  exports: [DevicesService, VendorsService, ModelsService, PortsService],
 })
 export class DevicesModule {}

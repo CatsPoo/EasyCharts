@@ -7,6 +7,7 @@ import { ChartsModule } from "../charts/charts.module";
 import { AppConfigModule } from '../appConfig/appConfig.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppConfigService } from '../appConfig/appConfig.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AppConfigService } from '../appConfig/appConfig.service';
     LinesModule,
     ChartsModule,
     AppConfigModule,
+    AuthModule,
     TypeOrmModule.forRootAsync({
       imports: [AppConfigModule],
       inject:  [AppConfigService],
@@ -25,6 +27,7 @@ import { AppConfigService } from '../appConfig/appConfig.service';
         password:    configService.getConfig().database.password,
         database:    configService.getConfig().database.database_name,
 
+        logging: ['error', 'warn'],
         autoLoadEntities: true,
         synchronize: true,
       }),
