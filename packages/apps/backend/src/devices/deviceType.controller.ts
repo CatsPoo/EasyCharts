@@ -9,15 +9,23 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
-  UseGuards
+  Query,
+  UseGuards,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../common/zodValidation.pipe";
 import { DeviceTypeService } from "./deviceType.service";
 import { JwdAuthGuard } from "../auth/guards/jwtAuth.guard";
 import { PermissionsGuard } from "../auth/guards/permissions.guard";
 import { RequirePermissions } from "../auth/decorators/permissions.decorator";
-import { type DeviceTypeCreate, DeviceTypeCreateSchema, type DeviceTypeUpdate, DeviceTypeUpdateSchema, Permission } from "@easy-charts/easycharts-types";
-@UseGuards(JwdAuthGuard,PermissionsGuard)
+import {
+  type DeviceTypeCreate,
+  DeviceTypeCreateSchema,
+  type DeviceTypeUpdate,
+  DeviceTypeUpdateSchema,
+  Permission,
+} from "@easy-charts/easycharts-types";
+import { QueryDto } from "../query/dto/query.dto";
+@UseGuards(JwdAuthGuard, PermissionsGuard)
 @Controller("deviceType")
 export class DeviceTypeController {
   constructor(private readonly DeviceTypeService: DeviceTypeService) {}
@@ -26,15 +34,17 @@ export class DeviceTypeController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(
-    @Body(new ZodValidationPipe(DeviceTypeCreateSchema)) payload: DeviceTypeCreate) {
+    @Body(new ZodValidationPipe(DeviceTypeCreateSchema))
+    payload: DeviceTypeCreate
+  ) {
     return this.DeviceTypeService.createDeviceType(payload);
   }
 
-//   @RequirePermissions(Permission.ASSET_READ)
-//   @Get()
-//   list(@Query() q: ListDeviceTypesQueryDto) {
-//     return this.DeviceTypeService.listDeviceTypes(q);
-//   }
+  @RequirePermissions(Permission.ASSET_READ)
+  @Get()
+  list(@Query() q: QueryDto) {
+    return this.DeviceTypeService.listDeviceType(q);
+  }
 
   @RequirePermissions(Permission.ASSET_READ)
   @Get(":id")
@@ -46,7 +56,8 @@ export class DeviceTypeController {
   @Put(":id")
   update(
     @Param("id", new ParseUUIDPipe()) id: string,
-    @Body(new ZodValidationPipe(DeviceTypeUpdateSchema)) payload: DeviceTypeUpdate
+    @Body(new ZodValidationPipe(DeviceTypeUpdateSchema))
+    payload: DeviceTypeUpdate
   ) {
     return this.DeviceTypeService.updateDeviceType(id, payload);
   }
