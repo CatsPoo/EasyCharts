@@ -6,6 +6,6 @@ export const BondCreateSchema = z.object({
   membersLines:z.array(z.string().uuid())
 });
 
-export const BondUpdateSchema = BondCreateSchema.partial();
+export const BondUpdateSchema = BondCreateSchema.partial().omit({id:true});
 
 export const BondSchema = BondCreateSchema

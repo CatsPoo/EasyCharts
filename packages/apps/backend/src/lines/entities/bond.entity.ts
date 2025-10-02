@@ -14,6 +14,6 @@ export class BondEntity {
   @Column()
   name:string
 
-  @OneToMany(() => LineEntity, (line) => line.bond)
+  @OneToMany(() => LineEntity, (line) => line.bond,{ eager: true })
   members!: LineEntity[];
 }
