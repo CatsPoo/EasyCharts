@@ -5,6 +5,7 @@ export interface appConfigSchema{
     jwt:JwtSignOptions,
     refreshJwt : JwtSignOptions,
     redis:redisConfig,
+    defaultAdminUser:DefaultAdminUserConfig
 }
 
 export interface databaseConfig {
@@ -20,4 +21,9 @@ export interface redisConfig {
   password:string,
   host:string,
   port:number
+}
+
+export interface DefaultAdminUserConfig{
+  username:string,
+  password:string
 }

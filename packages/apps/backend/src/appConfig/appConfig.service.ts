@@ -28,6 +28,10 @@ export class AppConfigService {
         host: this.configService.get<string>("REDIS_HOST", ""),
         port: this.configService.get<number>("REDIS_PORT", 1234),
       },
+      defaultAdminUser:{
+        username:this.configService.get<string>("DEFAULT_ADMIN_USERNAME","admin"),
+        password:this.configService.get<string>("DEFAULT_ADMIN_PASSWORD","admin"),
+      }
     };
   }
 
