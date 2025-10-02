@@ -2,6 +2,7 @@ import z from "zod";
 import { DeviceOnChartSchema } from "./deviceOnChart.schemas.js";
 import { IdentifiableSchema } from "../../generic.schema.js";
 import { LineOnChartSchema } from "./lineOnChart.schemas.js";
+import { ChartLockSchema } from "./chartsLocks.schema.js";
 
 
 
@@ -19,7 +20,8 @@ export const ChartSchema = IdentifiableSchema.extend({
   devicesOnChart: z.array(DeviceOnChartSchema),
   linesOnChart: z.array(LineOnChartSchema),
   createdAt:z.date(),
-  createdById:z.string()
+  createdById:z.string(),
+  lock : ChartLockSchema.optional().nullable().default(null)
 });
 
 export const ChartCreateSchema = z.object({

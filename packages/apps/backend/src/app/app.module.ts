@@ -27,6 +27,7 @@ import { AuthModule } from '../auth/auth.module';
         password:    configService.getConfig().database.password,
         database:    configService.getConfig().database.database_name,
 
+        logging: ['error', 'warn'],
         autoLoadEntities: true,
         synchronize: true,
       }),
