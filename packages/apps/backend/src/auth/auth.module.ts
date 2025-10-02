@@ -13,6 +13,7 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 import { RefreshStrategy } from "./strategies/refreshstrategy";
 import { PermissionsGuard } from "./guards/permissions.guard";
 import { JwdAuthGuard } from "./guards/jwtAuth.guard";
+import { BootstrapSeederService } from "./bootstrapSeeder.service";
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserEntity]),
@@ -24,7 +25,7 @@ import { JwdAuthGuard } from "./guards/jwtAuth.guard";
     }),
 ],
   controllers: [UsersController, AuthController],
-  providers: [UsersService, AuthService, LocalStrategy,JwtStrategy,RefreshStrategy],
+  providers: [UsersService, AuthService, LocalStrategy,JwtStrategy,RefreshStrategy,BootstrapSeederService],
   exports: [UsersService],
 })
 export class AuthModule {}
