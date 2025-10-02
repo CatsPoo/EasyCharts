@@ -21,7 +21,11 @@ import {
   useUpdateAsset,
   useDeleteAsset,
 } from "../../hooks/assetsHooks";
-import { type AssetKind, type AnyAsset, Permission } from "@easy-charts/easycharts-types";
+import {
+  type AssetKind,
+  type AnyAsset,
+  Permission,
+} from "@easy-charts/easycharts-types";
 import { AssetForm } from "./AssetsForm";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import { RequirePermissions } from "../../auth/RequirePermissions";
@@ -58,7 +62,6 @@ export default function AssetTab() {
   const deleteMut = useDeleteAsset(kind);
 
   const singular = (k: AssetKind) => (k.endsWith("s") ? k.slice(0, -1) : k);
-
 
   const onDeleteDialogConfirm = useCallback(() => {
     if (!pendingDelete) return;
@@ -132,6 +135,7 @@ export default function AssetTab() {
         })}
       >
         <Tab label="Devices" value="devices" />
+        <Tab label="Device Types" value="types"/>
         <Tab label="Vendors" value="vendors" />
         <Tab label="Models" value="models" />
       </Tabs>

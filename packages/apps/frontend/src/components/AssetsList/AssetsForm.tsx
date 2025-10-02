@@ -18,9 +18,12 @@ import { AssetsSelectionList } from "./AsetsSelectionList.component";
 const schemas = {
   devices: z.object({
     name: z.string().min(1),
-    type: z.string().min(1),
+    typeId: z.string().min(1),
     modelId: z.string().min(1), 
     ipAddress: z.ipv4()
+  }),
+    types: z.object({
+    name: z.string().min(1),
   }),
   models: z.object({
     name: z.string().min(1),
@@ -104,11 +107,14 @@ export function AssetForm<K extends AssetKind>({
             />
             {kind === "devices" && (
               <>
-                <TextField
+                <AssetsSelectionList
+                  fetchKind="types"
+                  name="typeId"
                   label="Type"
-                  {...register("type")}
-                  helperText={errors.type?.message as string}
-                  error={!!errors.type}
+                  control={control}
+                  errors={errors}
+                  getOptionValue={(v: any) => v.id}
+                  getOptionLabel={(v: any) => v.name}
                 />
 
                 <AssetsSelectionList

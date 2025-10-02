@@ -23,6 +23,7 @@ export const columns: Record<AssetKind, GridColDef[]> = {
     },
     { field: "ipAddress", headerName: "IP", width: 140 },
   ],
+  types: [{ field: "name", headerName: "Name", flex: 1 }],
   vendors: [{ field: "name", headerName: "Name", flex: 1 }],
   models: [
     { field: "name", headerName: "Name", flex: 1 },
