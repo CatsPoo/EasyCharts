@@ -480,17 +480,15 @@ export class ChartsService {
     const chart: ChartEntity | null = await this.chartRepo.findOne({
       where: { id: chartId },
     });
-    if (!chart) throw new NotFoundException(`Chart ${chartId} not found`);
+    if (!chart) throw new ChartNotFoundExeption(chartId);
 
     if (!chart.lockedById) return;
 
     if (chart.lockedById && chart.lockedById !== userId)
-      throw new BadRequestException(
-        `Chart ${chartId} already locked by user ${chart.lockedById}`
-      );
+      throw new ChartIsLockedExeption(chartId,chart.lockedById)
 
     chart.lockedById = null;
     chart.lockedAt = null;
-    this.chartRepo.save(chart);
+    await this.chartRepo.save(chart);
   }
 }
