@@ -20,7 +20,7 @@ const schemas = {
     name: z.string().min(1),
     type: z.string().min(1),
     modelId: z.string().min(1), 
-    ipAddress: z.ipv4().optional(),
+    ipAddress: z.ipv4()
   }),
   models: z.object({
     name: z.string().min(1),
@@ -132,7 +132,11 @@ export function AssetForm<K extends AssetKind>({
                   vendorIdFilter={selectedVendorId}
                 />
 
-                <TextField label="IP Address" {...register("ipAddress")} />
+                <TextField label="IP Address" 
+                {...register("ipAddress")} 
+                helperText={errors.ipAddress?.message as string}
+                error={!!errors.ipAddress}
+              />
               </>
             )}
             {kind === "models" && (
