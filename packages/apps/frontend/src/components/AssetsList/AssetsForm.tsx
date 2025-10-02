@@ -113,8 +113,8 @@ export function AssetForm<K extends AssetKind>({
                   label="Type"
                   control={control}
                   errors={errors}
-                  getOptionValue={(v: any) => v.id}
-                  getOptionLabel={(v: any) => v.name}
+                  getOptionValue={(t: any) => t.id}
+                  getOptionLabel={(t: any) => t.name}
                 />
 
                 <AssetsSelectionList
