@@ -54,47 +54,57 @@ export class LinessService {
     });
   }
 
-  convertBondEntitytoBond(bondEntity:BondEntity) : Bond{
+  convertBondEntitytoBond(bondEntity: BondEntity): Bond {
     return {
-      id:bondEntity.id,
-      name:bondEntity.name,
-      membersLines:bondEntity.members.map(m=>m.id)
-    } as Bond
+      id: bondEntity.id,
+      name: bondEntity.name,
+      membersLines: bondEntity.members.map((m) => m.id),
+    } as Bond;
   }
-  async createBond(bondCreate : BondCreate) : Promise<Bond>{
-    return await this.bondRepo.save(bondCreate)
-  }
-
-  async getBondById(id:string): Promise<Bond>{
-    const bond : BondEntity | null = await  this.bondRepo.findOne({where:{id}})
-    if(!bond) throw new NotFoundException( `Bond ${id} not found`)
-    return this.convertBondEntitytoBond(bond)
+  async createEmptyBond(bondCreate: BondCreate): Promise<Bond> {
+    const newBond : BondEntity = await this.bondRepo.save({
+      id: bondCreate.id,
+      name: bondCreate.name,
+    });
+    return this.convertBondEntitytoBond(newBond)
   }
 
-  async updateBond(id:string,bondUpdate:BondUpdate): Promise<Bond>{
-    const bond : BondEntity | null = await  this.bondRepo.findOne({where:{id}})
-    if(!bond) throw new NotFoundException( `Bond ${id} not found`)
-    if(bondUpdate.name) bond.name = bondUpdate.name
-    
+  async getBondById(id: string): Promise<Bond> {
+    const bond: BondEntity | null = await this.bondRepo.findOne({
+      where: { id },
+    });
+    if (!bond) throw new NotFoundException(`Bond ${id} not found`);
+    return this.convertBondEntitytoBond(bond);
+  }
+
+  async updateBond(id: string, bondUpdate: BondUpdate): Promise<Bond> {
+    const bond: BondEntity | null = await this.bondRepo.findOne({
+      where: { id },
+    });
+    if (!bond) throw new NotFoundException(`Bond ${id} not found`);
+    if (bondUpdate.name) bond.name = bondUpdate.name;
+
     if (bondUpdate.membersLines) {
       const requestedLines: LineEntity[] = await this.linesrepo.findBy({
         id: In(bondUpdate.membersLines),
       });
 
-      for(const line of requestedLines){
-        if(line.bondId !== null)
-          throw new BadGatewayException(`Line ${line.id} already member of bond ${line.bondId}`)
+      for (const line of requestedLines) {
+        if (line.bondId !== null)
+          throw new BadGatewayException(
+            `Line ${line.id} already member of bond ${line.bondId}`
+          );
       }
 
-      bond.members = requestedLines
+      bond.members = requestedLines;
     }
-    const updatedBond :BondEntity | null = await this.bondRepo.save(bond)
-      if(!updatedBond)
-        throw new InternalServerErrorException(`Cannot update bond ${id}`)
-      return this.convertBondEntitytoBond(updatedBond);
+    const updatedBond: BondEntity | null = await this.bondRepo.save(bond);
+    if (!updatedBond)
+      throw new InternalServerErrorException(`Cannot update bond ${id}`);
+    return this.convertBondEntitytoBond(updatedBond);
   }
 
-  async deleteBond (id:string) : Promise<void>{
-    this.bondRepo.delete(id)
+  async deleteBond(id: string): Promise<void> {
+    this.bondRepo.delete(id);
   }
 }
