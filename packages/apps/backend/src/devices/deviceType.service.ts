@@ -30,7 +30,7 @@ export class DeviceTypeService {
        qb.where('LOWER(v.name) LIKE :s', { s: `%${q.search.toLowerCase()}%` });
      }
  
-     const allowed = new Set(['name', 'id', 'createdAt', 'updatedAt']);
+     const allowed = new Set(['name', 'id']);
      const sortBy = q.sortBy && allowed.has(q.sortBy) ? q.sortBy : 'name';
      const sortDir = (q.sortDir ?? 'asc').toUpperCase() as 'ASC' | 'DESC';
  

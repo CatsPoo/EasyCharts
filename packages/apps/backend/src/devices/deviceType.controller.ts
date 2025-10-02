@@ -26,7 +26,7 @@ import {
 } from "@easy-charts/easycharts-types";
 import { QueryDto } from "../query/dto/query.dto";
 @UseGuards(JwdAuthGuard, PermissionsGuard)
-@Controller("deviceType")
+@Controller("deviceTypes")
 export class DeviceTypeController {
   constructor(private readonly DeviceTypeService: DeviceTypeService) {}
 
