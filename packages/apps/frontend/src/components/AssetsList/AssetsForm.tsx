@@ -20,7 +20,7 @@ const schemas = {
     name: z.string().min(1),
     type: z.string().min(1),
     modelId: z.string().min(1), 
-    ipAddress: z.string().optional(),
+    ipAddress: z.ipv4().optional(),
   }),
   models: z.object({
     name: z.string().min(1),
