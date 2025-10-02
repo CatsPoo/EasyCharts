@@ -2,6 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColum
 import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entityEntity';
 import { ModelEntity } from './model.entity';
 import { PortEntity } from './port.entity';
+import { DeviceTypeEntity } from './deviceType.entity';
 @Entity({ name: "devices" })
 export class DeviceEntity {
   @PrimaryGeneratedColumn("uuid")
@@ -11,8 +12,11 @@ export class DeviceEntity {
   name!: string;
 
   // @Column({ type: 'enum', enum: DeviceType })
-  @Column()
-  type!: string;
+  // @Column()
+  // type!: string;
+  @ManyToOne(() => DeviceTypeEntity, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "type_id" })
+  type: DeviceTypeEntity;
 
   @ManyToOne(() => ModelEntity, { onDelete: "CASCADE" })
   @JoinColumn({ name: "model_id" })
