@@ -136,10 +136,10 @@ export class ChartsService {
       convertedLinesOnChart.push(await this.convertLineonChartEntity(ll));
     }
 
-    const convertedBondOnChart : BondOnChart[] = []
-    for(const bond of bondOnChart){
-      convertedBondOnChart.push(this.convertBondOnChartEntity(bond))
-    }
+    const convertedBondOnChart: BondOnChart[] = [];
+      for (const bond of bondOnChart) {
+        convertedBondOnChart.push(this.convertBondOnChartEntity(bond));
+      }
     return {
       devicesOnChart: convertedDeviceOnCharts,
       linesOnChart: convertedLinesOnChart,
@@ -180,6 +180,9 @@ export class ChartsService {
             targetPort: true,
           },
         },
+        bondOnChart:{
+          bond:true
+        }
       },
     });
     if (!chart) throw new NotFoundException("chart not found");
@@ -195,6 +198,7 @@ export class ChartsService {
         deviceId: dl.device.id,
         position: dl.position,
       })),
+      bondOnChart:[]
     });
     const newChart: ChartEntity = await this.chartRepo.save(chart);
     return this.convertChartEntityToChart(newChart);
@@ -249,7 +253,7 @@ export class ChartsService {
       // ---- 0) Load chart
       const chart = await chartsRepo.findOne({
         where: { id: chartId },
-        relations: { devicesOnChart: true },
+        relations: { devicesOnChart: true,bondOnChart:true },
       });
       if (!chart) throw new ChartNotFoundExeption(chartId);
       if (chart.lockedById && chart.lockedById !== userId)
@@ -417,7 +421,7 @@ export class ChartsService {
 
         //Bonds
 
-        if(dto.bondsOnChart){
+        if(dto.bondsOnChart !== undefined){
           for(const boc of dto.bondsOnChart){
             const requiredMembers : LineEntity[] = await lineRepo.findBy({id:In(boc.bond.membersLines)})
             if(requiredMembers.length !== boc.bond.membersLines.length) throw new BadRequestException(`One or more from requested members of bond ${boc.bond.id} doesn't exist`)
@@ -454,6 +458,9 @@ export class ChartsService {
               targetPort: true,
             },
           },
+          bondOnChart:{
+            bond:true
+          }
         },
       });
     });

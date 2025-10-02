@@ -30,7 +30,8 @@ export const ChartSchema = IdentifiableSchema.extend({
 export const ChartCreateSchema = ChartSchema.omit({
   createdAt:true,
   createdById:true,
-  lock:true
+  lock:true,
+  id:true
 })
 // update = partial(create) + deletes
 export const ChartUpdateSchema = ChartCreateSchema.partial().extend({

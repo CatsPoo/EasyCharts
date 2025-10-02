@@ -1,5 +1,6 @@
 import {
   ChartEntitiesEnum,
+  type Bond,
   type Chart,
   type ChartUpdate,
   type Device,
@@ -8,7 +9,7 @@ import {
   type Line,
   type LineOnChart,
   type Port,
-  type Side,
+  type Side
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -20,7 +21,14 @@ import {
   useRef,
   useState,
 } from "react";
-import type { Connection, Edge, EdgeChange, Node, NodeChange } from "reactflow";
+import type {
+  Connection,
+  Edge,
+  EdgeChange,
+  Node,
+  NodeChange,
+  XYPosition,
+} from "reactflow";
 import { v4 as uuidv4 } from "uuid";
 
 import ReactFlow, {
@@ -37,15 +45,17 @@ import { useThemeMode } from "../../contexts/ThemeModeContext";
 import { useListAssets } from "../../hooks/assetsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
+import { ConfirmDialog } from "../DeleteAlertDialog";
 import DeviceNode from "../DeviceNode/DeviceNode";
 import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";
+import {BondBridgeNode, type BondBridgeNodeData } from "./BondBadgeNode";
 import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
+import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
 import type { DeleteSets } from "./interfaces/deleteSets.interfaces";
 import type { EditLineDialogFormRespone } from "./interfaces/editLineDialogForm.interfaces";
-import { ConfirmDialog } from "../DeleteAlertDialog";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -73,7 +83,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       useState<string>("");
 
     const actionsHistory = useRef<Chart[]>([chart]);
-    const actionsHistoryIndex = useRef<number>(actionsHistory.current.length-1);
+    const actionsHistoryIndex = useRef<number>(
+      actionsHistory.current.length - 1
+    );
 
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
@@ -81,7 +93,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { isDark } = useThemeMode();
 
-    const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
+    const nodeTypes = useMemo(
+      () => ({
+        device: DeviceNode,
+        bridge: BondBridgeNode,
+      }),
+      []
+    );
 
     const updateMut = useUpdateChartMutation();
 
@@ -143,20 +161,19 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         0,
         actionsHistoryIndex.current + 1
       );
-      setCanUndo(true)
+      setCanUndo(true);
       setCanUndo(actionsHistoryIndex.current > 0);
 
       actionsHistory.current.push(structuredClone(newChart));
       actionsHistoryIndex.current = actionsHistory.current.length - 1;
     }, []);
 
-
     const applyChartChange = useCallback(
       (produce: (base: Chart) => Chart) => {
         const base = chart;
         const next = produce(base);
         setChart(next);
-        addChartToHistory(next); 
+        addChartToHistory(next);
         setMadeChanges(true);
       },
       [addChartToHistory, chart, setChart, setMadeChanges]
@@ -207,7 +224,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       []
     );
 
-
     const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
     const onUndoClick = useCallback(() => {
@@ -216,7 +232,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       setChart(actionsHistory.current[actionsHistoryIndex.current]);
       setMadeChanges(actionsHistoryIndex.current > 0);
       setCanUndo(actionsHistoryIndex.current > 0);
-  setCanRedo(actionsHistoryIndex.current < actionsHistory.current.length - 1);
+      setCanRedo(
+        actionsHistoryIndex.current < actionsHistory.current.length - 1
+      );
     }, [setChart, setMadeChanges]);
 
     const onRedoClick = useCallback(() => {
@@ -233,8 +251,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     useEffect(() => {
       actionsHistory.current = [chart];
       actionsHistoryIndex.current = 0;
-      setCanRedo(false)
-      setCanRedo(false)
+      setCanRedo(false);
+      setCanRedo(false);
     }, [chart.id]);
 
     const convertLineToEdge = (lineonChart: LineOnChart): Edge => {
@@ -257,7 +275,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const onRemoveNode = useCallback(
       (deviceId: string) => {
         applyChartChange((prev) => {
-          return{
+          return {
             ...prev,
             devicesOnChart: prev.devicesOnChart.filter(
               (doc) => doc.device.id !== deviceId
@@ -417,7 +435,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const onEditLineDialgSubmit = useCallback(
       (newValue: EditLineDialogFormRespone) => {
         applyChartChange((prev) => {
-          return{
+          return {
             ...prev,
             linesOnChart: prev.linesOnChart.map((loc) => {
               return loc.line.id === selectedEditLine?.id
@@ -431,7 +449,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         });
 
         setEditLineDialogOpen(false);
-        setMadeChanges(true)
+        setMadeChanges(true);
       },
       [applyChartChange, selectedEditLine?.id, setMadeChanges]
     );
@@ -440,7 +458,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       (deviceOnChart: DeviceOnChart) => {
         const { device, handles } = deviceOnChart;
         applyChartChange((prev) => {
-          return{
+          return {
             ...prev,
             devicesOnChart: prev.devicesOnChart.map((doc) =>
               doc.device.id === device.id ? { ...doc, handles, device } : doc
@@ -501,11 +519,216 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [availableDevices]
     );
 
+    const devicePos = useMemo<Map<string, XYPosition>>(() => {
+      const m = new Map<string, XYPosition>();
+      for (const doc of chart.devicesOnChart) {
+        m.set(doc.device.id, doc.position);
+      }
+      return m;
+    }, [chart.devicesOnChart]);
+
+    const pickOrientation = useCallback(
+      (bond: Bond): Orientation => {
+        const lines: LineOnChart[] = chart.linesOnChart;
+        let sumDx = 0,
+          sumDy = 0,
+          c = 0;
+        for (const lid of bond.membersLines) {
+          const loc = lines.find((l) => l.line.id === lid);
+          if (!loc) continue;
+          const a = devicePos.get(loc.line.sourcePort.deviceId);
+          const b = devicePos.get(loc.line.targetPort.deviceId);
+          if (!a || !b) continue;
+          sumDx += Math.abs(a.x - b.x);
+          sumDy += Math.abs(a.y - b.y);
+          c++;
+        }
+        if (!c) return Orientation.TopToBottom;
+        // If devices are vertically aligned on average -> use left/right handles (taller oval)
+        return sumDx < sumDy
+          ? Orientation.LeftToright
+          : Orientation.TopToBottom;
+      },
+      [chart.linesOnChart, devicePos]
+    );
+
+    const buildBridgeView = useCallback(() => {
+      const bridgeNodes: Node<BondBridgeNodeData>[] = [];
+      const splitEdges: Edge[] = [];
+      const bridgedLineIds = new Set<string>();
+
+      // stable order for handles
+      const byAngle = (
+        cx: number,
+        cy: number,
+        devA: { x: number; y: number },
+        devB: { x: number; y: number }
+      ) => {
+        const mx = (devA.x + devB.x) / 2,
+          my = (devA.y + devB.y) / 2;
+        return Math.atan2(my - cy, mx - cx);
+      };
+
+      for (const b of chart.bondsOnChart) {
+        const members: LineOnChart[] = chart.linesOnChart.filter((loc) =>
+          b.bond.membersLines.includes(loc.line.id)
+        );
+        if (members.length < 2) continue;
+
+        const orientation: Orientation = pickOrientation(b.bond);
+        // auto position: average of member midpoints
+        let cx = 0,
+          cy = 0,
+          cnt = 0;
+        for (const loc of members) {
+          const A = devicePos.get(loc.line.sourcePort.deviceId);
+          const B = devicePos.get(loc.line.targetPort.deviceId);
+          if (!A || !B) continue;
+          cx += (A.x + B.x) / 2;
+          cy += (A.y + B.y) / 2;
+          cnt++;
+        }
+        if (cnt) {
+          cx /= cnt;
+          cy /= cnt;
+        }
+        const nodeId = `bridge-${b.bond.id}`;
+
+        // size to position (must match BridgeNode)
+        const baseW = 84,
+          baseH = 48,
+          step = 14,
+          n = members.length;
+        const width =
+          orientation === Orientation.TopToBottom
+            ? Math.max(baseW, baseW + step * (n - 1))
+            : 52;
+        const height =
+          orientation === Orientation.LeftToright
+            ? Math.max(baseH, baseH + step * (n - 1))
+            : 52;
+
+        const nodePos = /*b.autoPosition || */ !b.position
+          ? { x: cx - width / 2, y: cy - height / 2 }
+          : b.position;
+
+        // order handles by angle around bridge center for nicer bundling
+        const membersSorted = [...members].sort((L1, L2) => {
+          const a1 = devicePos.get(L1.line.sourcePort.deviceId)!;
+          const b1 = devicePos.get(L1.line.targetPort.deviceId)!;
+          const a2 = devicePos.get(L2.line.sourcePort.deviceId)!;
+          const b2 = devicePos.get(L2.line.targetPort.deviceId)!;
+          return byAngle(cx, cy, a1, b1) - byAngle(cx, cy, a2, b2);
+        });
+
+        // create node
+        bridgeNodes.push({
+          id: nodeId,
+          type: "bridge",
+          position: nodePos,
+          draggable: true,
+          selectable: true,
+          zIndex: 10,
+          data: {
+            bond: b.bond,
+            orientation,
+            onRename: (txt: string) => {
+              //setBridges(prev => prev.map(x => x.id === b.id ? { ...x, name: txt } : x));
+              setMadeChanges(true);
+            },
+          },
+        });
+
+        // per-member split edges
+        membersSorted.forEach((loc, idx) => {
+          bridgedLineIds.add(loc.line.id);
+
+          const A = devicePos.get(loc.line.sourcePort.deviceId)!;
+          const B = devicePos.get(loc.line.targetPort.deviceId)!;
+
+          // Decide which end goes to the “first side” based on orientation:
+          //  - "lr": smaller x → Left; larger x → Right
+          //  - "tb": smaller y → Top;  larger y → Bottom
+          const sourceFirst =
+            orientation === Orientation.LeftToright ? A.x <= B.x : A.y <= B.y;
+
+          const leftOrTopHandle =
+            orientation === Orientation.LeftToright
+              ? `${nodeId}-L-${idx}`
+              : `${nodeId}-T-${idx}`;
+          const rightOrBottomHandle =
+            orientation === Orientation.LeftToright
+              ? `${nodeId}-R-${idx}`
+              : `${nodeId}-B-${idx}`;
+
+          const edgeA: Edge = sourceFirst
+            ? {
+                id: `${loc.line.id}-a`,
+                source: loc.line.sourcePort.deviceId,
+                sourceHandle: loc.line.sourcePort.id,
+                target: nodeId,
+                targetHandle: leftOrTopHandle,
+                type: "step",
+                data: { lineId: loc.line.id },
+                // avoid editing reconnection on split view
+                updatable: false,
+              }
+            : {
+                id: `${loc.line.id}-a`,
+                source: loc.line.targetPort.deviceId,
+                sourceHandle: loc.line.targetPort.id,
+                target: nodeId,
+                targetHandle: leftOrTopHandle,
+                type: "step",
+                data: { lineId: loc.line.id },
+                updatable: false,
+              };
+
+          const edgeB: Edge = sourceFirst
+            ? {
+                id: `${loc.line.id}-b`,
+                source: nodeId,
+                sourceHandle: rightOrBottomHandle,
+                target: loc.line.targetPort.deviceId,
+                targetHandle: loc.line.targetPort.id,
+                type: "step",
+                data: { lineId: loc.line.id },
+                updatable: false,
+              }
+            : {
+                id: `${loc.line.id}-b`,
+                source: nodeId,
+                sourceHandle: rightOrBottomHandle,
+                target: loc.line.sourcePort.deviceId,
+                targetHandle: loc.line.sourcePort.id,
+                type: "step",
+                data: { lineId: loc.line.id },
+                updatable: false,
+              };
+
+          splitEdges.push(edgeA, edgeB);
+        });
+      }
+
+      // Non-bridged lines render as usual
+      const plainEdges = chart.linesOnChart
+        .filter((l) => !bridgedLineIds.has(l.line.id))
+        .map(convertLineToEdge);
+
+      return { bridgeNodes, displayEdges: [...plainEdges, ...splitEdges] };
+    }, [
+      chart.bondsOnChart,
+      chart.linesOnChart,
+      devicePos,
+      pickOrientation,
+      setMadeChanges,
+    ]);
+
     useEffect(() => {
       setNodes((prev) => {
         const prevById = new Map(prev.map((n) => [n.id, n]));
 
-        return chart.devicesOnChart.map((doc) => {
+        const devicesNodes: Node[] = chart.devicesOnChart.map((doc) => {
           const base = convertDeviceToNode(doc); // fresh node from chart
           const old = prevById.get(base.id);
 
@@ -517,8 +740,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               }
             : base;
         });
+        const { bridgeNodes } = buildBridgeView();
+        return [...devicesNodes, ...bridgeNodes];
       });
-    }, [chart.devicesOnChart, convertDeviceToNode, setNodes]);
+    }, [buildBridgeView, chart.devicesOnChart, convertDeviceToNode, setNodes]);
 
     useEffect(() => {
       setEdges(chart.linesOnChart.map(convertLineToEdge));
@@ -585,10 +810,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 } as Device,
               } as DeviceOnChart;
             }),
-          }as Chart;
+          } as Chart;
         });
       },
-      [chart.devicesOnChart, chart.id, setEdges, setMadeChanges, applyChartChange]
+      [
+        chart.devicesOnChart,
+        chart.id,
+        setEdges,
+        setMadeChanges,
+        applyChartChange,
+      ]
     );
 
     const onReconnect = useCallback(
@@ -661,7 +892,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 : doc;
             }),
           } as Chart;
-
         });
 
         setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
@@ -724,7 +954,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         setNodes((nds) => [...nds, newNode]);
 
         applyChartChange((prev) => {
-          return{
+          return {
             ...chart,
             devicesOnChart: [
               ...chart.devicesOnChart,
@@ -739,7 +969,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         });
         setMadeChanges(true);
       },
-      [editMode, devicesById, project, convertDeviceToNode, setNodes, applyChartChange, setMadeChanges, chart]
+      [
+        editMode,
+        devicesById,
+        project,
+        convertDeviceToNode,
+        setNodes,
+        applyChartChange,
+        setMadeChanges,
+        chart,
+      ]
     );
     const onEdgeUpdate = useCallback(
       (oldE: Edge, conn: Connection) => {
