@@ -31,7 +31,6 @@ export class ChartEntity {
   })
   createdAt!: Date;
 
-  @Index("idx_charts_created_by")
   @Column({ name: "created_by_id", type: "uuid" })
   createdById!: string;
 
@@ -39,13 +38,16 @@ export class ChartEntity {
   @JoinColumn({ name: "created_by_id" })
   createdBy!: Relation<UserEntity>;
 
-  @Index("idx_charts_created_by")
+  @Column({ name: "locked_at", type: "timestamptz",nullable:true,default:null })
+  lockedAt?:Date | null
+
+
   @Column({ name: "locked_by_id", type: "uuid",nullable:true,default:null })
   lockedById?: string | null;
 
-  @ManyToOne(() => UserEntity, {onDelete: "SET NULL", eager: false })
-  @JoinColumn({ name: "locked_by_id" })
-  lockedBy!: Relation<UserEntity>;
+  @ManyToOne(() => UserEntity, {onDelete: "SET NULL", eager: true ,nullable:true})
+  @JoinColumn({ name: "locked_by_id"})
+  lockedBy?: Relation<UserEntity> | null;
 
   @OneToMany(() => DeviceOnChartEntity, (doc) => doc.chart, {
     cascade: ["insert", "update"],

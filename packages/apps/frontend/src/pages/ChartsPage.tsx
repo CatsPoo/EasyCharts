@@ -1,30 +1,33 @@
-import { Permission, type Chart } from "@easy-charts/easycharts-types";
+import { LockState, Permission, type Chart } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   Alert,
   AppBar,
   Button,
   CircularProgress,
+  Collapse,
   Dialog,
   FormControlLabel,
   IconButton,
   Switch,
   Tab,
   Tabs,
-  Toolbar,
+  Toolbar
 } from "@mui/material";
 import Box from "@mui/material/Box";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RequirePermissions } from "../auth/RequirePermissions";
+import { useAuth } from "../auth/useAuth";
 import AssetTab from "../components/AssetsList/AssetTab";
+import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/chartEditorHandle.interfaces";
 import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
-import { lockChart, unlockChart, useChartById } from "../hooks/chartsHooks";
-import { ChartEditor } from "../components/ChartEditor/ChartEditor";
-import { useAuth } from "../auth/useAuth";
-import { RequirePermissions } from "../auth/RequirePermissions";
+import { useChartById } from "../hooks/chartsHooks";
+import { useChartLock } from "../hooks/chartsLockHooks";
+import { LockStatusChip } from "../components/ChartEditor/LockStatusClip";
 
 export function ChartsPage() {
   const { user } = useAuth();
@@ -40,6 +43,7 @@ export function ChartsPage() {
 
   const chartEditorRef = useRef<ChartEditorHandle>(null);
 
+  const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,refetch,isLoading} = useChartLock(user!.id,selectedId || undefined)
   const readonly = false;
 
   const nope = useCallback(()=>{return} ,[])
@@ -48,9 +52,8 @@ export function ChartsPage() {
   }, [tab]);
 
   const onEditChartdialogClose = useCallback(async ()=>{
-    if(editChart?.id) await unlockChart(editChart?.id)
-    setDialogOpen(false)
-  },[editChart?.id])
+    if(lockState === LockState.MINE) await unlockChart()
+  },[lockState, unlockChart])
 
 
   const {
@@ -59,10 +62,21 @@ export function ChartsPage() {
     error: selectedChartError,
   } = useChartById(selectedId ?? "");
 
-  const onEditSwitchToggle = useCallback((newVal:boolean)=>{
-    setEditMode(newVal)
-    if(editChart?.id && newVal) lockChart(editChart?.id)
-  },[editChart?.id])
+  const onEditSwitchToggle = useCallback(async (checked:boolean)=>{
+    try {
+      if (checked) {
+        await lockChart();
+        setEditMode(true);
+      } else {
+        await unlockChart();
+        setEditMode(false);
+      }
+    } catch (e) {
+      // optional: toast error
+      console.error(e);
+    }
+  },[lockChart, unlockChart])
+
   const handleEdit = (chartId: string) => {
     setSelectedId(chartId);
     setEditMode(false);
@@ -86,7 +100,7 @@ export function ChartsPage() {
         return;
       }
     }
-    if(editChart?.id) await unlockChart(editChart?.id)
+    if(lockState === LockState.MINE) await unlockChart()
     setDialogOpen(false);
     setSelectedId("");
     setEditMode(false);
@@ -102,6 +116,7 @@ export function ChartsPage() {
       if( ! saved)
         throw new Error('Unable to save the chart')
       // do any parent-side updates you want
+      await unlockChart()
       setSelectedId(saved.id);
       setDialogOpen(false);
       setEditorMadeChanges(false);
@@ -112,13 +127,6 @@ export function ChartsPage() {
       setSaving(false);
     }
   }
-
-  const isChartLocked = useCallback(()=>{
-    if(!editChart) return false
-    if(!editChart.lockedById) return false
-    return editChart.lockedById !== user?.id
-  },[editChart, user?.id])
-
   
   return (
     <Box
@@ -206,7 +214,7 @@ export function ChartsPage() {
           </Box>
         )}
       </Box>
-      <Dialog fullScreen open={dialogOpen} onClose={onEditChartdialogClose}>
+      <Dialog fullScreen open={dialogOpen}>
         <AppBar position="relative">
           <Toolbar>
             <IconButton
@@ -228,15 +236,31 @@ export function ChartsPage() {
                 height: 41,
               }}
             >
+              <LockStatusChip
+                lock={lock}
+                lockState={lockState}
+                isLoading={isLoading}
+                locking={locking}
+                unlocking={unlocking}
+              />
               <RequirePermissions required={[Permission.CHART_UPDATE]}>
-                {!readonly && !isChartLocked() ? (
+                {!readonly &&
+                lockState !== LockState.OTHERs /* or OTHERs */ ? (
                   <FormControlLabel
-                    style={{ background: "#7676c4" }}
+                    sx={{
+                      ml: 1,
+                      px: 1,
+                      borderRadius: 1,
+                      bgcolor: "#7676c4",
+                      color: "white",
+                      "& .MuiFormControlLabel-label": { fontWeight: 600 },
+                    }}
                     control={
                       <Switch
                         checked={editMode}
                         onChange={(e) => onEditSwitchToggle(e.target.checked)}
-                        color="primary"
+                        disabled={locking || unlocking}
+                        color="default"
                       />
                     }
                     label={editMode ? "Edit Mode" : "View Mode"}
@@ -257,13 +281,26 @@ export function ChartsPage() {
             )}
           </Toolbar>
         </AppBar>
+        <Collapse in={!!lock && lockState !== LockState.UNLOCKED}>
+          {lockState === LockState.MINE ? (
+            <Alert severity="success" sx={{ borderRadius: 0 }}>
+              You’re editing this chart. Others are in read-only mode.
+            </Alert>
+          ) : lockState === LockState.OTHERs ? (
+            <Alert severity="warning" sx={{ borderRadius: 0 }}>
+              This chart is locked by{" "}
+              <strong>{lock?.lockedByName ?? "another user"}</strong>. You can
+              view but cannot edit.
+            </Alert>
+          ) : null}
+        </Collapse>
 
         {editChart && (
           <ChartEditor
             key={`edit-${editChart.id}-${editMode}`}
             chart={editChart}
             setChart={setEditChart}
-            editMode={!isChartLocked() && editMode}
+            editMode={lockState !== LockState.OTHERs && editMode}
             setMadeChanges={setEditorMadeChanges}
             ref={chartEditorRef}
           />

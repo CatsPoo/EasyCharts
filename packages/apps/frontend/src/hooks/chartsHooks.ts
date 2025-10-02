@@ -113,24 +113,3 @@ export function useDeleteChartMutation() {
     },
   });
 }
-
-
-export async function lockChart(id: string): Promise<void> {
-  try{
-    await http.patch<Chart>(`/charts/${id}/lock`);
-  }
-  catch(err:any){
-    throw new Error(err || `Failed to lock chart ${err}`);
-  }
-}
-
-export async function unlockChart(id: string): Promise<void> {
-  try{
-    await http.patch<Chart>(`/charts/${id}/unlock`);
-  }
-  catch(err:any){
-    throw new Error(err || `Failed to unlock chart ${err}`);
-  }
-}
-
-

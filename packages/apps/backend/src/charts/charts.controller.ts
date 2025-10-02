@@ -54,6 +54,24 @@ export class ChartsController {
     return this.chartService.getChartMetadataById(id);
   }
 
+  @RequirePermissions(Permission.CHART_UPDATE)
+  @Get(":id/lock")
+  async fetchLock(@Param("id") id: string, @Req() req: { user: string }) {
+    return this.chartService.fetchLock(id, req.user);
+  }
+
+  @RequirePermissions(Permission.CHART_UPDATE)
+  @Patch(":id/lock")
+  async lockChart(@Param("id") id: string, @Req() req: { user: string }) {
+    return this.chartService.lockChart(id, req.user);
+  }
+
+  @RequirePermissions(Permission.CHART_UPDATE)
+  @Patch(":id/unlock")
+  async unlockChart(@Param("id") id: string, @Req() req: { user: string }) {
+    return this.chartService.unlockChart(id, req.user);
+  }
+
   @RequirePermissions(Permission.CHART_READ)
   @Get(":id")
   findOne(@Param("id", new ParseUUIDPipe()) id: string) {
@@ -83,17 +101,5 @@ export class ChartsController {
     @Req() req: { user: string }
   ) {
     return this.chartService.updateChart(id, body, req.user);
-  }
-
-  @RequirePermissions(Permission.CHART_UPDATE)
-  @Patch(":id/lock")
-  async lockChart(@Param("id") id: string, @Req() req: { user: string }) {
-    this.chartService.lockChart(id, req.user);
-  }
-
-  @RequirePermissions(Permission.CHART_UPDATE)
-  @Patch(":id/unlock")
-  async unlockChart(@Param("id") id: string, @Req() req: { user: string }) {
-    this.chartService.unlockChart(id, req.user);
   }
 }
