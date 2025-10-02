@@ -59,7 +59,7 @@ export function AssetForm<K extends AssetKind>({
       d.vendorId = d.vendorId ?? d.model?.vendor?.id ?? "";
       delete d.model; // avoid sending nested object back
     }
-    return d;
+    
   }
 
   const {
