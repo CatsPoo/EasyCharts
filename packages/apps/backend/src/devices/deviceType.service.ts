@@ -12,19 +12,19 @@ import { QueryDto } from "../query/dto/query.dto";
 export class DeviceTypeService {
   constructor(
     @InjectRepository(DeviceTypeEntity)
-    private readonly DeviceTypeRepo: Repository<DeviceTypeEntity>,
+    private readonly deviceTypeRepo: Repository<DeviceTypeEntity>,
   ) {}
 
   async createDeviceType(dto: DeviceTypeCreate) : Promise<DeviceType> {
-    const entity = this.DeviceTypeRepo.create(dto);
-    return this.DeviceTypeRepo.save(entity);
+    const entity = this.deviceTypeRepo.create(dto);
+    return this.deviceTypeRepo.save(entity);
   }
 
    async listDeviceType(q: QueryDto) : Promise<{rows:DeviceType[],total:number}> {
      const take = q.pageSize ?? 25;
      const skip = (q.page ?? 0) * take;
  
-     const qb = this.DeviceTypeRepo.createQueryBuilder('v');
+     const qb = this.deviceTypeRepo.createQueryBuilder('v');
  
      if (q.search?.trim()) {
        qb.where('LOWER(v.name) LIKE :s', { s: `%${q.search.toLowerCase()}%` });
@@ -41,17 +41,17 @@ export class DeviceTypeService {
    }
  
    async getDeviceTypeById(id: string):Promise<DeviceType> {
-     const found = await this.DeviceTypeRepo.findOne({ where: { id } });
+     const found = await this.deviceTypeRepo.findOne({ where: { id } });
      if (!found) throw new NotFoundException('Device Type not found');
      return found;
    }
  
    async updateDeviceType(id: string, dto: DeviceTypeUpdate) : Promise<DeviceType> {
-     await this.DeviceTypeRepo.update(id, dto);
+     await this.deviceTypeRepo.update(id, dto);
      return this.getDeviceTypeById(id);
    }
  
    async removeDeviceType(id: string) : Promise<void> {
-     await this.DeviceTypeRepo.delete(id);
+     await this.deviceTypeRepo.delete(id);
    }
  }

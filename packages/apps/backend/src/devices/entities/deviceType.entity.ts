@@ -1,7 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { DeviceEntity } from './device.entity';
 
-@Entity({ name: "deviceType" })
+@Entity({ name: "device_type" })
 export class DeviceTypeEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;

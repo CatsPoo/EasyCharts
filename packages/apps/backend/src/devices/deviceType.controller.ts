@@ -28,7 +28,7 @@ import { QueryDto } from "../query/dto/query.dto";
 @UseGuards(JwdAuthGuard, PermissionsGuard)
 @Controller("types")
 export class DeviceTypeController {
-  constructor(private readonly DeviceTypeService: DeviceTypeService) {}
+  constructor(private readonly deviceTypeService: DeviceTypeService) {}
 
   @RequirePermissions(Permission.ASSET_CREATE)
   @Post()
@@ -37,19 +37,19 @@ export class DeviceTypeController {
     @Body(new ZodValidationPipe(DeviceTypeCreateSchema))
     payload: DeviceTypeCreate
   ) {
-    return this.DeviceTypeService.createDeviceType(payload);
+    return this.deviceTypeService.createDeviceType(payload);
   }
 
   @RequirePermissions(Permission.ASSET_READ)
   @Get()
   list(@Query() q: QueryDto) {
-    return this.DeviceTypeService.listDeviceType(q);
+    return this.deviceTypeService.listDeviceType(q);
   }
 
   @RequirePermissions(Permission.ASSET_READ)
   @Get(":id")
   getById(@Param("id", new ParseUUIDPipe()) id: string) {
-    return this.DeviceTypeService.getDeviceTypeById(id);
+    return this.deviceTypeService.getDeviceTypeById(id);
   }
 
   @RequirePermissions(Permission.ASSET_EDIT)
@@ -59,13 +59,13 @@ export class DeviceTypeController {
     @Body(new ZodValidationPipe(DeviceTypeUpdateSchema))
     payload: DeviceTypeUpdate
   ) {
-    return this.DeviceTypeService.updateDeviceType(id, payload);
+    return this.deviceTypeService.updateDeviceType(id, payload);
   }
 
   @RequirePermissions(Permission.ASSET_DELETE)
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param("id", new ParseUUIDPipe()) id: string) {
-    return this.DeviceTypeService.removeDeviceType(id);
+    return this.deviceTypeService.removeDeviceType(id);
   }
 }
