@@ -25,13 +25,13 @@ function serializeForApi(kind: keyof AssetMap, data: any, mode: 'create' | 'upda
       } as ModelUpdate;
     }
 
-    case 'devices': {
-      const {id:_omit,model,vendor, ...rest } = data as Device ?? {};
-      return {
-        ...rest,
-        modelId: model?.id ?? null,
-      } as DeviceUpdate;
-    }
+    // case 'devices': {
+    //   const {id:_omit,model,vendor, ...rest } = data as Device ?? {};
+    //   return {
+    //     ...rest,
+    //     modelId: model?.id ?? null,
+    //   } as DeviceUpdate;
+    // }
 
     default: {
       const {...rest } = data ?? {};

@@ -58,6 +58,7 @@ export function AssetForm<K extends AssetKind>({
       delete d.vendor;
     }
     if (kind === "devices") {
+      d.typeId = d.typeId ?? d.type?.id ?? "";
       d.modelId = d.modelId ?? d.model?.id ?? "";
       d.vendorId = d.vendorId ?? d.model?.vendor?.id ?? "";
       delete d.model; // avoid sending nested object back
