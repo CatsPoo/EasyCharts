@@ -32,3 +32,6 @@ export class ListModelsQueryDto extends QueryDto {
   @IsUUID()
   vendorId?: string;
 }
+
+
+

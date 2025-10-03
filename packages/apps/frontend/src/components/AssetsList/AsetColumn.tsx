@@ -4,7 +4,13 @@ import type { GridColDef } from "@mui/x-data-grid";
 export const columns: Record<AssetKind, GridColDef[]> = {
   devices: [
     { field: "name", headerName: "Name", flex: 1 },
-    { field: "type", headerName: "Type", width: 140 },
+    {
+      field: "type",
+      headerName: "Type",
+      width: 160,
+      valueGetter: (_v, row: Device & { type?: { name?: string } }) =>
+        row.type?.name ?? "",
+    },
     {
       field: "model",
       headerName: "Model",
@@ -23,6 +29,7 @@ export const columns: Record<AssetKind, GridColDef[]> = {
     },
     { field: "ipAddress", headerName: "IP", width: 140 },
   ],
+  types: [{ field: "name", headerName: "Name", flex: 1 }],
   vendors: [{ field: "name", headerName: "Name", flex: 1 }],
   models: [
     { field: "name", headerName: "Name", flex: 1 },

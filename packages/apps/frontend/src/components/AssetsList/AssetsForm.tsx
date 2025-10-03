@@ -18,9 +18,12 @@ import { AssetsSelectionList } from "./AsetsSelectionList.component";
 const schemas = {
   devices: z.object({
     name: z.string().min(1),
-    type: z.string().min(1),
+    typeId: z.string().min(1),
     modelId: z.string().min(1), 
     ipAddress: z.ipv4()
+  }),
+    types: z.object({
+    name: z.string().min(1),
   }),
   models: z.object({
     name: z.string().min(1),
@@ -55,6 +58,7 @@ export function AssetForm<K extends AssetKind>({
       delete d.vendor;
     }
     if (kind === "devices") {
+      d.typeId = d.typeId ?? d.type?.id ?? "";
       d.modelId = d.modelId ?? d.model?.id ?? "";
       d.vendorId = d.vendorId ?? d.model?.vendor?.id ?? "";
       delete d.model; // avoid sending nested object back
@@ -104,11 +108,14 @@ export function AssetForm<K extends AssetKind>({
             />
             {kind === "devices" && (
               <>
-                <TextField
+                <AssetsSelectionList
+                  fetchKind="types"
+                  name="typeId"
                   label="Type"
-                  {...register("type")}
-                  helperText={errors.type?.message as string}
-                  error={!!errors.type}
+                  control={control}
+                  errors={errors}
+                  getOptionValue={(t: any) => t.id}
+                  getOptionLabel={(t: any) => t.name}
                 />
 
                 <AssetsSelectionList
