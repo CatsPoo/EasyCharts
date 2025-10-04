@@ -1,38 +1,56 @@
-import { useEffect, useState } from "react"
+import { Button } from "@mui/material";
+import { useEffect, useState } from "react";
 
-export const UploadImage = () => {
-    const [selectedFile, setSelectedFile] = useState()
-    const [preview, setPreview] = useState()
+interface UploadImageComponent {
+  label: string;
+}
 
-    // create a preview as a side effect, whenever selected file is changed
-    useEffect(() => {
-        if (!selectedFile) {
-            setPreview(undefined)
-            return
-        }
+export function UploadImage({ label }: UploadImageComponent) {
+  const [selectedFile, setSelectedFile] = useState();
+  const [preview, setPreview] = useState();
 
-        //change type any
-        const objectUrl: any = URL.createObjectURL(selectedFile)
-        setPreview(objectUrl)
-
-        // free memory when ever this component is unmounted
-        return () => URL.revokeObjectURL(objectUrl)
-    }, [selectedFile])
-
-    const onSelectFile = e => {
-        if (!e.target.files || e.target.files.length === 0) {
-            setSelectedFile(undefined)
-            return
-        }
-
-        // I've kept this example simple by using the first image instead of multiple
-        setSelectedFile(e.target.files[0])
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreview(undefined);
+      return;
     }
 
-    return (
-        <div>
-            <input type='file' onChange={onSelectFile} />
-            {selectedFile &&  <img src={preview} /> }
-        </div>
-    )
+    const objectUrl: any = URL.createObjectURL(selectedFile);
+    setPreview(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedFile]);
+
+  const onSelectFile = (e) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      setSelectedFile(undefined);
+      return;
+    }
+
+    setSelectedFile(e.target.files[0]);
+  };
+
+  return (
+    <>
+      <label>{label}</label>
+      <Button
+        variant="outlined"
+        sx={{
+          color: "#bebebfff",
+          borderColor: "#bebebf66",
+          "&:hover": {
+            borderColor: "lightgray",
+            backgroundColor: "#5d5d5d0f",
+          },
+        }}
+      >
+        <input
+          type="file"
+          accept="jpeg, .jpg, .png"
+          onChange={onSelectFile}
+        />
+      </Button>
+      {selectedFile && <img src={preview} />}
+    </>
+  );
 }

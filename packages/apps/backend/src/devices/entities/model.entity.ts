@@ -25,5 +25,5 @@ export class ModelEntity {
   devices?: DeviceEntity[];
 
   @Column({ type: "bytea", name: "image", nullable: true })
-  image: File;
+  image?: File;
 }

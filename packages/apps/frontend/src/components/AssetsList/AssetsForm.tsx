@@ -29,7 +29,7 @@ const schemas = {
   models: z.object({
     name: z.string().min(1),
     vendorId: z.string().min(1),
-    image: z.file().mime(["image/png", "image/jpeg"]).optional(),
+    image: z.file().mime(["image/png", "image/jpg", "image/jpeg"]).optional(),
   }),
   vendors: z.object({
     name: z.string().min(1),
@@ -158,9 +158,11 @@ export function AssetForm<K extends AssetKind>({
                   control={control}
                   errors={errors}
                 />
-
-                {/* get image from here */}
-                <UploadImage />
+                <UploadImage
+                  label="Model Image (optional):"
+                  // value="image"
+                  {...register("image")}
+                />
               </>
             )}
           </Stack>
