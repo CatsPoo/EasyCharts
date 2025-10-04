@@ -24,6 +24,6 @@ export class ModelEntity {
   @OneToMany(() => DeviceEntity, (device) => device.model)
   devices?: DeviceEntity[];
 
-  @Column({ name: "image", nullable: true })
+  @Column({ type: "bytea", name: "image", nullable: true })
   image: File;
 }
