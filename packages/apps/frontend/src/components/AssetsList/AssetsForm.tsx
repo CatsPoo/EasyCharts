@@ -10,12 +10,11 @@ import {
   Stack,
   TextField,
 } from "@mui/material";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import z from "zod";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
 
-import Dropzone from "react-dropzone";
 
 const schemas = {
   devices: z.object({
@@ -30,6 +29,7 @@ const schemas = {
   models: z.object({
     name: z.string().min(1),
     vendorId: z.string().min(1),
+    image: z.file().mime(["image/png", "image/jpeg"]).optional(),
   }),
   vendors: z.object({
     name: z.string().min(1),
@@ -140,33 +140,6 @@ export function AssetForm<K extends AssetKind>({
                   getOptionLabel={(m: any) => m.name}
                   vendorIdFilter={selectedVendorId}
                 />
-
-                <Dropzone>
-                  {({ getRootProps, getInputProps }) => (
-                    <div {...getRootProps()}>
-                      <input {...getInputProps()} />
-                      <p>
-                        Drag 'n' drop some files here, or click to select files
-                      </p>
-                    </div>
-                  )}
-                </Dropzone>
-
-                {/* <Dropzone
-                  onDrop={(acceptedFiles) => console.log(acceptedFiles)}
-                >
-                  {({ getRootProps, getInputProps }) => (
-                    <section>
-                      <div {...getRootProps()}>
-                        <input {...getInputProps()} />
-                        <p>
-                          Drag 'n' drop some files here, or click to select
-                          files
-                        </p>
-                      </div>
-                    </section>
-                  )}
-                </Dropzone> */}
 
                 <TextField
                   label="IP Address"
