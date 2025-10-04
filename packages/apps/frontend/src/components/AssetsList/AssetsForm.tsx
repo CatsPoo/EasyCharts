@@ -15,14 +15,16 @@ import { useForm, useWatch } from "react-hook-form";
 import z from "zod";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
 
+import Dropzone from "react-dropzone";
+
 const schemas = {
   devices: z.object({
     name: z.string().min(1),
     typeId: z.string().min(1),
-    modelId: z.string().min(1), 
-    ipAddress: z.ipv4()
+    modelId: z.string().min(1),
+    ipAddress: z.ipv4(),
   }),
-    types: z.object({
+  types: z.object({
     name: z.string().min(1),
   }),
   models: z.object({
@@ -139,11 +141,39 @@ export function AssetForm<K extends AssetKind>({
                   vendorIdFilter={selectedVendorId}
                 />
 
-                <TextField label="IP Address" 
-                {...register("ipAddress")} 
-                helperText={errors.ipAddress?.message as string}
-                error={!!errors.ipAddress}
-              />
+                <Dropzone>
+                  {({ getRootProps, getInputProps }) => (
+                    <div {...getRootProps()}>
+                      <input {...getInputProps()} />
+                      <p>
+                        Drag 'n' drop some files here, or click to select files
+                      </p>
+                    </div>
+                  )}
+                </Dropzone>
+
+                {/* <Dropzone
+                  onDrop={(acceptedFiles) => console.log(acceptedFiles)}
+                >
+                  {({ getRootProps, getInputProps }) => (
+                    <section>
+                      <div {...getRootProps()}>
+                        <input {...getInputProps()} />
+                        <p>
+                          Drag 'n' drop some files here, or click to select
+                          files
+                        </p>
+                      </div>
+                    </section>
+                  )}
+                </Dropzone> */}
+
+                <TextField
+                  label="IP Address"
+                  {...register("ipAddress")}
+                  helperText={errors.ipAddress?.message as string}
+                  error={!!errors.ipAddress}
+                />
               </>
             )}
             {kind === "models" && (

@@ -22,6 +22,7 @@ export class ModelsService {
   async createModel(dto: ModelCreate): Promise<Model> {
     const model = this.modelsRepo.create({
       name: dto.name,
+      image: dto.image,
     });
 
     if (dto.vendorId) {
@@ -52,10 +53,14 @@ export class ModelsService {
       model.vendor = vendor;
     }
 
+    if (dto.image) model.image = dto.image;
+
     return this.modelsRepo.save(model);
   }
 
-  async listModels(q: ListModelsQueryDto):Promise<{rows:Model[],total:number}>{
+  async listModels(
+    q: ListModelsQueryDto
+  ): Promise<{ rows: Model[]; total: number }> {
     const take = q.pageSize ?? 25;
     const skip = (q.page ?? 0) * take;
 
@@ -82,13 +87,13 @@ export class ModelsService {
     return { rows, total };
   }
 
-  async getModelById(id: string) : Promise<Model> {
+  async getModelById(id: string): Promise<Model> {
     const found = await this.modelsRepo.findOne({ where: { id } });
     if (!found) throw new NotFoundException("Vendor not found");
     return found;
   }
 
-  async removeModel(id: string):Promise<void> {
+  async removeModel(id: string): Promise<void> {
     await this.modelsRepo.delete(id);
   }
 }
