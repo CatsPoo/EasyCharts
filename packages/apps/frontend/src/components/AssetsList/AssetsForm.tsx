@@ -10,11 +10,11 @@ import {
   Stack,
   TextField,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import z from "zod";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
-
+import { UploadImage } from "./UploadImage.component";
 
 const schemas = {
   devices: z.object({
@@ -150,13 +150,18 @@ export function AssetForm<K extends AssetKind>({
               </>
             )}
             {kind === "models" && (
-              <AssetsSelectionList
-                fetchKind="vendors"
-                name="vendorId" // field name in your models schema/DTO
-                label="Vendor"
-                control={control}
-                errors={errors}
-              />
+              <>
+                <AssetsSelectionList
+                  fetchKind="vendors"
+                  name="vendorId" // field name in your models schema/DTO
+                  label="Vendor"
+                  control={control}
+                  errors={errors}
+                />
+
+                {/* get image from here */}
+                <UploadImage />
+              </>
             )}
           </Stack>
         </DialogContent>

@@ -1,4 +1,7 @@
 {
     "nxConsole.generateAiAgentRules": true,
-    "nxConsole.nxWorkspacePath": ""
+    "nxConsole.nxWorkspacePath": "",
+    "cSpell.words": [
+        "Uploady"
+    ]
 }
