@@ -5,13 +5,15 @@ import { VendorSchema } from "./vendor.schemas.js";
 export const ModelBaseSchema = z.object({
   name: z.string().min(1),
   vendor: VendorSchema,
-  iconUrl: z.string().url().optional(),
+  image: z.file().mime(["image/png", "image/jpeg"]),
+  // iconUrl: z.string().url().optional(),
 });
 
 export const ModelCreateSchema = z.object({
   name: z.string().min(1),
   vendorId: z.string().uuid().optional(),
-  iconUrl: z.string().url().optional(),    // from your CreateModelDto
+  image: z.file().mime(["image/png", "image/jpeg"]),
+  // iconUrl: z.string().url().optional(),    // from your CreateModelDto
 });
 
 export const ModelUpdateSchema = ModelCreateSchema.partial();
