@@ -8,6 +8,7 @@ import { AppConfigModule } from '../appConfig/appConfig.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppConfigService } from '../appConfig/appConfig.service';
 import { AuthModule } from '../auth/auth.module';
+import { FilesModule } from '../files/files.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuthModule } from '../auth/auth.module';
     ChartsModule,
     AppConfigModule,
     AuthModule,
+    FilesModule,
     TypeOrmModule.forRootAsync({
       imports: [AppConfigModule],
       inject:  [AppConfigService],
