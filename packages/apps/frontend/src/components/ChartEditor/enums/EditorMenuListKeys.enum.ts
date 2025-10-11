@@ -9,6 +9,7 @@ export enum  EditorMenuListKeys{
     EDIT_LINE = 'edit_line',
     REMOVE_LINE_FROM_CHART = 'remove_line_from_chart',
     DELETE_LINE = 'delete_line',
+    BOND_LINES = 'bond_lines',
     EDIT_PORT = 'edit_port',
     REMOVE_PORT = 'remove_port'
 

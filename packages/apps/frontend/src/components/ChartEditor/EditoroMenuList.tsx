@@ -1,4 +1,6 @@
+import { useReactFlow, type Edge } from "reactflow";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
+import { useCallback } from "react";
 
 
 interface EditorMenuListProps  {
@@ -44,12 +46,20 @@ export default function EditorMenuList({
         label: "Remove Line From Chart",
       },
       { key: EditorMenuListKeys.DELETE_LINE, label: "Delete Line" },
+      { key: EditorMenuListKeys.BOND_LINES, label: "Bond Lines" },
     ],
     handle: [
       { key: EditorMenuListKeys.EDIT_PORT, label: "Edit Port" },
       { key: EditorMenuListKeys.REMOVE_PORT, label: "Remove Port" },
     ],
   };
+
+  const rf = useReactFlow();
+
+  /** All selected React Flow edges (split or plain) */
+  const getSelectedEdges = useCallback((): Edge[] => {
+    return rf.getEdges().filter((e) => e.selected);
+  }, [rf]);
 
   const items = [
     ...(itemsByKind[kind] ?? []),
@@ -68,6 +78,8 @@ export default function EditorMenuList({
                 ? !isUndoEnabled
                 : it.key === EditorMenuListKeys.REDO
                 ? !isRedoEnabled
+                : it.key === EditorMenuListKeys.BOND_LINES
+                ? (getSelectedEdges().length < 2)
                 : false
             }
           >

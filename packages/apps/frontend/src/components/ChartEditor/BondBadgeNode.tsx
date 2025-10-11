@@ -31,7 +31,7 @@ export function BondBridgeNode({ id, data, selected }: NodeProps<BondBridgeNodeD
 
   return (
     <div
-      className="nodrag nopan"
+      className="nopan"
       style={{
         width,
         height,

@@ -6,5 +6,4 @@ export const BondOnChartSchema = z.object({
   chartId: z.string().uuid(),
   bond: BondSchema,
   position: PositionSchema,
-  autoPosition:z.boolean,
 });

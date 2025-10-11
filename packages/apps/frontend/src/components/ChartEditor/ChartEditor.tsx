@@ -1,6 +1,5 @@
 import {
   ChartEntitiesEnum,
-  type Bond,
   type Chart,
   type ChartUpdate,
   type Device,
@@ -26,8 +25,7 @@ import type {
   Edge,
   EdgeChange,
   Node,
-  NodeChange,
-  XYPosition,
+  NodeChange
 } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
 
@@ -43,12 +41,14 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 import { useListAssets } from "../../hooks/assetsHooks";
+import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
+import { useDevices } from "../../hooks/devicesHook";
 import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import DeviceNode from "../DeviceNode/DeviceNode";
 import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";
-import {BondBridgeNode, type BondBridgeNodeData } from "./BondBadgeNode";
+import { BondBridgeNode, type BondBridgeNodeData } from "./BondBadgeNode";
 import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
 import { Orientation } from "./enums/BondBridgeNode.enum";
@@ -90,6 +90,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
 
+    const updateMut = useUpdateChartMutation();
+    const { project,getEdge } = useReactFlow();
+    const {devicePos} = useDevices({chart})
+    const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,setChart,setMadeChanges})
+    
+    
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { isDark } = useThemeMode();
 
@@ -100,8 +106,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       }),
       []
     );
-
-    const updateMut = useUpdateChartMutation();
 
     const deleteSetsRef = useRef<DeleteSets>({
       devices: new Set(),
@@ -224,7 +228,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       []
     );
 
-    const { project } = useReactFlow(); // requires you wrap App in <ReactFlowProvider>
 
     const onUndoClick = useCallback(() => {
       if (actionsHistoryIndex.current === 0) return;
@@ -519,38 +522,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [availableDevices]
     );
 
-    const devicePos = useMemo<Map<string, XYPosition>>(() => {
-      const m = new Map<string, XYPosition>();
-      for (const doc of chart.devicesOnChart) {
-        m.set(doc.device.id, doc.position);
-      }
-      return m;
-    }, [chart.devicesOnChart]);
-
-    const pickOrientation = useCallback(
-      (bond: Bond): Orientation => {
-        const lines: LineOnChart[] = chart.linesOnChart;
-        let sumDx = 0,
-          sumDy = 0,
-          c = 0;
-        for (const lid of bond.membersLines) {
-          const loc = lines.find((l) => l.line.id === lid);
-          if (!loc) continue;
-          const a = devicePos.get(loc.line.sourcePort.deviceId);
-          const b = devicePos.get(loc.line.targetPort.deviceId);
-          if (!a || !b) continue;
-          sumDx += Math.abs(a.x - b.x);
-          sumDy += Math.abs(a.y - b.y);
-          c++;
-        }
-        if (!c) return Orientation.TopToBottom;
-        // If devices are vertically aligned on average -> use left/right handles (taller oval)
-        return sumDx < sumDy
-          ? Orientation.LeftToright
-          : Orientation.TopToBottom;
-      },
-      [chart.linesOnChart, devicePos]
-    );
 
     const buildBridgeView = useCallback(() => {
       const bridgeNodes: Node<BondBridgeNodeData>[] = [];
@@ -577,40 +548,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         const orientation: Orientation = pickOrientation(b.bond);
         // auto position: average of member midpoints
-        let cx = 0,
-          cy = 0,
-          cnt = 0;
-        for (const loc of members) {
-          const A = devicePos.get(loc.line.sourcePort.deviceId);
-          const B = devicePos.get(loc.line.targetPort.deviceId);
-          if (!A || !B) continue;
-          cx += (A.x + B.x) / 2;
-          cy += (A.y + B.y) / 2;
-          cnt++;
-        }
-        if (cnt) {
-          cx /= cnt;
-          cy /= cnt;
-        }
+        const {x:cx,y:cy} = getBondCenterPos(members)
         const nodeId = `bridge-${b.bond.id}`;
-
-        // size to position (must match BridgeNode)
-        const baseW = 84,
-          baseH = 48,
-          step = 14,
-          n = members.length;
-        const width =
-          orientation === Orientation.TopToBottom
-            ? Math.max(baseW, baseW + step * (n - 1))
-            : 52;
-        const height =
-          orientation === Orientation.LeftToright
-            ? Math.max(baseH, baseH + step * (n - 1))
-            : 52;
-
-        const nodePos = /*b.autoPosition || */ !b.position
-          ? { x: cx - width / 2, y: cy - height / 2 }
-          : b.position;
 
         // order handles by angle around bridge center for nicer bundling
         const membersSorted = [...members].sort((L1, L2) => {
@@ -625,7 +564,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         bridgeNodes.push({
           id: nodeId,
           type: "bridge",
-          position: nodePos,
+          position: b.position,
           draggable: true,
           selectable: true,
           zIndex: 10,
@@ -716,13 +655,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         .map(convertLineToEdge);
 
       return { bridgeNodes, displayEdges: [...plainEdges, ...splitEdges] };
-    }, [
-      chart.bondsOnChart,
-      chart.linesOnChart,
-      devicePos,
-      pickOrientation,
-      setMadeChanges,
-    ]);
+    }, [chart.bondsOnChart, chart.linesOnChart, devicePos, getBondCenterPos, pickOrientation, setMadeChanges]);
 
     useEffect(() => {
       setNodes((prev) => {
@@ -746,8 +679,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     }, [buildBridgeView, chart.devicesOnChart, convertDeviceToNode, setNodes]);
 
     useEffect(() => {
-      setEdges(chart.linesOnChart.map(convertLineToEdge));
-    }, [chart.linesOnChart, setEdges]);
+      const { displayEdges } = buildBridgeView();
+      setEdges(displayEdges);
+    }, [buildBridgeView, setEdges]);
 
     const onNodesChange = useCallback(
       (changes: NodeChange[]) => {
@@ -986,6 +920,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       },
       [setEdges]
     );
+    
 
     const onCtxAction = useCallback(
       (action: EditorMenuListKeys) => {
@@ -1035,6 +970,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             );
             setConfirmDeleteOpen(true);
             //onDeleteLine(payload.edge.id);
+            break;
+
+          case EditorMenuListKeys.BOND_LINES:
+            createBond()
             break;
 
           case EditorMenuListKeys.EDIT_PORT:
