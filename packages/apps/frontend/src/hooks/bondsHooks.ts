@@ -5,16 +5,12 @@ import { v4 as uuidv4 } from "uuid";
 import { Orientation } from "../components/ChartEditor/enums/BondBridgeNode.enum";
 import { useDevices } from "./devicesHook";
 
-// If your Bond uses another property name (e.g. memberLineIds),
-// adjust the places marked with // <-- here
-
 type UseBondsArgs = {
   chart: Chart;
-  setChart: React.Dispatch<React.SetStateAction<Chart>>;
-  setMadeChanges?: (v: boolean) => void;
+  applyChartChange: (produce: (base: Chart) => Chart) => void;
 };
 
-export function useBonds({ chart, setChart, setMadeChanges }: UseBondsArgs) {
+export function useBonds({ chart, applyChartChange }: UseBondsArgs) {
   const rf = useReactFlow();
   const { devicePos } = useDevices({ chart });
 
@@ -150,7 +146,7 @@ export function useBonds({ chart, setChart, setMadeChanges }: UseBondsArgs) {
         position: newPosition,
       };
 
-      setChart((prev) => {
+      applyChartChange((prev) => {
         const next = {
           ...prev,
           bondsOnChart: [
@@ -160,8 +156,6 @@ export function useBonds({ chart, setChart, setMadeChanges }: UseBondsArgs) {
         } as Chart;
         return next;
       });
-
-      setMadeChanges?.(true);
       return { ok: true, bond };
     },
     [
@@ -169,15 +163,14 @@ export function useBonds({ chart, setChart, setMadeChanges }: UseBondsArgs) {
       chart.bondsOnChart,
       chart.id,
       getNewBondPosition,
-      setChart,
-      setMadeChanges,
+      applyChartChange,
     ]
   );
 
   /** Delete a bond entirely (does not touch lines themselves) */
   const deleteBond = useCallback(
     (bondId: string) => {
-      setChart((prev) => {
+      applyChartChange((prev) => {
         const next = {
           ...prev,
           bondsOnChart: (prev.bondsOnChart ?? []).filter(
@@ -186,10 +179,9 @@ export function useBonds({ chart, setChart, setMadeChanges }: UseBondsArgs) {
         } as Chart;
         return next;
       });
-      setMadeChanges?.(true);
       return { ok: true };
     },
-    [setChart, setMadeChanges]
+    [applyChartChange]
   );
 
   /** Add lines into an existing bond (uses selection if lineIds omitted) */
@@ -209,7 +201,7 @@ export function useBonds({ chart, setChart, setMadeChanges }: UseBondsArgs) {
         return { ok: false, reason: "All selected lines are already bonded." };
       }
 
-      setChart((prev) => {
+      applyChartChange((prev) => {
         const next = {
           ...prev,
           bondsOnChart: (prev.bondsOnChart ?? []).map((b) => {
@@ -224,10 +216,9 @@ export function useBonds({ chart, setChart, setMadeChanges }: UseBondsArgs) {
         } as Chart;
         return next;
       });
-      setMadeChanges?.(true);
       return { ok: true };
     },
-    [chart.bondsOnChart, getSelectedLineIds, setChart, setMadeChanges]
+    [applyChartChange, chart.bondsOnChart, getSelectedLineIds]
   );
 
   return {

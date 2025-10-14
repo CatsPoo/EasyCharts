@@ -87,13 +87,37 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       actionsHistory.current.length - 1
     );
 
+    const addChartToHistory = useCallback((newChart: Chart) => {
+      actionsHistory.current = actionsHistory.current.slice(
+        0,
+        actionsHistoryIndex.current + 1
+      );
+      setCanUndo(true);
+      setCanUndo(actionsHistoryIndex.current > 0);
+
+      actionsHistory.current.push(structuredClone(newChart));
+      actionsHistoryIndex.current = actionsHistory.current.length - 1;
+    }, []);
+
+    const applyChartChange = useCallback(
+      (produce: (base: Chart) => Chart) => {
+        const base = chart;
+        const next = produce(base);
+        setChart(next);
+        addChartToHistory(next);
+        setMadeChanges(true);
+      },
+      [addChartToHistory, chart, setChart, setMadeChanges]
+    );
+
+
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
 
     const updateMut = useUpdateChartMutation();
     const { project,getEdge } = useReactFlow();
     const {devicePos} = useDevices({chart})
-    const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,setChart,setMadeChanges})
+    const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,applyChartChange})
     
     
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -160,28 +184,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       });
     }, []);
 
-    const addChartToHistory = useCallback((newChart: Chart) => {
-      actionsHistory.current = actionsHistory.current.slice(
-        0,
-        actionsHistoryIndex.current + 1
-      );
-      setCanUndo(true);
-      setCanUndo(actionsHistoryIndex.current > 0);
-
-      actionsHistory.current.push(structuredClone(newChart));
-      actionsHistoryIndex.current = actionsHistory.current.length - 1;
-    }, []);
-
-    const applyChartChange = useCallback(
-      (produce: (base: Chart) => Chart) => {
-        const base = chart;
-        const next = produce(base);
-        setChart(next);
-        addChartToHistory(next);
-        setMadeChanges(true);
-      },
-      [addChartToHistory, chart, setChart, setMadeChanges]
-    );
 
     const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
       e.preventDefault();
