@@ -845,19 +845,31 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onNodeDragStop = useCallback(
       (_e: React.MouseEvent, node: Node) => {
-        applyChartChange((prev) => {
-          return {
+
+        if (node.type === "bridge") {
+          const bondId = node.id.replace("bridge-", "");
+          applyChartChange((prev) => ({
             ...prev,
-            devicesOnChart: prev.devicesOnChart.map((loc) =>
-              loc.device.id === node.id
-                ? { ...loc, position: node.position }
-                : loc
+            bondsOnChart: (prev.bondsOnChart ?? []).map((b) =>
+              b.bond.id === bondId ? { ...b, position: node.position } : b
             ),
-          } as Chart;
-        });
-        setMadeChanges(true);
+          } as Chart));
+
+        } else if (node.type === "device") {
+          applyChartChange(
+            (prev) =>
+              ({
+                ...prev,
+                devicesOnChart: prev.devicesOnChart.map((loc) =>
+                  loc.device.id === node.id
+                    ? { ...loc, position: node.position }
+                    : loc
+                ),
+              } as Chart)
+          );
+        }
       },
-      [applyChartChange, setMadeChanges]
+      [applyChartChange]
     );
 
     const onDrop = useCallback(
