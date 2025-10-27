@@ -8,7 +8,7 @@ import {
   Check,
   Unique,
 } from "typeorm";
-import { DeviceOnChartEntity } from "./deviceOnChart.entityEntity";
+import { DeviceOnChartEntity } from "./deviceOnChart.entity";
 import { PortEntity } from "../../devices/entities/port.entity";
 import { type PortSide } from "@easy-charts/easycharts-types";
 

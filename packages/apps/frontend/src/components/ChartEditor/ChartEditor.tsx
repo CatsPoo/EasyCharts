@@ -1011,10 +1011,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         e?.preventDefault();
 
         const payload: ChartUpdate = {
-          name: chart.name,
-          description: chart.description ?? "",
-          devicesOnChart: chart.devicesOnChart,
-          linesOnChart: chart.linesOnChart,
+          ...chart,
           deletes: {
             devices: [...deleteSetsRef.current[ChartEntitiesEnum.DEVICES]],
             lines: [...deleteSetsRef.current[ChartEntitiesEnum.LINES]],
