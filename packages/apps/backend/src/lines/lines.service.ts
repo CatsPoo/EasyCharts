@@ -2,7 +2,7 @@ import { BadGatewayException, Injectable, InternalServerErrorException, NotFound
 import { LineEntity } from './entities/line.entity';
 import { Bond, BondCreate, BondUpdate, Line } from '@easy-charts/easycharts-types';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { LineOnChartEntity } from '../charts/entities/lineonChart.emtity';
 import { BondEntity } from './entities/bond.entity';
 
@@ -34,8 +34,9 @@ export class LinessService {
     } as LineEntity;
   }
 
-  async deleteOrphanLines(): Promise<number> {
-    return this.linesrepo.manager.transaction(async (m) => {
+  async deleteOrphanLines(manager ?: EntityManager): Promise<number> {
+    const man = manager ?? this.linesrepo.manager
+    return man.transaction(async (m) => {
       const usedLinesSub = m
         .createQueryBuilder()
         .subQuery()
@@ -58,7 +59,7 @@ export class LinessService {
     return {
       id: bondEntity.id,
       name: bondEntity.name,
-      membersLines: bondEntity.members.map((m) => m.id),
+      membersLines: (bondEntity.members ?? []).map(m => m.id),
     } as Bond;
   }
   async createEmptyBond(bondCreate: BondCreate): Promise<Bond> {
@@ -66,43 +67,46 @@ export class LinessService {
       id: bondCreate.id,
       name: bondCreate.name,
     });
+
     return this.convertBondEntitytoBond(newBond)
   }
 
-  async getBondById(id: string): Promise<Bond> {
+  async getBondById(id: string): Promise<Bond | null> {
     const bond: BondEntity | null = await this.bondRepo.findOne({
       where: { id },
+      relations: { members: true },
     });
-    if (!bond) throw new NotFoundException(`Bond ${id} not found`);
+    if (!bond) return null
     return this.convertBondEntitytoBond(bond);
   }
 
   async updateBond(id: string, bondUpdate: BondUpdate): Promise<Bond> {
-    const bond: BondEntity | null = await this.bondRepo.findOne({
-      where: { id },
-    });
-    if (!bond) throw new NotFoundException(`Bond ${id} not found`);
-    if (bondUpdate.name) bond.name = bondUpdate.name;
+  const bond = await this.bondRepo.findOne({
+    where: { id },
+    relations: { members: true },  // ← ensure loaded before overwrite
+  });
+  if (!bond) throw new NotFoundException(`Bond ${id} not found`);
 
-    if (bondUpdate.membersLines) {
-      const requestedLines: LineEntity[] = await this.linesrepo.findBy({
-        id: In(bondUpdate.membersLines),
-      });
+  if (bondUpdate.name) bond.name = bondUpdate.name;
 
-      for (const line of requestedLines) {
-        if (line.bondId !== null)
-          throw new BadGatewayException(
-            `Line ${line.id} already member of bond ${line.bondId}`
-          );
+  if (bondUpdate.membersLines) {
+    const requestedLines = await this.linesrepo.findBy({ id: In(bondUpdate.membersLines) });
+
+    // keep the "already member of another bond" guard if that's a global constraint
+    for (const line of requestedLines) {
+      if (line.bondId !== null) {
+        throw new BadGatewayException(`Line ${line.id} already member of bond ${line.bondId}`);
       }
-
-      bond.members = requestedLines;
     }
-    const updatedBond: BondEntity | null = await this.bondRepo.save(bond);
-    if (!updatedBond)
-      throw new InternalServerErrorException(`Cannot update bond ${id}`);
-    return this.convertBondEntitytoBond(updatedBond);
+
+    bond.members = requestedLines;
   }
+
+  const updatedBond = await this.bondRepo.save(bond);
+  // Reload or return with null-safe conversion
+  const reloaded = await this.bondRepo.findOne({ where: { id }, relations: { members: true } });
+  return this.convertBondEntitytoBond(reloaded!);
+}
 
   async deleteBond(id: string): Promise<void> {
     this.bondRepo.delete(id);

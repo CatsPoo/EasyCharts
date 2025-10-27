@@ -9,7 +9,7 @@ import {
   PrimaryGeneratedColumn,
   type Relation
 } from "typeorm";
-import { DeviceOnChartEntity } from "./deviceOnChart.entityEntity";
+import { DeviceOnChartEntity } from "./deviceOnChart.entity";
 import { LineOnChartEntity } from "./lineonChart.emtity";
 import { UserEntity } from "../../auth/entities/user.entity";
 import { BondOnChartEntity } from "./BondOnChart.emtity";

@@ -1,5 +1,6 @@
 // src/charts/charts.service.ts
 import {
+  Bond,
   BondOnChart,
   ChartLock,
   HandleInfo,
@@ -29,7 +30,7 @@ import { PortsService } from "../devices/ports.service";
 import { LineEntity } from "../lines/entities/line.entity";
 import { LinessService } from "../lines/lines.service";
 import { ChartEntity } from "./entities/chart.entity";
-import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
+import { DeviceOnChartEntity } from "./entities/deviceOnChart.entity";
 import { LineOnChartEntity } from "./entities/lineonChart.emtity";
 import { PortOnChartEntity } from "./entities/portOnChart.entity";
 import { ChartIsLockedExeption } from "./exeptions/chartIsLocked.exeption";
@@ -180,9 +181,9 @@ export class ChartsService {
             targetPort: true,
           },
         },
-        bondOnChart:{
-          bond:true
-        }
+        bondOnChart: {
+          bond: { members: true },
+        },
       },
     });
     if (!chart) throw new NotFoundException("chart not found");
@@ -234,6 +235,26 @@ export class ChartsService {
     }
     return this.convertChartToChartMetadata(chart);
   }
+
+  // ChartsService
+private async syncBondOnChart(
+  bocRepo: Repository<BondOnChartEntity>,
+  chartId: string,
+  bondsOnChart: BondOnChart[]
+) {
+  const desired = bondsOnChart.map(b => ({ chartId, bondId: b.bond.id }));
+  if (desired.length) {
+    await bocRepo.upsert(desired, {
+      conflictPaths: ["chartId", "bondId"],
+      skipUpdateIfNoValuesChanged: true,
+    });
+  }
+
+  await bocRepo.delete({
+    chartId,
+    bondId: Not(In(bondsOnChart.map(b => b.bond.id))),
+  });
+}
 
   async updateChart(
     chartId: string,
@@ -421,14 +442,29 @@ export class ChartsService {
 
         //Bonds
 
-        if(dto.bondsOnChart !== undefined){
-          for(const boc of dto.bondsOnChart){
-            const requiredMembers : LineEntity[] = await lineRepo.findBy({id:In(boc.bond.membersLines)})
-            if(requiredMembers.length !== boc.bond.membersLines.length) throw new BadRequestException(`One or more from requested members of bond ${boc.bond.id} doesn't exist`)
-            if(! this.linesService.getBondById(boc.bond.id)) await this.linesService.createEmptyBond(boc.bond)
-            await this.linesService.updateBond(boc.bond.id,boc.bond)
-          }
-        }
+        if (dto.bondsOnChart !== undefined) {
+  for (const boc of dto.bondsOnChart) {
+    // Validate all member lines exist
+    const requiredMembers = await lineRepo.findBy({ id: In(boc.bond.membersLines) });
+    if (requiredMembers.length !== boc.bond.membersLines.length) {
+      throw new BadRequestException(
+        `One or more requested members of bond ${boc.bond.id} don't exist`
+      );
+    }
+
+    const currentBond = await this.linesService.getBondById(boc.bond.id);
+    if (!currentBond) {
+      await this.linesService.createEmptyBond({ id:boc.bond.id, name: boc.bond.name,membersLines:[] });
+    }
+    await this.linesService.updateBond(boc.bond.id, {
+      name: boc.bond.name,
+      membersLines: boc.bond.membersLines,
+    });
+  }
+
+  // Keep the per-chart linkage in sync (see §3 below)
+  await this.syncBondOnChart(bocRepo, chartId, dto.bondsOnChart);
+}
 
 
         // delete entities permenantly from db
@@ -459,7 +495,9 @@ export class ChartsService {
             },
           },
           bondOnChart:{
-            bond:true
+            bond:{
+              members:true,
+            }
           }
         },
       });
@@ -522,8 +560,9 @@ export class ChartsService {
       lockedById: null,
       lockedAt: null,
     });
-    const updatedChart : ChartEntity | null = await this.chartRepo.save({id:chartId,lockedAt:null,lockedById:null} as ChartEntity)
-    if(!this.updateChart) throw new Error('Enable to un lock chart')
+    await this.chartRepo.update(chartId, { lockedAt: null, lockedById: null });
+    const updatedChart = await this.chartRepo.findOne({ where: { id: chartId }, relations: { lockedBy: true } });
+    if(!updatedChart) throw new Error('Enable to un lock chart')
     return this.getLockFromChartEntity(updatedChart)
   }
 }

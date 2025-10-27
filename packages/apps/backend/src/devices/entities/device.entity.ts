@@ -1,5 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entityEntity';
+import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entity';
 import { ModelEntity } from './model.entity';
 import { PortEntity } from './port.entity';
 @Entity({ name: "devices" })
