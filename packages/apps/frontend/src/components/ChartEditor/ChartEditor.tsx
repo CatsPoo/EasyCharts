@@ -1,5 +1,6 @@
 import {
   ChartEntitiesEnum,
+  type BondOnChart,
   type Chart,
   type ChartUpdate,
   type Device,
@@ -525,7 +526,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     );
 
 
-    const buildBridgeView = useCallback(() => {
+    const buildBridgeView = useCallback((bondsOnChart : BondOnChart[],linesOnChart:LineOnChart[]) => {
       const bridgeNodes: Node<BondBridgeNodeData>[] = [];
       const splitEdges: Edge[] = [];
       const bridgedLineIds = new Set<string>();
@@ -542,8 +543,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         return Math.atan2(my - cy, mx - cx);
       };
 
-      for (const b of chart.bondsOnChart) {
-        const members: LineOnChart[] = chart.linesOnChart.filter((loc) =>
+      for (const b of bondsOnChart) {
+        console.log(b)
+        const members: LineOnChart[] = linesOnChart.filter((loc) =>
           b.bond.membersLines.includes(loc.line.id)
         );
         if (members.length < 2) continue;
@@ -578,7 +580,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               setMadeChanges(true);
             },
           },
-        });
+        } as Node);
 
         // per-member split edges
         membersSorted.forEach((loc, idx) => {
@@ -613,7 +615,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 data: { lineId: loc.line.id },
                 // avoid editing reconnection on split view
                 updatable: false,
-              }
+              } as Edge
             : {
                 id: `${loc.line.id}-a`,
                 source: loc.line.targetPort.deviceId,
@@ -623,7 +625,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 type: "step",
                 data: { lineId: loc.line.id },
                 updatable: false,
-              };
+              } as Edge;
 
           const edgeB: Edge = sourceFirst
             ? {
@@ -635,7 +637,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 type: "step",
                 data: { lineId: loc.line.id },
                 updatable: false,
-              }
+              } as Edge
             : {
                 id: `${loc.line.id}-b`,
                 source: nodeId,
@@ -645,19 +647,19 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 type: "step",
                 data: { lineId: loc.line.id },
                 updatable: false,
-              };
+              } as Edge;
 
           splitEdges.push(edgeA, edgeB);
         });
       }
 
       // Non-bridged lines render as usual
-      const plainEdges = chart.linesOnChart
+      const plainEdges = linesOnChart
         .filter((l) => !bridgedLineIds.has(l.line.id))
         .map(convertLineToEdge);
 
       return { bridgeNodes, displayEdges: [...plainEdges, ...splitEdges] };
-    }, [chart.bondsOnChart, chart.linesOnChart, devicePos, getBondCenterPos, pickOrientation, setMadeChanges]);
+    }, [devicePos, getBondCenterPos, pickOrientation, setMadeChanges]);
 
     useEffect(() => {
       setNodes((prev) => {
@@ -675,15 +677,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               }
             : base;
         });
-        const { bridgeNodes } = buildBridgeView();
+        const { bridgeNodes } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
         return [...devicesNodes, ...bridgeNodes];
       });
-    }, [buildBridgeView, chart.devicesOnChart, convertDeviceToNode, setNodes]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.devicesOnChart, chart.linesOnChart, convertDeviceToNode, setNodes]);
 
     useEffect(() => {
-      const { displayEdges } = buildBridgeView();
+      const { displayEdges } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
       setEdges(displayEdges);
-    }, [buildBridgeView, setEdges]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.linesOnChart, setEdges]);
 
     const onNodesChange = useCallback(
       (changes: NodeChange[]) => {

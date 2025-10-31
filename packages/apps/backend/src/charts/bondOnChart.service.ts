@@ -1,6 +1,7 @@
 // src/charts/instance/bonds-on-chart.service.ts
 import { Injectable } from "@nestjs/common";
 import { EntityManager } from "typeorm";
+import { Position} from './entities/position.entity'
 import type { BondOnChart } from "@Easy-charts/easycharts-types";
 import { BondOnChartEntity } from "./entities/BondOnChart.emtity";
 import { LinessService } from "../lines/lines.service";
@@ -15,6 +16,7 @@ export class BondsOnChartService {
     return {
       bond: this.linesService.convertBondEntitytoBond(bondonChartEntity.bond),
       chartId: bondonChartEntity.chartId,
+      position:bondonChartEntity.position
     } as BondOnChart;
   }
   /**
@@ -28,7 +30,7 @@ export class BondsOnChartService {
   ): Promise<void> {
     const bocRepo = manager.getRepository(BondOnChartEntity);
 
-    const desired = items.map((b) => ({ chartId, bondId: b.bond.id }));
+    const desired  = items.map((b) => ({ chartId, bondId: b.bond.id,position: {x : b.position.x,y:b.position.y} as Position }));
     if (desired.length) {
       await bocRepo.upsert(desired, {
         conflictPaths: ["chartId", "bondId"],
