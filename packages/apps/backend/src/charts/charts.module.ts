@@ -16,6 +16,7 @@ import { BondOnChartEntity } from './entities/BondOnChart.emtity';
 import { LinesOnChartService } from './lineOnChart.service';
 import { DevicesOnChartService } from './deviceOnChart.service';
 import { BondsOnChartService } from './bondOnChart.service';
+import { PortsOnChartService } from './portsOnChart.service';
 
 @Module({
     imports: [
@@ -35,7 +36,7 @@ import { BondsOnChartService } from './bondOnChart.service';
         AuthModule
     ],
     controllers: [ChartsController],
-    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService],
+    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,PortsOnChartService],
     exports:[ChartsService]
 })
 export class ChartsModule {}

@@ -2,17 +2,12 @@
 import {
   BondOnChart,
   ChartLock,
-  HandleInfo,
   LineOnChart,
-  Port,
-  SIDES,
   type Chart,
   type ChartCreate,
   type ChartMetadata,
   type ChartUpdate,
-  type DeviceOnChart,
-  type Handles,
-  type Side
+  type DeviceOnChart
 } from "@Easy-charts/easycharts-types";
 import {
   Injectable,
@@ -20,23 +15,19 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, EntityManager, Repository } from "typeorm";
-import { DevicesService } from "../devices/devices.service";
 import { DeviceEntity } from "../devices/entities/device.entity";
 import { PortEntity } from "../devices/entities/port.entity";
 import { PortsService } from "../devices/ports.service";
 import { LineEntity } from "../lines/entities/line.entity";
 import { LinessService } from "../lines/lines.service";
+import { BondsOnChartService } from "./bondOnChart.service";
+import { ChartLockFeilds } from "./chartLockes.types";
+import { DevicesOnChartService } from "./deviceOnChart.service";
 import { ChartEntity } from "./entities/chart.entity";
-import { DeviceOnChartEntity } from "./entities/deviceOnChart.entity";
-import { LineOnChartEntity } from "./entities/lineonChart.emtity";
-import { PortOnChartEntity } from "./entities/portOnChart.entity";
 import { ChartIsLockedExeption } from "./exeptions/chartIsLocked.exeption";
 import { ChartNotFoundExeption } from "./exeptions/chartNotFound.exeption";
-import { ChartLockFeilds } from "./chartLockes.types";
-import { BondOnChartEntity } from "./entities/BondOnChart.emtity";
-import { DevicesOnChartService } from "./deviceOnChart.service";
 import { LinesOnChartService } from "./lineOnChart.service";
-import { BondsOnChartService } from "./bondOnChart.service";
+import { PortsOnChartService } from "./portsOnChart.service";
 
 @Injectable()
 export class ChartsService {
@@ -54,6 +45,7 @@ export class ChartsService {
     private readonly devicesOnChartService: DevicesOnChartService,
     private readonly linesOnChartService: LinesOnChartService,
     private readonly bondsOnChartService: BondsOnChartService,
+    private readonly portsOnChartService:PortsOnChartService,
   ) {}
 
   getLockFromChartEntity = (chartEntiy: ChartLockFeilds): ChartLock => {
@@ -150,7 +142,7 @@ export class ChartsService {
     return this.convertChartToChartMetadata(chart);
   }
 
-  // ---------- UPDATE orchestrator ----------
+
   async updateChart(chartId: string, dto: ChartUpdate, userId: string): Promise<Chart> {
     const updated = await this.dataSource.transaction(async (manager: EntityManager) => {
       const chartsRepo = manager.getRepository(ChartEntity);
@@ -168,6 +160,7 @@ export class ChartsService {
       if (dto.name !== undefined) chart.name = dto.name;
       if (dto.description !== undefined) chart.description = dto.description ?? "";
       if (dto.name !== undefined || dto.description !== undefined) await chartsRepo.save(chart);
+
 
       // 2) DevicesOnChart (instance only)
       if (dto.devicesOnChart !== undefined) {

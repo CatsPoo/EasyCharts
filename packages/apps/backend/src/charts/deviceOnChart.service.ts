@@ -1,54 +1,22 @@
 // src/charts/instance/devices-on-chart.service.ts
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { EntityManager, In } from "typeorm";
-import type { DeviceOnChart, HandleInfo, Handles, Port, Side } from "@Easy-charts/easycharts-types";
+import type { Device, DeviceOnChart, HandleInfo, Handles, Port, Position, Side } from "@Easy-charts/easycharts-types";
 import { PortOnChartEntity } from "./entities/portOnChart.entity";
 import { DeviceEntity } from "../devices/entities/device.entity";
 import { DeviceOnChartEntity } from "./entities/deviceOnChart.entity";
 import { PortEntity } from "../devices/entities/port.entity";
 import { DevicesService } from "../devices/devices.service";
+import { PortsOnChartService } from "./portsOnChart.service";
+import { PortsService } from "../devices/ports.service";
 
 @Injectable()
 export class DevicesOnChartService {
-
-  constructor(private readonly devicesService: DevicesService) {}
-  
-  private handlesToRows(
-    chartId: string,
-    deviceId: string,
-    handles?: Handles
-  ): Array<
-    Pick<PortOnChartEntity, "chartId" | "deviceId" | "portId" | "side">
-  > {
-    if (!handles) return [];
-    const rows: Array<
-      Pick<PortOnChartEntity, "chartId" | "deviceId" | "portId" | "side">
-    > = [];
-    (["left", "right", "top", "bottom"] as const).forEach((side) => {
-      const arr = handles[side] ?? [];
-      for (const h of arr)
-        rows.push({ chartId, deviceId, portId: h.port.id, side });
-    });
-    return rows;
-  }
-
-  convertPortEntityToPort(portEntity: PortEntity): Port {
-    const { id, name, type, deviceId } = portEntity;
-    return { id, name, type, deviceId } as Port;
-  }
-
-  rowsToHandles(placements: PortOnChartEntity[]): Handles {
-    const bySide: Record<Side, HandleInfo[]> = {
-      left: [],
-      right: [],
-      top: [],
-      bottom: [],
-    };
-    for (const r of placements) {
-      bySide[r.side].push({ port: this.convertPortEntityToPort(r.port) });
-    }
-    return bySide;
-  }
+  constructor(
+    private readonly devicesService: DevicesService,
+    private readonly portsOnChartService: PortsOnChartService,
+    private readonly portsService:PortsService
+  ) {}
 
   convertDeviceOnChartEntity = async (
     deviceonChartEntity: DeviceOnChartEntity
@@ -58,7 +26,7 @@ export class DevicesOnChartService {
       chartId,
       device: this.devicesService.convertDeviceEntity(device),
       position,
-      handles: this.rowsToHandles(portPlacements ?? []),
+      handles: this.portsOnChartService.rowsToHandles(portPlacements ?? []),
     } as DeviceOnChart;
   };
 
@@ -70,8 +38,8 @@ export class DevicesOnChartService {
     manager: EntityManager,
     chartId: string,
     placements: Array<{
-      device: { id: string };
-      position: { x: number; y: number };
+      device: Device;
+      position: Position;
       handles?: Handles;
     }>
   ): Promise<void> {
@@ -79,6 +47,7 @@ export class DevicesOnChartService {
     const pocRepo = manager.getRepository(PortOnChartEntity);
     const deviceRepo = manager.getRepository(DeviceEntity);
     const portRepo = manager.getRepository(PortEntity);
+
 
     // Validate devices exist (global)
     const uniqDeviceIds = [...new Set(placements.map((d) => d.device.id))];
@@ -108,7 +77,13 @@ export class DevicesOnChartService {
 
     // Replace handles per device
     for (const d of placements) {
-      const desiredRows = this.handlesToRows(chartId, d.device.id, d.handles);
+
+    await this.portsService.upsertPortsForDevice(d.device.id, d.device.ports,manager);
+      const desiredRows = this.portsOnChartService.handlesToRows(
+        chartId,
+        d.device.id,
+        d.handles
+      );
 
       // Validate that every port belongs to the device (global invariant)
       if (desiredRows.length) {
