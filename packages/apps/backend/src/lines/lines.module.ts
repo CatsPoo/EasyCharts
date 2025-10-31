@@ -6,10 +6,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PortEntity } from '../devices/entities/port.entity';
 import { DevicesModule } from '../devices/devices.module';
 import { DeviceEntity } from '../devices/entities/device.entity';
+import { BondEntity } from './entities/bond.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([LineEntity,PortEntity,DeviceEntity]),
+    TypeOrmModule.forFeature([LineEntity,PortEntity,DeviceEntity,BondEntity]),
     DevicesModule
   ],
   controllers: [LinesController],
