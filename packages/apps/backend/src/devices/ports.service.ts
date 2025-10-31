@@ -4,9 +4,9 @@ import type {
   PortType,
   PortUpdate,
 } from "@easy-charts/easycharts-types";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, Repository } from "typeorm";
+import { DataSource, EntityManager, In, Repository } from "typeorm";
 import { LineEntity } from "../lines/entities/line.entity";
 import { QueryDto } from "../query/dto/query.dto";
 import { PortEntity } from "./entities/port.entity";
@@ -25,6 +25,16 @@ export class PortsService {
       type: dto.type as PortType,
     });
     return this.portsRepo.save(entity);
+  }
+
+  async upsertPorts(ports: Partial<PortEntity>[], manager?: EntityManager) {
+    const portRepo = manager
+      ? manager.getRepository(PortEntity)
+      : this.portsRepo;
+    await portRepo.upsert(ports, {
+      conflictPaths: ["id"],
+      skipUpdateIfNoValuesChanged: true,
+    });
   }
 
   async listPorts(q: QueryDto): Promise<{ rows: Port[]; total: number }> {
@@ -112,5 +122,64 @@ export class PortsService {
         .where(`id IN ${usedAsSource} OR id IN ${usedAsTarget}`)
         .execute();
     });
+  }
+
+  convertPortEntityToPort(portEntity: PortEntity): Port {
+    const { id, name, type, deviceId } = portEntity;
+    return { id, name, type, deviceId } as Port;
+  }
+
+  async getPortsByIds(ids: string[], manager?: EntityManager) {
+    const portRepo = manager
+      ? manager.getRepository(PortEntity)
+      : this.portsRepo;
+    return portRepo.find({
+      where: { id: In(ids) },
+      select: ["id", "deviceId"],
+    });
+  }
+
+  async upsertPortsForDevice(
+    deviceId: string,
+    ports:
+      | Array<{ id: string; name: string; type: PortType }>
+      | undefined
+      | null,
+    manager?: EntityManager
+  ): Promise<void> {
+    if (!ports?.length) return;
+
+    const portRepo = manager
+      ? manager.getRepository(PortEntity)
+      : this.portsRepo;
+
+    // Prevent moving an existing port id to another device
+    const ids = [...new Set(ports.map((p) => p.id))];
+    const existing = await portRepo.find({
+      where: { id: In(ids) },
+      select: ["id", "deviceId"],
+    });
+    const byId = new Map(existing.map((e) => [e.id, e.deviceId]));
+    const conflicts = ports.filter(
+      (p) => byId.has(p.id) && byId.get(p.id) !== deviceId
+    );
+    if (conflicts.length) {
+      throw new BadRequestException(
+        `Port(s) belong to a different device: ${conflicts
+          .map((c) => c.id)
+          .join(", ")}`
+      );
+    }
+
+    // Upsert and force-bind to device
+    await portRepo.upsert(
+      ports.map((p) => ({
+        id: p.id,
+        name: p.name,
+        type: p.type as any,
+        deviceId,
+      })),
+      { conflictPaths: ["id"], skipUpdateIfNoValuesChanged: true }
+    );
   }
 }

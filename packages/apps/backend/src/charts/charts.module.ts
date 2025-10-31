@@ -3,7 +3,7 @@ import { ChartsService } from './charts.service';
 import { ChartsController } from './charts.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChartEntity } from './entities/chart.entity';
-import { DeviceOnChartEntity } from "./entities/deviceOnChart.entityEntity";
+import { DeviceOnChartEntity } from "./entities/deviceOnChart.entity";
 import { DevicesModule } from '../devices/devices.module';
 import { DeviceEntity } from '../devices/entities/device.entity';
 import { LineEntity } from '../lines/entities/line.entity';
@@ -13,6 +13,10 @@ import { PortOnChartEntity } from './entities/portOnChart.entity';
 import { LineOnChartEntity } from './entities/lineonChart.emtity';
 import { AuthModule } from '../auth/auth.module';
 import { BondOnChartEntity } from './entities/BondOnChart.emtity';
+import { LinesOnChartService } from './lineOnChart.service';
+import { DevicesOnChartService } from './deviceOnChart.service';
+import { BondsOnChartService } from './bondOnChart.service';
+import { PortsOnChartService } from './portsOnChart.service';
 
 @Module({
     imports: [
@@ -32,7 +36,7 @@ import { BondOnChartEntity } from './entities/BondOnChart.emtity';
         AuthModule
     ],
     controllers: [ChartsController],
-    providers: [ChartsService],
+    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,PortsOnChartService],
     exports:[ChartsService]
 })
 export class ChartsModule {}

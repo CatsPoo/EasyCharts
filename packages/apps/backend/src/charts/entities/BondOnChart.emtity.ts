@@ -9,6 +9,7 @@ import {
   Unique,
   type Relation
 } from "typeorm";
+import { Position } from "./position.entity";
 import { LineEntity } from "../../lines/entities/line.entity";
 import { ChartEntity } from "./chart.entity";
 import { BondEntity } from "../../lines/entities/bond.entity";
@@ -25,6 +26,9 @@ export class BondOnChartEntity {
   @PrimaryColumn({ name: "bond_id" ,type:"uuid"})
   bondId!: string;
 
+  @Column(() => Position)
+    position!: Position;
+
   @ManyToOne(() => ChartEntity, (chart) => chart.bondOnChart, {
     onDelete: "CASCADE",
     eager: false,
@@ -34,7 +38,7 @@ export class BondOnChartEntity {
 
   // The global line it references
   @ManyToOne(() => BondEntity, { onDelete: "CASCADE", eager: false })
-  @JoinColumn({ name: "line_id" })
+  @JoinColumn({ name: "bond_id" })
   bond!: Relation<BondEntity>;
 
 

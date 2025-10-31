@@ -23,7 +23,9 @@ export function CreateChartDialog({ open, onClose, onSubmit, submitting }: Creat
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSubmit({ name: name.trim(), description: description.trim(),devicesOnChart:[], linesOnChart:[] });
+    onSubmit({
+      name: name.trim(), description: description.trim(), devicesOnChart: [], linesOnChart: [], bondsOnChart: [],
+    });
   };
 
   return (
