@@ -12,6 +12,6 @@
     "experimentalDecorators": true,
     "declaration": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "../../apps/backend/src/chartsDirectories/chartsInDirectories.controller.ts"],
   "references": []
 }

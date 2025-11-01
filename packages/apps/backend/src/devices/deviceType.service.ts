@@ -15,8 +15,8 @@ export class DeviceTypeService {
     private readonly deviceTypeRepo: Repository<DeviceTypeEntity>,
   ) {}
 
-  async createDeviceType(dto: DeviceTypeCreate) : Promise<DeviceType> {
-    const entity = this.deviceTypeRepo.create(dto);
+  async createDeviceType(dto: DeviceTypeCreate,createdByUserId:string) : Promise<DeviceType> {
+    const entity = this.deviceTypeRepo.create({...dto,createdByUserId,updatedByUserId:createdByUserId});
     return this.deviceTypeRepo.save(entity);
   }
 
@@ -46,8 +46,8 @@ export class DeviceTypeService {
      return found;
    }
  
-   async updateDeviceType(id: string, dto: DeviceTypeUpdate) : Promise<DeviceType> {
-     await this.deviceTypeRepo.update(id, dto);
+   async updateDeviceType(id: string, dto: DeviceTypeUpdate,updatedByUserId:string) : Promise<DeviceType> {
+     await this.deviceTypeRepo.update(id, {...dto,updatedByUserId});
      return this.getDeviceTypeById(id);
    }
  

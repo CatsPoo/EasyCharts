@@ -1,12 +1,14 @@
 import {
   Check,
   Column,
+  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
   Unique,
+  UpdateDateColumn,
   type Relation
 } from "typeorm";
 import { PortEntity } from "../../devices/entities/port.entity";
@@ -52,4 +54,16 @@ export class LineEntity {
   @ManyToOne(() => BondEntity, (bond) => bond.members, { onDelete: "SET NULL" })
   @JoinColumn({ name: "bond_id" })
   bond?: BondEntity | null;
+
+  @CreateDateColumn({ type: "timestamptz", name: "created_at" })
+  createdAt!: Date;
+
+  @Column({ type: "uuid", name: "created_by_user_id" })
+  createdByUserId!: string;
+
+  @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
+  updatedAt!: Date;
+
+  @Column({ type: "uuid", name: "updated_by_user_id", nullable: true })
+  updatedByUserId!: string | null;
 }

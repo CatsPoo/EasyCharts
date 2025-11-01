@@ -19,10 +19,11 @@ export class PortsService {
     private readonly portsRepo: Repository<PortEntity>
   ) {}
 
-  async createPort(dto: PortCreate): Promise<Port> {
+  async createPort(dto: PortCreate,createdByUserId:string): Promise<Port> {
     const entity = this.portsRepo.create({
       ...dto,
       type: dto.type as PortType,
+      createdByUserId
     });
     return this.portsRepo.save(entity);
   }
@@ -63,8 +64,8 @@ export class PortsService {
     return found;
   }
 
-  async updatePort(id: string, dto: PortUpdate): Promise<Port> {
-    await this.portsRepo.update(id, { ...dto, type: dto.type as PortType });
+  async updatePort(id: string, dto: PortUpdate,updatedByUserId:string): Promise<Port> {
+    await this.portsRepo.update(id, { ...dto, type: dto.type as PortType ,updatedByUserId});
     return this.getPortrById(id);
   }
 
@@ -125,8 +126,7 @@ export class PortsService {
   }
 
   convertPortEntityToPort(portEntity: PortEntity): Port {
-    const { id, name, type, deviceId } = portEntity;
-    return { id, name, type, deviceId } as Port;
+    return {...portEntity}
   }
 
   async getPortsByIds(ids: string[], manager?: EntityManager) {
@@ -145,6 +145,7 @@ export class PortsService {
       | Array<{ id: string; name: string; type: PortType }>
       | undefined
       | null,
+    updatedBuUserid:string,
     manager?: EntityManager
   ): Promise<void> {
     if (!ports?.length) return;
@@ -178,6 +179,7 @@ export class PortsService {
         name: p.name,
         type: p.type as any,
         deviceId,
+        updatedBuUserid,
       })),
       { conflictPaths: ["id"], skipUpdateIfNoValuesChanged: true }
     );

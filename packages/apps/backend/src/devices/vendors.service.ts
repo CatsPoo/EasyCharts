@@ -12,8 +12,8 @@ export class VendorsService {
     private readonly vendorsRepo: Repository<VendorEntity>,
   ) {}
 
-  async createVendor(dto: VendorCreate) : Promise<Vendor> {
-    const entity = this.vendorsRepo.create(dto);
+  async createVendor(dto: VendorCreate,createdByUserId:string) : Promise<Vendor> {
+    const entity = this.vendorsRepo.create({...dto,createdByUserId});
     return this.vendorsRepo.save(entity);
   }
 
@@ -43,8 +43,8 @@ export class VendorsService {
     return found;
   }
 
-  async updateVendor(id: string, dto: VendorUpdate) : Promise<Vendor> {
-    await this.vendorsRepo.update(id, dto);
+  async updateVendor(id: string, dto: VendorUpdate,updatedByUserId:string) : Promise<Vendor> {
+    await this.vendorsRepo.update(id, {...dto,updatedByUserId});
     return this.getVendorById(id);
   }
 

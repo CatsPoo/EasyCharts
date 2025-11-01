@@ -60,7 +60,7 @@ export class ChartsService {
   convertChartEntityToChart = async (
     chartEnrity: ChartEntity
   ): Promise<Chart> => {
-    const { devicesOnChart, linesOnChart, bondOnChart, ...chartData } = chartEnrity;
+    const { devicesOnChart, linesOnChart, bondOnChart,createdAt,createdById,updatedAt,updatedByUserId, ...chartData } = chartEnrity;
     const convertedDeviceOnCharts: DeviceOnChart[] = [];
     for (const dl of devicesOnChart) convertedDeviceOnCharts.push(await this.devicesOnChartService.convertDeviceOnChartEntity(dl));
 
@@ -75,6 +75,10 @@ export class ChartsService {
       linesOnChart: convertedLinesOnChart,
       lock: this.getLockFromChartEntity(chartEnrity),
       bondsOnChart: convertedBondOnChart,
+      createdAt,
+      createdById,
+      updatedAt,
+      updatedByUserId,
       ...chartData,
     } as Chart;
   };
@@ -113,7 +117,8 @@ export class ChartsService {
         deviceId: dl.device.id,
         position: dl.position,
       })),
-      bondOnChart: []
+      bondOnChart: [],
+      updatedByUserId:createdById
     });
     const newChart: ChartEntity = await this.chartRepo.save(chart);
     return this.convertChartEntityToChart(newChart);
@@ -160,11 +165,11 @@ export class ChartsService {
       if (dto.name !== undefined) chart.name = dto.name;
       if (dto.description !== undefined) chart.description = dto.description ?? "";
       if (dto.name !== undefined || dto.description !== undefined) await chartsRepo.save(chart);
-
+      dto.updatedByUserId=userId
 
       // 2) DevicesOnChart (instance only)
       if (dto.devicesOnChart !== undefined) {
-        await this.devicesOnChartService.syncPlacementsAndHandles(manager, chartId, dto.devicesOnChart);
+        await this.devicesOnChartService.syncPlacementsAndHandles(manager, chartId, dto.devicesOnChart,userId);
       }
 
       // 3) Lines (global) + LineOnChart (instance)

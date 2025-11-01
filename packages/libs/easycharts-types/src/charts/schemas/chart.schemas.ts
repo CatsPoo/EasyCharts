@@ -1,10 +1,9 @@
 import z from "zod";
-import { DeviceOnChartSchema } from "./deviceOnChart.schemas.js";
-import { IdentifiableSchema } from "../../generic.schema.js";
-import { LineOnChartSchema } from "./lineOnChart.schemas.js";
-import { ChartLockSchema } from "./chartsLocks.schema.js";
-import { BondSchema } from "src/lines/index.js";
+import { AuditableSchema, IdentifiableSchema } from "../../generic.schema.js";
 import { BondOnChartSchema } from "./bondOnChart.schemas.js";
+import { ChartLockSchema } from "./chartsLocks.schema.js";
+import { DeviceOnChartSchema } from "./deviceOnChart.schemas.js";
+import { LineOnChartSchema } from "./lineOnChart.schemas.js";
 
 
 
@@ -15,17 +14,17 @@ const DeletesSchema = z.object({
 });
 
 
-
-export const ChartSchema = IdentifiableSchema.extend({
+const ChartBaseSchema = z.object({
   name: z.string(),
   description: z.string(),
   devicesOnChart: z.array(DeviceOnChartSchema),
   linesOnChart: z.array(LineOnChartSchema),
-  bondsOnChart:z.array(BondOnChartSchema),
-  createdAt:z.date(),
-  createdById:z.string(),
-  lock : ChartLockSchema.optional().nullable().default(null)
+  bondsOnChart: z.array(BondOnChartSchema),
+  createdAt: z.date(),
+  createdById: z.string(),
+  lock: ChartLockSchema.optional().nullable().default(null),
 });
+export const ChartSchema = ChartBaseSchema.extend(IdentifiableSchema.shape).extend(AuditableSchema.shape);
 
 export const ChartCreateSchema = ChartSchema.omit({
   createdAt:true,

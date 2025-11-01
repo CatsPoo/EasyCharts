@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entity';
 import { ModelEntity } from './model.entity';
 import { PortEntity } from './port.entity';
@@ -36,4 +36,16 @@ export class DeviceEntity {
     eager: true,       
   })
   ports!: PortEntity[];
+
+  @CreateDateColumn({ type: "timestamptz", name: "created_at" })
+    createdAt!: Date;
+  
+    @Column({ type: "uuid", name: "created_by_user_id" })
+    createdByUserId!: string;
+  
+    @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
+    updatedAt!: Date;
+  
+    @Column({ type: "uuid", name: "updated_by_user_id", nullable: true })
+    updatedByUserId!: string | null;
 }
