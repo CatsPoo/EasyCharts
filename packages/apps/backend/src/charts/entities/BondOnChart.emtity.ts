@@ -1,4 +1,3 @@
-import type { LineType } from "@easy-charts/easycharts-types";
 import {
   Column,
   Entity,
@@ -9,10 +8,9 @@ import {
   Unique,
   type Relation
 } from "typeorm";
-import { Position } from "./position.entity";
-import { LineEntity } from "../../lines/entities/line.entity";
-import { ChartEntity } from "./chart.entity";
 import { BondEntity } from "../../lines/entities/bond.entity";
+import { ChartEntity } from "./chart.entity";
+import { Position } from "./position.entity";
 
 
 
