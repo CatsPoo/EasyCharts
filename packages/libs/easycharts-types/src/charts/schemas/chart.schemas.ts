@@ -20,17 +20,12 @@ const ChartBaseSchema = z.object({
   devicesOnChart: z.array(DeviceOnChartSchema),
   linesOnChart: z.array(LineOnChartSchema),
   bondsOnChart: z.array(BondOnChartSchema),
-  createdAt: z.date(),
-  createdById: z.string(),
   lock: ChartLockSchema.optional().nullable().default(null),
 });
 export const ChartSchema = ChartBaseSchema.extend(IdentifiableSchema.shape).extend(AuditableSchema.shape);
 
-export const ChartCreateSchema = ChartSchema.omit({
-  createdAt:true,
-  createdById:true,
+export const ChartCreateSchema = ChartBaseSchema.omit({
   lock:true,
-  id:true
 })
 // update = partial(create) + deletes
 export const ChartUpdateSchema = ChartCreateSchema.partial().extend({

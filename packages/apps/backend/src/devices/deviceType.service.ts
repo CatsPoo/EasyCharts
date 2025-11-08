@@ -16,7 +16,7 @@ export class DeviceTypeService {
   ) {}
 
   async createDeviceType(dto: DeviceTypeCreate,createdByUserId:string) : Promise<DeviceType> {
-    const entity = this.deviceTypeRepo.create({...dto,createdByUserId,updatedByUserId:createdByUserId});
+    const entity = this.deviceTypeRepo.create({...dto,createdByUserId});
     return this.deviceTypeRepo.save(entity);
   }
 

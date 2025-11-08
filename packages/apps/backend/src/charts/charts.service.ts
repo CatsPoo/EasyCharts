@@ -60,7 +60,7 @@ export class ChartsService {
   convertChartEntityToChart = async (
     chartEnrity: ChartEntity
   ): Promise<Chart> => {
-    const { devicesOnChart, linesOnChart, bondOnChart,createdAt,createdById,updatedAt,updatedByUserId, ...chartData } = chartEnrity;
+    const { devicesOnChart, linesOnChart, bondOnChart,createdAt,createdByUserId,updatedAt,updatedByUserId, ...chartData } = chartEnrity;
     const convertedDeviceOnCharts: DeviceOnChart[] = [];
     for (const dl of devicesOnChart) convertedDeviceOnCharts.push(await this.devicesOnChartService.convertDeviceOnChartEntity(dl));
 
@@ -76,7 +76,7 @@ export class ChartsService {
       lock: this.getLockFromChartEntity(chartEnrity),
       bondsOnChart: convertedBondOnChart,
       createdAt,
-      createdById,
+      createdByUserId,
       updatedAt,
       updatedByUserId,
       ...chartData,
@@ -108,27 +108,26 @@ export class ChartsService {
     return await this.convertChartEntityToChart(chart);
   }
 
-  async createChart(createdById: string, dto: ChartCreate): Promise<Chart> {
+  async createChart(dto: ChartCreate,createdByUserId:string): Promise<Chart> {
     const chart: ChartEntity = this.chartRepo.create({
       name: dto.name,
       description: dto.description,
-      createdById,
+      createdByUserId,
       devicesOnChart: dto.devicesOnChart.map((dl) => ({
         deviceId: dl.device.id,
         position: dl.position,
       })),
       bondOnChart: [],
-      updatedByUserId:createdById
     });
     const newChart: ChartEntity = await this.chartRepo.save(chart);
     return this.convertChartEntityToChart(newChart);
   }
 
   convertChartToChartMetadata(chartEntity: ChartEntity): ChartMetadata {
-    const { createdAt, createdById, description, id, name } = chartEntity;
+    const { createdAt, createdByUserId, description, id, name } = chartEntity;
     return {
       createdAt,
-      createdById,
+      createdByUserId,
       description,
       id,
       name,
@@ -137,7 +136,7 @@ export class ChartsService {
   }
 
   async getAllUserChartsMetadata(userId: string): Promise<ChartMetadata[]> {
-    const charts = await this.chartRepo.find({ where: { createdById: userId } });
+    const charts = await this.chartRepo.find({ where: { createdByUserId: userId } });
     return charts.map((c) => this.convertChartToChartMetadata(c)) as ChartMetadata[];
   }
 
@@ -146,7 +145,6 @@ export class ChartsService {
     if (!chart) throw new NotFoundException(`Chart with ID ${id} not found`);
     return this.convertChartToChartMetadata(chart);
   }
-
 
   async updateChart(chartId: string, dto: ChartUpdate, userId: string): Promise<Chart> {
     const updated = await this.dataSource.transaction(async (manager: EntityManager) => {
@@ -164,8 +162,8 @@ export class ChartsService {
       // 1) Meta (global)
       if (dto.name !== undefined) chart.name = dto.name;
       if (dto.description !== undefined) chart.description = dto.description ?? "";
+      chart.updatedByUserId=userId
       if (dto.name !== undefined || dto.description !== undefined) await chartsRepo.save(chart);
-      dto.updatedByUserId=userId
 
       // 2) DevicesOnChart (instance only)
       if (dto.devicesOnChart !== undefined) {

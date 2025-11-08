@@ -1,10 +1,7 @@
-import { Device, DeviceOnChart, HandleInfo, Handles, Side, SIDES } from "@easy-charts/easycharts-types";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { HandleInfo, Handles, Side, SIDES } from "@easy-charts/easycharts-types";
+import { Injectable } from "@nestjs/common";
 import { PortsService } from "../devices/ports.service";
 import { PortOnChartEntity } from "./entities/portOnChart.entity";
-import { PortEntity } from "../devices/entities/port.entity";
-import { In } from "typeorm";
-import { DeviceOnChartEntity } from "./entities/deviceOnChart.entity";
 
 @Injectable()
 export class PortsOnChartService {

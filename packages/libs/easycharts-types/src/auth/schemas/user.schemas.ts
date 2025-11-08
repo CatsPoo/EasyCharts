@@ -1,4 +1,4 @@
-import { IdentifiableSchema } from "../../generic.schema.js";
+import { AuditableSchema, IdentifiableSchema } from "../../generic.schema.js";
 import z from "zod";
 import { Permission } from "../enums/permitions.enums.js";
 
@@ -18,5 +18,5 @@ export const UserCreateSchema = UserBaseSchema.extend({
 
 export const UserUpdateSchema = UserCreateSchema.partial()
 
-export const UserSchema = UserBaseSchema.extend(IdentifiableSchema.shape)
+export const UserSchema = UserBaseSchema.extend(IdentifiableSchema.shape).extend(AuditableSchema.shape)
 

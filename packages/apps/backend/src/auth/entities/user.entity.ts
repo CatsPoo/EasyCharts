@@ -1,9 +1,10 @@
 // src/auth/entities/user.entity.ts
 import { Permission } from '@easy-charts/easycharts-types';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { AuditableEntity } from './auditableEntity.culumns';
 
 @Entity({ name: "users" })
-export class UserEntity {
+export class UserEntity extends AuditableEntity{
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
