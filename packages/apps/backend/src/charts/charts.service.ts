@@ -173,7 +173,7 @@ export class ChartsService {
       // 3) Lines (global) + LineOnChart (instance)
       if (dto.linesOnChart !== undefined) {
         const wantedLines = dto.linesOnChart.map(l => l.line);
-        await this.linesService.upsertLines(manager, wantedLines);   // global
+        await this.linesService.upsertLines(manager, wantedLines,userId);   // global
         await this.linesOnChartService.syncLinks(manager, chartId, dto.linesOnChart); // instance
       }
 

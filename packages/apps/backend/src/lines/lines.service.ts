@@ -168,11 +168,11 @@ export class LinessService {
     this.bondRepo.delete(id);
   }
 
-  async upsertLines(manager: EntityManager, lines: Line[]): Promise<void> {
+  async upsertLines(manager: EntityManager, lines: Line[],userId:string): Promise<void> {
     if (!lines?.length) return;
     const repo = manager.getRepository(LineEntity);
     await repo.upsert(
-      lines.map((l) => this.convertLineToEntity(l)),
+      lines.map((l) => {return {...this.convertLineToEntity(l),createdByUserId:userId,updatedByUserId:userId}}),
       { conflictPaths: ["id"], skipUpdateIfNoValuesChanged: true }
     );
   }
