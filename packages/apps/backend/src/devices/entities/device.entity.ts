@@ -3,8 +3,9 @@ import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entity'
 import { ModelEntity } from './model.entity';
 import { PortEntity } from './port.entity';
 import { DeviceTypeEntity } from './deviceType.entity';
+import { AuditableEntity } from '../../auth/entities/auditableEntity.culumns';
 @Entity({ name: "devices" })
-export class DeviceEntity {
+export class DeviceEntity extends AuditableEntity{
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -36,16 +37,4 @@ export class DeviceEntity {
     eager: true,       
   })
   ports!: PortEntity[];
-
-  @CreateDateColumn({ type: "timestamptz", name: "created_at" })
-    createdAt!: Date;
-  
-    @Column({ type: "uuid", name: "created_by_user_id" })
-    createdByUserId!: string;
-  
-    @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
-    updatedAt!: Date;
-  
-    @Column({ type: "uuid", name: "updated_by_user_id", nullable: true })
-    updatedByUserId!: string | null;
 }

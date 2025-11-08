@@ -1,21 +1,20 @@
 // apps/api/src/directories/entities/directory.entity.ts
 import {
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  RelationId,
-  UpdateDateColumn
+  RelationId
 } from "typeorm";
 import { ChartInDirectoryEntity } from "./chartsInDirectory.entity";
+import { AuditableEntity } from "../../auth/entities/auditableEntity.culumns";
 
 @Entity("charts_directories")
 @Index(["parentId", "name"], { unique: true }) // unique among siblings
-export class ChartsDirectoryEntity {
+export class ChartsDirectoryEntity extends AuditableEntity{
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -48,16 +47,4 @@ export class ChartsDirectoryEntity {
   get chartIds(): string[] {
     return (this.chartMembershipKeys ?? []).map((k) => k.chartId);
   }
-
-  @CreateDateColumn({ type: "timestamptz", name: "created_at" })
-  createdAt!: Date;
-
-  @Column({ type: "uuid", name: "created_by_user_id" })
-  createdByUserId!: string;
-
-  @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
-  updatedAt!: Date;
-
-  @Column({ type: "uuid", name: "updated_by_user_id", nullable: true })
-  updatedByUserId!: string | null;
 }

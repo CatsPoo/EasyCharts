@@ -12,7 +12,7 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
-import { RequirePermissions } from "../auth/decorators/permissions.decorator";
+import { RequirePermissions } from "../auth/decorators/permissions.decorator"
 import { JwdAuthGuard } from "../auth/guards/jwtAuth.guard";
 import { PermissionsGuard } from "../auth/guards/permissions.guard";
 import { ChartsDirectoriesService } from "./chartsDirectories.service";

@@ -1,22 +1,20 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
-  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
   type Relation
 } from "typeorm";
-import { DeviceOnChartEntity } from "./deviceOnChart.entity";
-import { LineOnChartEntity } from "./lineonChart.emtity";
 import { UserEntity } from "../../auth/entities/user.entity";
 import { BondOnChartEntity } from "./BondOnChart.emtity";
+import { DeviceOnChartEntity } from "./deviceOnChart.entity";
+import { LineOnChartEntity } from "./lineonChart.emtity";
+import { AuditableEntity } from "../../auth/entities/auditableEntity.culumns";
 
 @Entity({ name: "charts" })
-export class ChartEntity {
+export class ChartEntity extends AuditableEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -25,22 +23,6 @@ export class ChartEntity {
 
   @Column({ nullable: false, default: "" })
   description!: string;
-
-  @CreateDateColumn({
-    name: "created_at",
-    type: "timestamptz",
-    default: () => "CURRENT_TIMESTAMP",
-  })
-  createdAt!: Date;
-
-  @Column({ name: "created_by_id", type: "uuid" })
-  createdById!: string;
-
-  @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
-  updatedAt!: Date;
-
-  @Column({ type: "uuid", name: "updated_by_user_id", nullable: true })
-  updatedByUserId!: string | null;
 
   @Column({
     name: "locked_at",

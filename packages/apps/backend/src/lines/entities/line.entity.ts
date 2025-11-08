@@ -1,16 +1,15 @@
 import {
   Check,
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
   Unique,
-  UpdateDateColumn,
   type Relation
 } from "typeorm";
+import { AuditableEntity } from "../../auth/entities/auditableEntity.culumns";
 import { PortEntity } from "../../devices/entities/port.entity";
 import { BondEntity } from "./bond.entity";
 
@@ -28,7 +27,7 @@ export type LineType = (typeof LineTypeValues)[number];
 @Entity({ name: "lines" })
 @Check("CHK_line_source_target_diff", `"source_port_id" <> "target_port_id"`)
 @Unique("uniq_line_pair", ["sourcePortId", "targetPortId"])
-export class LineEntity {
+export class LineEntity extends AuditableEntity{
   @PrimaryColumn("uuid")
   id!: string;
 
@@ -54,16 +53,4 @@ export class LineEntity {
   @ManyToOne(() => BondEntity, (bond) => bond.members, { onDelete: "SET NULL" })
   @JoinColumn({ name: "bond_id" })
   bond?: BondEntity | null;
-
-  @CreateDateColumn({ type: "timestamptz", name: "created_at" })
-  createdAt!: Date;
-
-  @Column({ type: "uuid", name: "created_by_user_id" })
-  createdByUserId!: string;
-
-  @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
-  updatedAt!: Date;
-
-  @Column({ type: "uuid", name: "updated_by_user_id", nullable: true })
-  updatedByUserId!: string | null;
 }

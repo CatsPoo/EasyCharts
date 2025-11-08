@@ -1,10 +1,11 @@
 import { type PortType } from "@easy-charts/easycharts-types";
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryColumn, UpdateDateColumn, type Relation } from "typeorm";
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryColumn, type Relation } from "typeorm";
 import { LineEntity } from "../../lines/entities/line.entity";
 import { DeviceEntity } from "./device.entity";
+import { AuditableEntity } from "../../auth/entities/auditableEntity.culumns";
 @Entity({ name: "ports" })
 @Index(["deviceId"])
-export class PortEntity {
+export class PortEntity extends AuditableEntity{
   @PrimaryColumn("uuid")
   id!: string;
 
@@ -31,16 +32,4 @@ export class PortEntity {
 
   @OneToMany(() => LineEntity, (line) => line.targetPort)
   asTargetInLines!: Relation<LineEntity[]>;
-
-  @CreateDateColumn({ type: "timestamptz", name: "created_at" })
-  createdAt!: Date;
-
-  @Column({ type: "uuid", name: "created_by_user_id" })
-  createdByUserId!: string;
-
-  @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
-  updatedAt!: Date;
-
-  @Column({ type: "uuid", name: "updated_by_user_id", nullable: true })
-  updatedByUserId!: string | null;
 }
