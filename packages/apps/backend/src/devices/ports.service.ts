@@ -10,6 +10,7 @@ import { DataSource, EntityManager, In, Repository } from "typeorm";
 import { LineEntity } from "../lines/entities/line.entity";
 import { QueryDto } from "../query/dto/query.dto";
 import { PortEntity } from "./entities/port.entity";
+import { updatePortPayload } from "./interfaces/ports.interfaces";
 
 @Injectable()
 export class PortsService {
@@ -142,7 +143,7 @@ export class PortsService {
   async upsertPortsForDevice(
     deviceId: string,
     ports:
-      | Array<{ id: string; name: string; type: PortType }>
+      | updatePortPayload[]
       | undefined
       | null,
     updatedBuUserid:string,
@@ -180,7 +181,7 @@ export class PortsService {
         type: p.type as any,
         deviceId,
         updatedBuUserid,
-        createdByUserId:updatedBuUserid
+        createdByUserId:p.createdByUserId ?? updatedBuUserid
       })),
       { conflictPaths: ["id"], skipUpdateIfNoValuesChanged: true }
     );
