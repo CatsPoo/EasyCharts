@@ -180,7 +180,7 @@ export class ChartsService {
       // 4) Bonds (global) + BondOnChart (instance)
       if (dto.bondsOnChart !== undefined) {
         const globalBonds = dto.bondsOnChart.map(b => b.bond);
-        await this.linesService.ensureAndUpdateBonds(manager, globalBonds); // global
+        await this.linesService.ensureAndUpdateBonds(manager, globalBonds,userId); // global
         await this.bondsOnChartService.syncLinks(manager, chartId, dto.bondsOnChart); // instance
       }
 
