@@ -8,12 +8,14 @@ import { AppConfigModule } from '../appConfig/appConfig.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppConfigService } from '../appConfig/appConfig.service';
 import { AuthModule } from '../auth/auth.module';
+import { ChartsDirectoriesModule } from '../chartsDirectories/chartsDirectories.module';
 
 @Module({
   imports: [
     DevicesModule,
     LinesModule,
     ChartsModule,
+    ChartsDirectoriesModule,
     AppConfigModule,
     AuthModule,
     TypeOrmModule.forRootAsync({

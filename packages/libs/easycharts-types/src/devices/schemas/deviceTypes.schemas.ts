@@ -1,4 +1,4 @@
-import { IdentifiableSchema } from "./../../generic.schema.js";
+import { AuditableSchema, IdentifiableSchema } from "./../../generic.schema.js";
 import z from "zod";
 
 export const DeviceTypeBaseSchema = z.object({
@@ -8,4 +8,4 @@ export const DeviceTypeBaseSchema = z.object({
 export const DeviceTypeCreateSchema = DeviceTypeBaseSchema;
 export const DeviceTypeUpdateSchema = DeviceTypeBaseSchema.partial().refine(v => Object.keys(v).length > 0, { message: 'At least one field is required' });;
 
-export const DeviceTypeSchema = IdentifiableSchema.merge(DeviceTypeBaseSchema);
+export const DeviceTypeSchema = IdentifiableSchema.extend(DeviceTypeBaseSchema.shape).extend(AuditableSchema.shape);

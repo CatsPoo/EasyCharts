@@ -2,9 +2,10 @@ import { type PortType } from "@easy-charts/easycharts-types";
 import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryColumn, type Relation } from "typeorm";
 import { LineEntity } from "../../lines/entities/line.entity";
 import { DeviceEntity } from "./device.entity";
+import { AuditableEntity } from "../../auth/entities/auditableEntity.culumns";
 @Entity({ name: "ports" })
 @Index(["deviceId"])
-export class PortEntity {
+export class PortEntity extends AuditableEntity{
   @PrimaryColumn("uuid")
   id!: string;
 

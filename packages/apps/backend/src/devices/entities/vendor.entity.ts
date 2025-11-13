@@ -1,8 +1,9 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { ModelEntity } from './model.entity';
+import { AuditableEntity } from '../../auth/entities/auditableEntity.culumns';
 
 @Entity({ name: "vendors" })
-export class VendorEntity {
+export class VendorEntity extends AuditableEntity{
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 

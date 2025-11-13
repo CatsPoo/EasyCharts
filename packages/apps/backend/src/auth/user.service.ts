@@ -1,6 +1,5 @@
 // src/Users/Users.service.ts
 import {
-  Permission,
   type User,
   type UserCreate,
   type UserUpdate
@@ -43,19 +42,20 @@ export class UsersService {
     return user
   }
 
-  async createUser(dto: UserCreate): Promise<User> {
+  async createUser(dto: UserCreate,createdByUserId:string): Promise<User> {
     const user : UserEntity[] = await this.userRepo.find({where:{username : dto.username}})
     if(user.length > 0) throw new BadRequestException('Username '+dto.username + ' already exists')
     const hasjedPasswordUser : UserCreate = {
         ...dto,
         password: await bcrypt.hash(dto.password, 12)
     }
-    return await this.userRepo.save(hasjedPasswordUser);
+    return await this.userRepo.save({...hasjedPasswordUser,createdByUserId});
   }
 
-  async updateUser(userId: string, dto: UserUpdate): Promise<User> {
+  async updateUser(userId: string, dto: UserUpdate,updatedByUserId:string): Promise<User> {
      const user : UserEntity | null = await this.userRepo.findOne({where:{id:userId}})
      if(!user) throw new NotFoundException("User not found");
+     user.updatedByUserId = updatedByUserId
     if (dto.username !== undefined) user.username = dto.username;
     if (dto.displayName !== undefined) user.displayName = dto.displayName;
     if (dto.isActive !== undefined) user.isActive = dto.isActive;
@@ -70,10 +70,10 @@ export class UsersService {
     await this.userRepo.remove(User); 
   }
 
-  async updateUserRefreshToken(id:string,refreshToken:string|null) : Promise<int>{
+  async updateUserRefreshToken(id:string,refreshToken:string|null) : Promise<number>{
     const refreshTokenHash : string = await bcrypt.hash(refreshToken, 12)
     const updateResults :UpdateResult = await this.userRepo.update(id,{refreshTokenHash})
     if(!updateResults || updateResults.affected==0) throw new NotFoundException('User not found')
-    return updateResults.affected
+    return updateResults.affected ?? 0
   }
 }

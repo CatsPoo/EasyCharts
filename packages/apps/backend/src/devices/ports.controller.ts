@@ -10,20 +10,24 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
-  Query
+  Query,
+  Req
 } from '@nestjs/common';
 import { ZodValidationPipe } from '../common/zodValidation.pipe';
 import { QueryDto } from '../query/dto/query.dto';
 import { PortsService } from './ports.service';
 
-@Controller('ports')
+@Controller("ports")
 export class PortsController {
   constructor(private readonly portsService: PortsService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body(new ZodValidationPipe(PortCreateSchema)) payload: PortCreate) {
-    return this.portsService.createPort(payload);
+  create(
+    @Body(new ZodValidationPipe(PortCreateSchema)) payload: PortCreate,
+    @Req() req: { user: string }
+  ) {
+    return this.portsService.createPort(payload,req.user);
   }
 
   // GET /vendors?page=&pageSize=&search=&sortBy=&sortDir=
@@ -32,22 +36,23 @@ export class PortsController {
     return this.portsService.listPorts(q);
   }
 
-  @Get(':id')
-  getById(@Param('id', new ParseUUIDPipe()) id: string) {
+  @Get(":id")
+  getById(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.portsService.getPortrById(id);
   }
 
-  @Put(':id')
+  @Put(":id")
   update(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body(new ZodValidationPipe(PortUpdateSchema))  payload: PortUpdate,
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(PortUpdateSchema)) payload: PortUpdate,
+    @Req() req: { user: string }
   ) {
-    return this.portsService.updatePort(id, payload);
+    return this.portsService.updatePort(id, payload, req.user);
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', new ParseUUIDPipe()) id: string) {
+  remove(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.portsService.removePort(id);
   }
 }

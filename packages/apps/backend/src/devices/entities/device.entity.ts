@@ -1,10 +1,11 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entity';
 import { ModelEntity } from './model.entity';
 import { PortEntity } from './port.entity';
 import { DeviceTypeEntity } from './deviceType.entity';
+import { AuditableEntity } from '../../auth/entities/auditableEntity.culumns';
 @Entity({ name: "devices" })
-export class DeviceEntity {
+export class DeviceEntity extends AuditableEntity{
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 

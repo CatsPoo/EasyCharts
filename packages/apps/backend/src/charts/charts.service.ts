@@ -60,7 +60,7 @@ export class ChartsService {
   convertChartEntityToChart = async (
     chartEnrity: ChartEntity
   ): Promise<Chart> => {
-    const { devicesOnChart, linesOnChart, bondOnChart, ...chartData } = chartEnrity;
+    const { devicesOnChart, linesOnChart, bondOnChart,createdAt,createdByUserId,updatedAt,updatedByUserId, ...chartData } = chartEnrity;
     const convertedDeviceOnCharts: DeviceOnChart[] = [];
     for (const dl of devicesOnChart) convertedDeviceOnCharts.push(await this.devicesOnChartService.convertDeviceOnChartEntity(dl));
 
@@ -75,6 +75,10 @@ export class ChartsService {
       linesOnChart: convertedLinesOnChart,
       lock: this.getLockFromChartEntity(chartEnrity),
       bondsOnChart: convertedBondOnChart,
+      createdAt,
+      createdByUserId,
+      updatedAt,
+      updatedByUserId,
       ...chartData,
     } as Chart;
   };
@@ -104,26 +108,26 @@ export class ChartsService {
     return await this.convertChartEntityToChart(chart);
   }
 
-  async createChart(createdById: string, dto: ChartCreate): Promise<Chart> {
+  async createChart(dto: ChartCreate,createdByUserId:string): Promise<Chart> {
     const chart: ChartEntity = this.chartRepo.create({
       name: dto.name,
       description: dto.description,
-      createdById,
+      createdByUserId,
       devicesOnChart: dto.devicesOnChart.map((dl) => ({
         deviceId: dl.device.id,
         position: dl.position,
       })),
-      bondOnChart: []
+      bondOnChart: [],
     });
     const newChart: ChartEntity = await this.chartRepo.save(chart);
     return this.convertChartEntityToChart(newChart);
   }
 
   convertChartToChartMetadata(chartEntity: ChartEntity): ChartMetadata {
-    const { createdAt, createdById, description, id, name } = chartEntity;
+    const { createdAt, createdByUserId, description, id, name } = chartEntity;
     return {
       createdAt,
-      createdById,
+      createdByUserId,
       description,
       id,
       name,
@@ -132,7 +136,7 @@ export class ChartsService {
   }
 
   async getAllUserChartsMetadata(userId: string): Promise<ChartMetadata[]> {
-    const charts = await this.chartRepo.find({ where: { createdById: userId } });
+    const charts = await this.chartRepo.find({ where: { createdByUserId: userId } });
     return charts.map((c) => this.convertChartToChartMetadata(c)) as ChartMetadata[];
   }
 
@@ -141,7 +145,6 @@ export class ChartsService {
     if (!chart) throw new NotFoundException(`Chart with ID ${id} not found`);
     return this.convertChartToChartMetadata(chart);
   }
-
 
   async updateChart(chartId: string, dto: ChartUpdate, userId: string): Promise<Chart> {
     const updated = await this.dataSource.transaction(async (manager: EntityManager) => {
@@ -159,25 +162,25 @@ export class ChartsService {
       // 1) Meta (global)
       if (dto.name !== undefined) chart.name = dto.name;
       if (dto.description !== undefined) chart.description = dto.description ?? "";
+      chart.updatedByUserId=userId
       if (dto.name !== undefined || dto.description !== undefined) await chartsRepo.save(chart);
-
 
       // 2) DevicesOnChart (instance only)
       if (dto.devicesOnChart !== undefined) {
-        await this.devicesOnChartService.syncPlacementsAndHandles(manager, chartId, dto.devicesOnChart);
+        await this.devicesOnChartService.syncPlacementsAndHandles(manager, chartId, dto.devicesOnChart,userId);
       }
 
       // 3) Lines (global) + LineOnChart (instance)
       if (dto.linesOnChart !== undefined) {
         const wantedLines = dto.linesOnChart.map(l => l.line);
-        await this.linesService.upsertLines(manager, wantedLines);   // global
+        await this.linesService.upsertLines(manager, wantedLines,userId);   // global
         await this.linesOnChartService.syncLinks(manager, chartId, dto.linesOnChart); // instance
       }
 
       // 4) Bonds (global) + BondOnChart (instance)
       if (dto.bondsOnChart !== undefined) {
         const globalBonds = dto.bondsOnChart.map(b => b.bond);
-        await this.linesService.ensureAndUpdateBonds(manager, globalBonds); // global
+        await this.linesService.ensureAndUpdateBonds(manager, globalBonds,userId); // global
         await this.bondsOnChartService.syncLinks(manager, chartId, dto.bondsOnChart); // instance
       }
 

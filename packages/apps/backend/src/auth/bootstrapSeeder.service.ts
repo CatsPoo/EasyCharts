@@ -4,6 +4,7 @@ import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
 import { randomBytes } from "crypto";
 import { UsersService } from "./user.service";
 import { AppConfigService } from "../appConfig/appConfig.service";
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class BootstrapSeederService implements OnApplicationBootstrap {
@@ -20,13 +21,14 @@ export class BootstrapSeederService implements OnApplicationBootstrap {
     const adminUsername = this.appConfigService.getConfig().defaultAdminUser.username
     const plainPassword = this.appConfigService.getConfig().defaultAdminUser.password
 
+    const uuid:string = uuidv4()
     const admin : User = await  this.usersService.createUser({
         username:adminUsername,
         password:plainPassword,
         displayName:adminUsername,
         isActive:true,
         permissions: Object.values(Permission),
-    } as UserCreate)
+    } as UserCreate,uuid)
 
     this.log.warn(
       `Created default admin "${adminUsername}". ${process.env.ADMIN_PASSWORD ? "" : `Generated password: ${plainPassword}`}`

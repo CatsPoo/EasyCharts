@@ -82,7 +82,7 @@ export class ChartsController {
   @Post()
   @UsePipes(new ZodValidationPipe(ChartCreateSchema))
   create(@Body() dto: ChartCreate, @Req() req: { user: string }) {
-    return this.chartService.createChart(req.user, dto);
+    return this.chartService.createChart(dto,req.user);
   }
 
   @RequirePermissions(Permission.CHART_DELETE)

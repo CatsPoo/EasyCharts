@@ -41,7 +41,8 @@ export class DevicesOnChartService {
       device: Device;
       position: Position;
       handles?: Handles;
-    }>
+    }>,
+    updatedByUserId:string
   ): Promise<void> {
     const docRepo = manager.getRepository(DeviceOnChartEntity);
     const pocRepo = manager.getRepository(PortOnChartEntity);
@@ -78,7 +79,7 @@ export class DevicesOnChartService {
     // Replace handles per device
     for (const d of placements) {
 
-    await this.portsService.upsertPortsForDevice(d.device.id, d.device.ports,manager);
+    await this.portsService.upsertPortsForDevice(d.device.id, d.device.ports,updatedByUserId,manager);
       const desiredRows = this.portsOnChartService.handlesToRows(
         chartId,
         d.device.id,

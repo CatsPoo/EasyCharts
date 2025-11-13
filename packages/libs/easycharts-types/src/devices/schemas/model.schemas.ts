@@ -1,5 +1,5 @@
 import z from "zod";
-import { IdentifiableSchema } from "../..//generic.schema.js";
+import { AuditableSchema, IdentifiableSchema } from "../..//generic.schema.js";
 import { VendorSchema } from "./vendor.schemas.js";
 
 export const ModelBaseSchema = z.object({
@@ -16,4 +16,4 @@ export const ModelCreateSchema = z.object({
 
 export const ModelUpdateSchema = ModelCreateSchema.partial();
 
-export const ModelSchema = IdentifiableSchema.merge(ModelBaseSchema);
+export const ModelSchema = IdentifiableSchema.extend(ModelBaseSchema.shape).extend(AuditableSchema.shape);
