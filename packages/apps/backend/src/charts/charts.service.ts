@@ -26,6 +26,8 @@ import { ChartLockFeilds } from "./chartLockes.types";
 import { DevicesOnChartService } from "./deviceOnChart.service";
 import { ChartEntity } from "./entities/chart.entity";
 import { ChartShareEntity } from "./entities/chartShare.entity";
+import { ChartInDirectoryEntity } from "../chartsDirectories/entities/chartsInDirectory.entity";
+import { DirectoryShareEntity } from "../chartsDirectories/entities/directoryShare.entity";
 import { ChartIsLockedExeption } from "./exeptions/chartIsLocked.exeption";
 import { ChartNotFoundExeption } from "./exeptions/chartNotFound.exeption";
 import { LinesOnChartService } from "./lineOnChart.service";
@@ -41,6 +43,12 @@ export class ChartsService {
 
     @InjectRepository(ChartShareEntity)
     private readonly chartShareRepo: Repository<ChartShareEntity>,
+
+    @InjectRepository(ChartInDirectoryEntity)
+    private readonly cidRepo: Repository<ChartInDirectoryEntity>,
+
+    @InjectRepository(DirectoryShareEntity)
+    private readonly shareDirRepo: Repository<DirectoryShareEntity>,
 
     // Global services (no knowledge of *OnChart)
     private readonly linesService: LinessService,
@@ -183,6 +191,18 @@ export class ChartsService {
       { chartId, sharedWithUserId, sharedByUserId, ...permissions },
       { conflictPaths: ["chartId", "sharedWithUserId"], skipUpdateIfNoValuesChanged: false },
     );
+
+    // Auto-share parent directories (view-only, insert-if-not-exists to avoid downgrading existing permissions)
+    const parentDirs = await this.cidRepo.find({ where: { chartId }, select: ["directoryId"] });
+    for (const { directoryId } of parentDirs) {
+      await this.shareDirRepo
+        .createQueryBuilder()
+        .insert()
+        .into(DirectoryShareEntity)
+        .values({ directoryId, sharedWithUserId, sharedByUserId, canEdit: false, canDelete: false, canShare: false })
+        .orIgnore()
+        .execute();
+    }
   }
 
   async unshareChart(chartId: string, sharedWithUserId: string): Promise<void> {

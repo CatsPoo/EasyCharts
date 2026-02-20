@@ -203,12 +203,23 @@ export class ChartsDirectoriesService {
     sharedWithUserId: string,
     sharedByUserId: string,
     permissions: { canEdit: boolean; canDelete: boolean; canShare: boolean },
+    includeContent = false,
   ): Promise<void> {
     await this.assertDirectoryPermission(directoryId, sharedByUserId, "canShare");
     await this.shareDirRepo.upsert(
       { directoryId, sharedWithUserId, sharedByUserId, ...permissions },
       { conflictPaths: ["directoryId", "sharedWithUserId"], skipUpdateIfNoValuesChanged: false },
     );
+
+    if (includeContent) {
+      const charts = await this.cidRepo.find({ where: { directoryId }, select: ["chartId"] });
+      for (const { chartId } of charts) {
+        await this.chartShareRepo.upsert(
+          { chartId, sharedWithUserId, sharedByUserId, ...permissions },
+          { conflictPaths: ["chartId", "sharedWithUserId"], skipUpdateIfNoValuesChanged: false },
+        );
+      }
+    }
   }
 
   async unshareDirectory(directoryId: string, sharedWithUserId: string): Promise<void> {

@@ -2,8 +2,8 @@ import {
   type CreateChartDirectory,
   CreateChartDirectorySchema,
   Permission,
-  ShareWithUserSchema,
-  type ShareWithUser,
+  ShareDirectoryRequestSchema,
+  type ShareDirectoryRequest,
   type UpadateChartDirectory,
   UpdateChartsDirectorySchema,
 } from "@easy-charts/easycharts-types";
@@ -99,14 +99,16 @@ export class ChartsDirectoriesController {
   @HttpCode(HttpStatus.CREATED)
   share(
     @Param("id", new ParseUUIDPipe()) id: string,
-    @Body(new ZodValidationPipe(ShareWithUserSchema)) body: ShareWithUser,
+    @Body(new ZodValidationPipe(ShareDirectoryRequestSchema)) body: ShareDirectoryRequest,
     @Req() req: { user: string },
   ) {
-    return this.chartsDirectoriesService.shareDirectory(id, body.sharedWithUserId, req.user, {
-      canEdit: body.canEdit,
-      canDelete: body.canDelete,
-      canShare: body.canShare,
-    });
+    return this.chartsDirectoriesService.shareDirectory(
+      id,
+      body.sharedWithUserId,
+      req.user,
+      { canEdit: body.canEdit, canDelete: body.canDelete, canShare: body.canShare },
+      body.includeContent,
+    );
   }
 
   @RequirePermissions(Permission.CHART_SHARE)

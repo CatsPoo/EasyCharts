@@ -31,3 +31,7 @@ export const DirectoryShareSchema = ShareWithUserSchema.extend({
   directoryId: z.string().uuid(),
   sharedByUserId: z.string().uuid(),
 });
+
+export const ShareDirectoryRequestSchema = ShareWithUserSchema.extend({
+  includeContent: z.boolean().default(false),
+});

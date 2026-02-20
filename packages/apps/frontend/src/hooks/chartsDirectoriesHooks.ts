@@ -174,12 +174,14 @@ async function shareDirectory(
   directoryId: string,
   sharedWithUserId: string,
   permissions: SharePermissions = {},
+  includeContent = false,
 ): Promise<void> {
   await http.post(`/chartsDirectories/${directoryId}/share`, {
     sharedWithUserId,
     canEdit: permissions.canEdit ?? false,
     canDelete: permissions.canDelete ?? false,
     canShare: permissions.canShare ?? false,
+    includeContent,
   });
 }
 
@@ -202,8 +204,9 @@ export function useShareDirectoryMutation() {
       directoryId,
       sharedWithUserId,
       permissions = {},
-    }: { directoryId: string; sharedWithUserId: string; permissions?: SharePermissions }) =>
-      shareDirectory(directoryId, sharedWithUserId, permissions),
+      includeContent = false,
+    }: { directoryId: string; sharedWithUserId: string; permissions?: SharePermissions; includeContent?: boolean }) =>
+      shareDirectory(directoryId, sharedWithUserId, permissions, includeContent),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["directoryShares", vars.directoryId] });
     },

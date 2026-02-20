@@ -51,6 +51,7 @@ import {
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import { CreateChartDialog } from "../CreateChartDialog";
 import { ShareChartDialog } from "./ShareChartDialog";
+import { ShareDirectoryDialog } from "./ShareDirectoryDialog";
 
 interface DirectoryBrowserSidebarProps {
   onSelect: (chartId: string) => void;
@@ -90,6 +91,13 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
   // Share chart dialog state
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [pendingChartToShare, setPendingChartToShare] = useState("");
+
+  // Directory context menu state
+  const [dirContextMenu, setDirContextMenu] = useState<{ mouseX: number; mouseY: number; dirId: string } | null>(null);
+
+  // Share directory dialog state
+  const [shareDirDialogOpen, setShareDirDialogOpen] = useState(false);
+  const [pendingDirToShare, setPendingDirToShare] = useState("");
 
   const { data: directories, isLoading: dirsLoading } = useRootDirectoriesQuery();
   const { data: dirCharts, isLoading: dirChartsLoading } = useDirectoryChartsMetadataQuery(
@@ -214,6 +222,26 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
     setMoveDialogOpen(false);
   }, [pendingChartSourceDirId, pendingChartToMove, removeChartFromDirectoryMutation]);
 
+  const handleDirContextMenu = useCallback((e: React.MouseEvent, dirId: string) => {
+    e.preventDefault();
+    setDirContextMenu({ mouseX: e.clientX, mouseY: e.clientY, dirId });
+  }, []);
+
+  const handleDirContextMenuClose = useCallback(() => setDirContextMenu(null), []);
+
+  const handleDirContextMenuShare = useCallback(() => {
+    if (!dirContextMenu) return;
+    setPendingDirToShare(dirContextMenu.dirId);
+    setShareDirDialogOpen(true);
+    setDirContextMenu(null);
+  }, [dirContextMenu]);
+
+  const handleDirContextMenuDelete = useCallback(() => {
+    if (!dirContextMenu) return;
+    handleDeleteDir(dirContextMenu.dirId);
+    setDirContextMenu(null);
+  }, [dirContextMenu, handleDeleteDir]);
+
   const isLoading = dirsLoading || (view === "directory-charts" && dirChartsLoading) || (view === "unassigned" && unassignedLoading);
 
   const sidebarSx = (t: any) => ({
@@ -262,13 +290,7 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
             <ListItem
               key={dir.id}
               disablePadding
-              secondaryAction={
-                <RequirePermissions required={[Permission.CHART_DELETE]}>
-                  <IconButton edge="end" size="small" onClick={() => handleDeleteDir(dir.id)}>
-                    <DeleteForeverIcon fontSize="small" />
-                  </IconButton>
-                </RequirePermissions>
-              }
+              onContextMenu={(e) => handleDirContextMenu(e, dir.id)}
             >
               <ListItemButton onClick={() => handleOpenDirectory(dir.id, dir.name)}>
                 <ListItemIcon sx={{ minWidth: 32 }}>
@@ -365,6 +387,33 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           confirmColor="error"
           description="Permanently delete this directory? Charts inside will not be deleted."
           cancelText="Cancel"
+        />
+
+        {/* Directory right-click context menu */}
+        <Menu
+          open={dirContextMenu !== null}
+          onClose={handleDirContextMenuClose}
+          anchorReference="anchorPosition"
+          anchorPosition={dirContextMenu ? { top: dirContextMenu.mouseY, left: dirContextMenu.mouseX } : undefined}
+        >
+          <MenuItem onClick={handleDirContextMenuShare}>
+            <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
+            Share
+          </MenuItem>
+          <Divider />
+          <RequirePermissions required={[Permission.CHART_DELETE]}>
+            <MenuItem onClick={handleDirContextMenuDelete} sx={{ color: "error.main" }}>
+              <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
+              Delete directory
+            </MenuItem>
+          </RequirePermissions>
+        </Menu>
+
+        {/* Share directory dialog */}
+        <ShareDirectoryDialog
+          open={shareDirDialogOpen}
+          onClose={() => { setShareDirDialogOpen(false); setPendingDirToShare(""); }}
+          directoryId={pendingDirToShare}
         />
       </Box>
     );

@@ -18,6 +18,8 @@ import { DevicesOnChartService } from './deviceOnChart.service';
 import { BondsOnChartService } from './bondOnChart.service';
 import { PortsOnChartService } from './portsOnChart.service';
 import { ChartShareEntity } from './entities/chartShare.entity';
+import { ChartInDirectoryEntity } from '../chartsDirectories/entities/chartsInDirectory.entity';
+import { DirectoryShareEntity } from '../chartsDirectories/entities/directoryShare.entity';
 
 @Module({
     imports: [
@@ -32,6 +34,8 @@ import { ChartShareEntity } from './entities/chartShare.entity';
            LineOnChartEntity,
            BondOnChartEntity,
            ChartShareEntity,
+           ChartInDirectoryEntity,
+           DirectoryShareEntity,
         ]),
         DevicesModule,
         LinesModule,
