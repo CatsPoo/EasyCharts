@@ -165,7 +165,7 @@ export class ChartsService {
     userId: string,
     permission: "canEdit" | "canDelete" | "canShare",
   ): Promise<void> {
-    const chart = await this.chartRepo.findOne({ where: { id: chartId }, select: { createdByUserId: true } });
+    const chart = await this.chartRepo.findOne({ where: { id: chartId }, select: { id: true, createdByUserId: true } });
     if (!chart) throw new ChartNotFoundExeption(chartId);
     if (chart.createdByUserId === userId) return; // owner has full access
     const share = await this.chartShareRepo.findOne({ where: { chartId, sharedWithUserId: userId } });
