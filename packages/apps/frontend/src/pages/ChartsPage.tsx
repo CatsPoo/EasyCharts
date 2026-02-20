@@ -22,7 +22,7 @@ import { useAuth } from "../auth/useAuth";
 import AssetTab from "../components/AssetsList/AssetTab";
 import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/chartEditorHandle.interfaces";
-import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
+import { DirectoryBrowserSidebar } from "../components/ChartsViewer/DirectoryBrowserSidebar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { useChartById } from "../hooks/chartsHooks";
@@ -149,8 +149,7 @@ export function ChartsPage() {
             textColor="inherit"
             indicatorColor="secondary"
           >
-            <Tab label="My Charts" />
-            <Tab label="Shared Charts" />
+            <Tab label="Charts" />
             <Tab label="Assets" />
           </Tabs>
         </div>
@@ -158,7 +157,7 @@ export function ChartsPage() {
 
       <Box sx={{ display: "flex", flex: 1 }}>
         <AnimatePresence initial={false}>
-          {tab !== 2 && (
+          {tab !== 1 && (
             <motion.div
               key="chart-sidebar"
               initial={{ width: 0, opacity: 0 }}
@@ -170,8 +169,7 @@ export function ChartsPage() {
              bg-transparent dark:bg-slate-900
              transition-colors duration-200"
             >
-              <ChartListSidebar
-                isMyCharts={tab === 0}
+              <DirectoryBrowserSidebar
                 onSelect={setSelectedId}
                 onEdit={handleEdit}
               />
@@ -179,7 +177,7 @@ export function ChartsPage() {
           )}
         </AnimatePresence>
 
-        {tab !== 2 ? (
+        {tab !== 1 ? (
           <Box sx={{ flex: 1, position: "relative" }}>
             {selectedChartError ? (
               <Box
@@ -211,11 +209,11 @@ export function ChartsPage() {
               </Box>
             )}
           </Box>
-        ) : (
+        ) : tab === 1 ? (
           <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex" }}>
             <AssetTab />
           </Box>
-        )}
+        ) : null}
       </Box>
       <Dialog fullScreen open={dialogOpen}>
         <AppBar position="relative">

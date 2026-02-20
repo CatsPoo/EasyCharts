@@ -4,12 +4,16 @@ import {
   ChartMetadata,
   type ChartUpdate,
   Permission,
+  ShareWithUserSchema,
+  type ShareWithUser,
 } from "@easy-charts/easycharts-types";
 import {
   Body,
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -19,8 +23,8 @@ import {
   UsePipes,
   ValidationPipe,
 } from "@nestjs/common";
-import { ChartsService } from "./charts.service";
 import { ZodValidationPipe } from "../common/zodValidation.pipe";
+import { ChartsService } from "./charts.service";
 import { JwdAuthGuard } from "../auth/guards/jwtAuth.guard";
 import { PermissionsGuard } from "../auth/guards/permissions.guard";
 import { RequirePermissions } from "../auth/decorators/permissions.decorator";
@@ -44,6 +48,14 @@ export class ChartsController {
     @Req() req: { user: string }
   ): Promise<ChartMetadata[]> {
     return this.chartService.getAllUserChartsMetadata(req.user);
+  }
+
+  @RequirePermissions(Permission.CHART_READ)
+  @Get("metadata/unassigned")
+  async getUnassignedChartMetadata(
+    @Req() req: { user: string }
+  ): Promise<ChartMetadata[]> {
+    return this.chartService.getUnassignedChartsMetadata(req.user);
   }
 
   @RequirePermissions(Permission.CHART_READ)
@@ -101,5 +113,38 @@ export class ChartsController {
     @Req() req: { user: string }
   ) {
     return this.chartService.updateChart(id, body, req.user);
+  }
+
+  // ─── Sharing ────────────────────────────────────────────────────────────────
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @Get(":id/shares")
+  getShares(@Param("id", new ParseUUIDPipe()) id: string) {
+    return this.chartService.getChartShares(id);
+  }
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @Post(":id/share")
+  @HttpCode(HttpStatus.CREATED)
+  share(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(ShareWithUserSchema)) body: ShareWithUser,
+    @Req() req: { user: string },
+  ) {
+    return this.chartService.shareChart(id, body.sharedWithUserId, req.user, {
+      canEdit: body.canEdit,
+      canDelete: body.canDelete,
+      canShare: body.canShare,
+    });
+  }
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @Delete(":id/share/:userId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  unshare(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("userId", new ParseUUIDPipe()) userId: string,
+  ) {
+    return this.chartService.unshareChart(id, userId);
   }
 }

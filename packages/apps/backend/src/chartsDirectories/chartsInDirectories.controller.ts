@@ -25,8 +25,8 @@ export class ChartsInDirectoriesController {
   ) {}
 
   // ---------- READ ----------
-  /** Full membership rows (pinned/sortOrder/note/addedAt…) */
-  @RequirePermissions(Permission.ASSET_READ)
+  /** Full membership rows */
+  @RequirePermissions(Permission.CHART_READ)
   @Get()
   listCharts(
     @Param("directoryId", new ParseUUIDPipe()) directoryId: string
@@ -35,7 +35,7 @@ export class ChartsInDirectoriesController {
   }
 
   /** Lightweight list of just chart IDs */
-  @RequirePermissions(Permission.ASSET_READ)
+  @RequirePermissions(Permission.CHART_READ)
   @Get("ids")
   listChartIds(
     @Param("directoryId", new ParseUUIDPipe()) directoryId: string
@@ -43,9 +43,19 @@ export class ChartsInDirectoriesController {
     return this.chartsDirsService.listChartIds(directoryId);
   }
 
+  /** Chart metadata for charts in the directory that the user can access */
+  @RequirePermissions(Permission.CHART_READ)
+  @Get("metadata")
+  listChartsMetadata(
+    @Param("directoryId", new ParseUUIDPipe()) directoryId: string,
+    @Req() req: { user: string },
+  ) {
+    return this.chartsDirsService.listChartsMetadata(directoryId, req.user);
+  }
+
   // ---------- WRITE ----------
   /** Add/Upsert a chart into the directory */
-  @RequirePermissions(Permission.ASSET_EDIT)
+  @RequirePermissions(Permission.CHART_UPDATE)
   @Post(":chartId")
   @HttpCode(HttpStatus.CREATED)
   async addChart(
@@ -58,7 +68,7 @@ export class ChartsInDirectoriesController {
   }
 
   /** Remove a chart from the directory */
-  @RequirePermissions(Permission.ASSET_EDIT)
+  @RequirePermissions(Permission.CHART_UPDATE)
   @Delete(":chartId")
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeChart(
