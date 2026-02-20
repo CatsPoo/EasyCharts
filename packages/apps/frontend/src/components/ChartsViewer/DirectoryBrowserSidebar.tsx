@@ -3,10 +3,17 @@ import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import DriveFileMoveIcon from "@mui/icons-material/DriveFileMove";
 import FolderIcon from "@mui/icons-material/Folder";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import InboxIcon from "@mui/icons-material/Inbox";
 import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
   Fab,
   IconButton,
   LinearProgress,
@@ -15,6 +22,8 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Menu,
+  MenuItem,
   SpeedDial,
   SpeedDialAction,
   SpeedDialIcon,
@@ -34,6 +43,7 @@ import {
   useCreateDirectoryMutation,
   useDeleteDirectoryMutation,
   useDirectoryChartsMetadataQuery,
+  useRemoveChartFromDirectoryMutation,
   useRootDirectoriesQuery,
   useUnassignedChartsQuery,
 } from "../../hooks/chartsDirectoriesHooks";
@@ -67,6 +77,13 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
   const [createDirOpen, setCreateDirOpen] = useState(false);
   const [newDirName, setNewDirName] = useState("");
 
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; chartId: string } | null>(null);
+
+  // Move chart dialog state
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [pendingChartToMove, setPendingChartToMove] = useState("");
+
   const { data: directories, isLoading: dirsLoading } = useRootDirectoriesQuery();
   const { data: dirCharts, isLoading: dirChartsLoading } = useDirectoryChartsMetadataQuery(
     view === "directory-charts" ? selectedDirId : null,
@@ -76,6 +93,7 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
   const createChartMutation = useCreateChartMutation();
   const deleteChartMutation = useDeleteChartMutation();
   const addChartToDirectoryMutation = useAddChartToDirectoryMutation();
+  const removeChartFromDirectoryMutation = useRemoveChartFromDirectoryMutation();
   const createDirMutation = useCreateDirectoryMutation();
   const deleteDirMutation = useDeleteDirectoryMutation();
 
@@ -136,6 +154,48 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
     setPendingDirToDelete("");
     setDeleteDirDialogOpen(false);
   }, [deleteDirMutation, pendingDirToDelete]);
+
+  const handleChartContextMenu = useCallback((e: React.MouseEvent, chartId: string) => {
+    e.preventDefault();
+    setContextMenu({ mouseX: e.clientX, mouseY: e.clientY, chartId });
+  }, []);
+
+  const handleContextMenuClose = useCallback(() => setContextMenu(null), []);
+
+  const handleContextMenuDelete = useCallback(() => {
+    if (!contextMenu) return;
+    handleDeleteChart(contextMenu.chartId);
+    setContextMenu(null);
+  }, [contextMenu, handleDeleteChart]);
+
+  const handleContextMenuEdit = useCallback(() => {
+    if (!contextMenu) return;
+    onEdit(contextMenu.chartId);
+    setContextMenu(null);
+  }, [contextMenu, onEdit]);
+
+  const handleContextMenuMove = useCallback(() => {
+    if (!contextMenu) return;
+    setPendingChartToMove(contextMenu.chartId);
+    setMoveDialogOpen(true);
+    setContextMenu(null);
+  }, [contextMenu]);
+
+  const handleMoveToDirectory = useCallback(async (targetDirId: string) => {
+    if (selectedDirId) {
+      await removeChartFromDirectoryMutation.mutateAsync({ directoryId: selectedDirId, chartId: pendingChartToMove });
+    }
+    await addChartToDirectoryMutation.mutateAsync({ directoryId: targetDirId, chartId: pendingChartToMove });
+    setPendingChartToMove("");
+    setMoveDialogOpen(false);
+  }, [selectedDirId, pendingChartToMove, removeChartFromDirectoryMutation, addChartToDirectoryMutation]);
+
+  const handleMakeUnassigned = useCallback(async () => {
+    if (!selectedDirId) return;
+    await removeChartFromDirectoryMutation.mutateAsync({ directoryId: selectedDirId, chartId: pendingChartToMove });
+    setPendingChartToMove("");
+    setMoveDialogOpen(false);
+  }, [selectedDirId, pendingChartToMove, removeChartFromDirectoryMutation]);
 
   const isLoading = dirsLoading || (view === "directory-charts" && dirChartsLoading) || (view === "unassigned" && unassignedLoading);
 
@@ -317,6 +377,7 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           <ListItem
             key={chart.id}
             disablePadding
+            onContextMenu={(e) => handleChartContextMenu(e, chart.id)}
             secondaryAction={
               <Box>
                 <RequirePermissions required={[Permission.CHART_DELETE]}>
@@ -377,6 +438,76 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
         description="Permanently delete this chart?"
         cancelText="Cancel"
       />
+
+      {/* Right-click context menu */}
+      <Menu
+        open={contextMenu !== null}
+        onClose={handleContextMenuClose}
+        anchorReference="anchorPosition"
+        anchorPosition={contextMenu ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined}
+      >
+        <MenuItem onClick={handleContextMenuEdit}>
+          <ListItemIcon><ArrowForwardIosIcon fontSize="small" /></ListItemIcon>
+          Edit chart
+        </MenuItem>
+        <MenuItem onClick={handleContextMenuMove}>
+          <ListItemIcon><DriveFileMoveIcon fontSize="small" /></ListItemIcon>
+          Move to directory
+        </MenuItem>
+        <Divider />
+        <RequirePermissions required={[Permission.CHART_DELETE]}>
+          <MenuItem onClick={handleContextMenuDelete} sx={{ color: "error.main" }}>
+            <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
+            Delete chart
+          </MenuItem>
+        </RequirePermissions>
+      </Menu>
+
+      {/* Move to directory dialog */}
+      <Dialog open={moveDialogOpen} onClose={() => setMoveDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Move chart to directory</DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          <List dense>
+            {selectedDirId && (
+              <>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={handleMakeUnassigned}
+                    disabled={removeChartFromDirectoryMutation.isPending}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <InboxIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Unassigned (no directory)" primaryTypographyProps={{ fontStyle: "italic" }} />
+                  </ListItemButton>
+                </ListItem>
+                <Divider />
+              </>
+            )}
+            {(directories ?? []).map((dir) => (
+              <ListItem key={dir.id} disablePadding>
+                <ListItemButton
+                  onClick={() => handleMoveToDirectory(dir.id)}
+                  disabled={removeChartFromDirectoryMutation.isPending || addChartToDirectoryMutation.isPending}
+                >
+                  <ListItemIcon sx={{ minWidth: 32 }}>
+                    <FolderIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary={dir.name} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+            {(directories ?? []).length === 0 && (
+              <ListItem>
+                <ListItemText secondary="No directories available" secondaryTypographyProps={{ textAlign: "center" }} />
+              </ListItem>
+            )}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMoveDialogOpen(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
