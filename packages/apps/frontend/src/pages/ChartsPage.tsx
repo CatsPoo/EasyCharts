@@ -40,6 +40,7 @@ export function ChartsPage() {
   const [editChart, setEditChart] = useState<Chart | undefined>(undefined);
   const [editorMadeChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
 
   const chartEditorRef = useRef<ChartEditorHandle>(null);
 
@@ -117,10 +118,12 @@ export function ChartsPage() {
         throw new Error('Unable to save the chart')
       // do any parent-side updates you want
       await unlockChart()
-      setSelectedId(saved.id);
+      setEditMode(false);
       setDialogOpen(false);
       setEditorMadeChanges(false);
       setEditChart(undefined);
+      setSelectedId(saved.id);
+      setPreviewKey(k => k + 1);
     } catch (err) {
       console.error("updateChart failed:", err);
     } finally {
@@ -194,7 +197,7 @@ export function ChartsPage() {
               </Box>
             ) : selectedChart ? (
               <ChartEditor
-                key={selectedChart.id}
+                key={`${selectedChart.id}-${previewKey}`}
                 chart={selectedChart}
                 setChart={nope}
                 editMode={false}
