@@ -15,6 +15,9 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  SpeedDial,
+  SpeedDialAction,
+  SpeedDialIcon,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -209,18 +212,33 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           )}
         </List>
 
-        {/* FAB for creating directory */}
+        {/* FAB speed dial for creating directory or unassigned chart */}
         <RequirePermissions required={[Permission.CHART_CREATE]}>
-          <Tooltip title="New directory">
-            <Fab
-              color="primary"
-              size="small"
+          <SpeedDial
+            ariaLabel="Create"
+            icon={<SpeedDialIcon />}
+            sx={{ position: "fixed", right: 16, bottom: 16, zIndex: 1300 }}
+            FabProps={{ size: "small", color: "primary" }}
+          >
+            <SpeedDialAction
+              icon={<FolderIcon fontSize="small" />}
+              tooltipTitle="New directory"
+              tooltipOpen
               onClick={() => setCreateDirOpen(true)}
-              sx={{ position: "fixed", right: 24, bottom: 24, zIndex: 1300 }}
-            >
-              <AddIcon />
-            </Fab>
-          </Tooltip>
+            />
+            <SpeedDialAction
+              icon={<AddIcon fontSize="small" />}
+              tooltipTitle="New unassigned chart"
+              tooltipOpen
+              onClick={() => setCreateChartOpen(true)}
+            />
+          </SpeedDial>
+          <CreateChartDialog
+            open={createChartOpen}
+            onClose={() => setCreateChartOpen(false)}
+            onSubmit={handleCreateChart}
+            submitting={createChartMutation.isPending}
+          />
         </RequirePermissions>
 
         {/* Create directory inline dialog (simple prompt) */}
