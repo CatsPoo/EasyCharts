@@ -36,10 +36,21 @@ export class UsersService {
     return this.convertUserEntity(user)
   }
 
-  async getsUerWithPasswordByUsername(username:string) : Promise<UserEntity>{
+  async getUserWithPasswordByUsername(username:string) : Promise<UserEntity>{
     const user :UserEntity | null = await this.userRepo.findOne({where:{username}})
     if(!user) throw new NotFoundException("User not found");
     return user
+  }
+
+  /** @deprecated use getUserWithPasswordByUsername */
+  async getsUerWithPasswordByUsername(username:string) : Promise<UserEntity>{
+    return this.getUserWithPasswordByUsername(username);
+  }
+
+  async getUserEntityById(id: string): Promise<UserEntity> {
+    const user : UserEntity | null = await this.userRepo.findOne({where:{id}});
+    if(!user) throw new NotFoundException("User not found");
+    return user;
   }
 
   async createUser(dto: UserCreate,createdByUserId:string): Promise<User> {
@@ -59,7 +70,7 @@ export class UsersService {
     if (dto.username !== undefined) user.username = dto.username;
     if (dto.displayName !== undefined) user.displayName = dto.displayName;
     if (dto.isActive !== undefined) user.isActive = dto.isActive;
-    if(dto.password !== undefined) user.password = dto.password;
+    if(dto.password !== undefined) user.password = await bcrypt.hash(dto.password, 12);
     if(dto.permissions !== undefined) user.permissions = dto.permissions
     return this.convertUserEntity(await this.userRepo.save(user));
   }
@@ -71,7 +82,7 @@ export class UsersService {
   }
 
   async updateUserRefreshToken(id:string,refreshToken:string|null) : Promise<number>{
-    const refreshTokenHash : string = await bcrypt.hash(refreshToken, 12)
+    const refreshTokenHash : string | null = refreshToken ? await bcrypt.hash(refreshToken, 12) : null
     const updateResults :UpdateResult = await this.userRepo.update(id,{refreshTokenHash})
     if(!updateResults || updateResults.affected==0) throw new NotFoundException('User not found')
     return updateResults.affected ?? 0

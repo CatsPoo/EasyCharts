@@ -253,7 +253,7 @@ export class ChartsService {
   async unlockChart(chartId: string, userId: string): Promise<ChartLock> {
     const chart: ChartEntity | null = await this.chartRepo.findOne({ where: { id: chartId } });
     if (!chart) throw new ChartNotFoundExeption(chartId);
-    if (!chart.lockedById || !chart.lockedAt ) this.getLockFromChartEntity(chart)
+    if (!chart.lockedById || !chart.lockedAt ) return this.getLockFromChartEntity(chart)
     if (chart.lockedById && chart.lockedById !== userId)
       throw new ChartIsLockedExeption(chartId,chart.lockedById)
 

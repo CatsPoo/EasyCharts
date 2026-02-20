@@ -11,13 +11,13 @@ import {
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import type { Edge } from "reactflow";
-import { EditLineDialogFormSchema, type EditLineDialogFormRespone } from "./interfaces/editLineDialogForm.interfaces";
+import { EditLineDialogFormSchema, type EditLineDialogFormResponse } from "./interfaces/editLineDialogForm.interfaces";
 
 interface EditLineDialofProps {
   isOpen: boolean;
   line: Edge | null;
   onClose: () => void;
-  onSubmit: (data: EditLineDialogFormRespone) => void;
+  onSubmit: (data: EditLineDialogFormResponse) => void;
 }
 export function EditLineDialog({
   isOpen,
@@ -38,7 +38,7 @@ export function EditLineDialog({
     defaultValues : {
         id:"",
         label:""
-    } as EditLineDialogFormRespone,
+    } as EditLineDialogFormResponse,
 
     mode: "onSubmit",
   });
@@ -75,8 +75,8 @@ export function EditLineDialog({
             <TextField
               label="label"
               {...register("label")}
-              helperText={errors.name?.message as string}
-              error={!!errors.name}
+              helperText={errors.label?.message as string}
+              error={!!errors.label}
             />
           </Stack>
         </DialogContent>

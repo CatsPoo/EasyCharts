@@ -38,7 +38,7 @@ export function ChartsPage() {
   // dialog state:
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editChart, setEditChart] = useState<Chart | undefined>(undefined);
-  const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false);
+  const [editorMadeChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
 
   const chartEditorRef = useRef<ChartEditorHandle>(null);
@@ -92,7 +92,7 @@ export function ChartsPage() {
   }, [dialogOpen, selectedChart]);
 
   const handleDialogClose = async  () => {
-    if (editorMageChanges) {
+    if (editorMadeChanges) {
       const leave = window.confirm(
         "You have unsaved changes. Are you sure you want to close without saving?"
       );
@@ -134,7 +134,7 @@ export function ChartsPage() {
         display: "flex",
         flexDirection: "column",
         height: "100vh",
-        width: "100Vw",
+        width: "100vw",
       }}
     >
       {/* Top tabs */}
@@ -274,7 +274,7 @@ export function ChartsPage() {
                 color="success"
                 variant="contained"
                 onClick={handleSaveClick}
-                disabled={saving || !editorMageChanges}
+                disabled={saving || !editorMadeChanges}
               >
                 {saving ? "Saving…" : "Save"}
               </Button>
