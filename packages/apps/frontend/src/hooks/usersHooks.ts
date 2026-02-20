@@ -2,6 +2,34 @@ import type { User, UserCreate, UserUpdate } from "@easy-charts/easycharts-types
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "../api/http";
 
+async function searchUsers(q: string): Promise<User[]> {
+  const { data } = await http.get<User[]>("/users/search", { params: { q } });
+  return data;
+}
+
+export function useUsersSearchQuery(q: string) {
+  return useQuery<User[]>({
+    queryKey: ["users", "search", q],
+    queryFn: () => searchUsers(q),
+    enabled: q.length > 0,
+    staleTime: 30_000,
+  });
+}
+
+async function getUserById(id: string): Promise<User> {
+  const { data } = await http.get<User>(`/users/${id}`);
+  return data;
+}
+
+export function useUserByIdQuery(id: string | null | undefined) {
+  return useQuery<User>({
+    queryKey: ["users", "byId", id],
+    queryFn: () => getUserById(id!),
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+}
+
 
 export async function getUserProfile(): Promise<User> {
   try{

@@ -5,4 +5,4 @@ import z from "zod";
    label: z.string(),
  });
 
-export type EditLineDialogFormRespone =z.infer<typeof EditLineDialogFormSchema>;
+export type EditLineDialogFormResponse =z.infer<typeof EditLineDialogFormSchema>;

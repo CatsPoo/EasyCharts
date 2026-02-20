@@ -9,7 +9,6 @@ export const UserBaseSchema = z.object({
   displayName : z.string(),
   isActive : z.boolean(),
   permissions: z.array(PermissionsEnumSchema),
-  refreshTokenHash : z.string()
 });
 
 export const UserCreateSchema = UserBaseSchema.extend({

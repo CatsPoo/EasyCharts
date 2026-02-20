@@ -188,6 +188,7 @@ export default function DeviceNode({
       ...deviceOnChart,
       device: { ...device, ports: [...device.ports, portToUse] },
     });
+    setSelectedPortId(portToUse.id);
     setNewPort(null);
     setCreateDialogOpen(false);
   };

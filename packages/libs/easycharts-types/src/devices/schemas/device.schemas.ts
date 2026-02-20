@@ -25,7 +25,7 @@ export const DeviceCreateSchema = z.object({
 export const DeviceUpdateSchema = DeviceCreateSchema.partial()
 .refine(v => Object.keys(v).length > 0, { message: 'At least one field is required' });
 
-export const DeviceSchema = DeviceBaseSchema.extend(IdentifiableSchema.shape).extend(AuditableSchema.shape).extend(AuditableSchema.shape)
+export const DeviceSchema = DeviceBaseSchema.extend(IdentifiableSchema.shape).extend(AuditableSchema.shape)
 
 export const DeviceMetadataSchema = DeviceSchema.omit({
   ports: true,

@@ -85,7 +85,7 @@ export class ModelsService {
 
   async getModelById(id: string) : Promise<Model> {
     const found = await this.modelsRepo.findOne({ where: { id } });
-    if (!found) throw new NotFoundException("Vendor not found");
+    if (!found) throw new NotFoundException("Model not found");
     return found;
   }
 
