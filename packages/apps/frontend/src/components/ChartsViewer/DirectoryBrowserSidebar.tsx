@@ -4,6 +4,7 @@ import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import DriveFileMoveIcon from "@mui/icons-material/DriveFileMove";
+import ShareIcon from "@mui/icons-material/Share";
 import FolderIcon from "@mui/icons-material/Folder";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import InboxIcon from "@mui/icons-material/Inbox";
@@ -49,6 +50,7 @@ import {
 } from "../../hooks/chartsDirectoriesHooks";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import { CreateChartDialog } from "../CreateChartDialog";
+import { ShareChartDialog } from "./ShareChartDialog";
 
 interface DirectoryBrowserSidebarProps {
   onSelect: (chartId: string) => void;
@@ -83,6 +85,11 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
   // Move chart dialog state
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [pendingChartToMove, setPendingChartToMove] = useState("");
+  const [pendingChartSourceDirId, setPendingChartSourceDirId] = useState<string | null>(null);
+
+  // Share chart dialog state
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [pendingChartToShare, setPendingChartToShare] = useState("");
 
   const { data: directories, isLoading: dirsLoading } = useRootDirectoriesQuery();
   const { data: dirCharts, isLoading: dirChartsLoading } = useDirectoryChartsMetadataQuery(
@@ -177,25 +184,35 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
   const handleContextMenuMove = useCallback(() => {
     if (!contextMenu) return;
     setPendingChartToMove(contextMenu.chartId);
+    setPendingChartSourceDirId(selectedDirId);
     setMoveDialogOpen(true);
+    setContextMenu(null);
+  }, [contextMenu, selectedDirId]);
+
+  const handleContextMenuShare = useCallback(() => {
+    if (!contextMenu) return;
+    setPendingChartToShare(contextMenu.chartId);
+    setShareDialogOpen(true);
     setContextMenu(null);
   }, [contextMenu]);
 
   const handleMoveToDirectory = useCallback(async (targetDirId: string) => {
-    if (selectedDirId) {
-      await removeChartFromDirectoryMutation.mutateAsync({ directoryId: selectedDirId, chartId: pendingChartToMove });
+    if (pendingChartSourceDirId) {
+      await removeChartFromDirectoryMutation.mutateAsync({ directoryId: pendingChartSourceDirId, chartId: pendingChartToMove });
     }
     await addChartToDirectoryMutation.mutateAsync({ directoryId: targetDirId, chartId: pendingChartToMove });
     setPendingChartToMove("");
+    setPendingChartSourceDirId(null);
     setMoveDialogOpen(false);
-  }, [selectedDirId, pendingChartToMove, removeChartFromDirectoryMutation, addChartToDirectoryMutation]);
+  }, [pendingChartSourceDirId, pendingChartToMove, removeChartFromDirectoryMutation, addChartToDirectoryMutation]);
 
   const handleMakeUnassigned = useCallback(async () => {
-    if (!selectedDirId) return;
-    await removeChartFromDirectoryMutation.mutateAsync({ directoryId: selectedDirId, chartId: pendingChartToMove });
+    if (!pendingChartSourceDirId) return;
+    await removeChartFromDirectoryMutation.mutateAsync({ directoryId: pendingChartSourceDirId, chartId: pendingChartToMove });
     setPendingChartToMove("");
+    setPendingChartSourceDirId(null);
     setMoveDialogOpen(false);
-  }, [selectedDirId, pendingChartToMove, removeChartFromDirectoryMutation]);
+  }, [pendingChartSourceDirId, pendingChartToMove, removeChartFromDirectoryMutation]);
 
   const isLoading = dirsLoading || (view === "directory-charts" && dirChartsLoading) || (view === "unassigned" && unassignedLoading);
 
@@ -454,6 +471,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           <ListItemIcon><DriveFileMoveIcon fontSize="small" /></ListItemIcon>
           Move to directory
         </MenuItem>
+        <MenuItem onClick={handleContextMenuShare}>
+          <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
+          Share
+        </MenuItem>
         <Divider />
         <RequirePermissions required={[Permission.CHART_DELETE]}>
           <MenuItem onClick={handleContextMenuDelete} sx={{ color: "error.main" }}>
@@ -468,7 +489,7 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
         <DialogTitle>Move chart to directory</DialogTitle>
         <DialogContent dividers sx={{ p: 0 }}>
           <List dense>
-            {selectedDirId && (
+            {pendingChartSourceDirId && (
               <>
                 <ListItem disablePadding>
                   <ListItemButton
@@ -508,6 +529,13 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           <Button onClick={() => setMoveDialogOpen(false)}>Cancel</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Share chart dialog */}
+      <ShareChartDialog
+        open={shareDialogOpen}
+        onClose={() => { setShareDialogOpen(false); setPendingChartToShare(""); }}
+        chartId={pendingChartToShare}
+      />
     </Box>
   );
 }

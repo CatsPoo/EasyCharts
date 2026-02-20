@@ -15,6 +15,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
   UsePipes,
@@ -41,6 +42,16 @@ export class UsersController {
   @Get("/profile")
   findOne(@Req() req: { user: User }) {
     return this.userService.getUserById(req.user.id);
+  }
+
+  @Get("/search")
+  search(@Query("q") q: string = "", @Req() req: { user: string }) {
+    return this.userService.searchUsers(q, req.user);
+  }
+
+  @Get(":id")
+  findById(@Param("id", new ParseUUIDPipe()) id: string) {
+    return this.userService.getUserById(id);
   }
 
   @RequirePermissions(Permission.USER_MANAGE)

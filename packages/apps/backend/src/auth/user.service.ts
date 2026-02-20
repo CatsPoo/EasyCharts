@@ -11,7 +11,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import * as bcrypt from 'bcrypt';
-import { Repository, UpdateResult } from "typeorm";
+import { ILike, Repository, UpdateResult } from "typeorm";
 import { UserEntity } from "./entities/user.entity";
 
 @Injectable()
@@ -24,6 +24,17 @@ export class UsersService {
   async getAllUsers(): Promise<User[]> {
     const users : UserEntity[]= await this.userRepo.find({});
     return users.map(u=>this.convertUserEntity(u))
+  }
+
+  async searchUsers(q: string, excludeId?: string): Promise<User[]> {
+    const like = `%${q}%`;
+    let users = await this.userRepo.find({
+      where: [{ username: ILike(like) }, { displayName: ILike(like) }],
+      order: { username: "ASC" },
+      take: 20,
+    });
+    if (excludeId) users = users.filter(u => u.id !== excludeId);
+    return users.map(u => this.convertUserEntity(u));
   }
 
   convertUserEntity(userEntity : UserEntity) : User{

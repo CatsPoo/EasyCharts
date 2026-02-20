@@ -128,9 +128,10 @@ export function useAddChartToDirectoryMutation() {
   return useMutation({
     mutationFn: ({ directoryId, chartId }: { directoryId: string; chartId: string }) =>
       addChartToDirectory(directoryId, chartId),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ["directoryChartsMetadata", vars.directoryId] });
-      qc.invalidateQueries({ queryKey: ["directoryCharts", vars.directoryId] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["directoryChartsMetadata"] });
+      qc.invalidateQueries({ queryKey: ["directoryCharts"] });
+      qc.invalidateQueries({ queryKey: ["chartsMetadata", "unassigned"] });
     },
   });
 }
@@ -140,9 +141,10 @@ export function useRemoveChartFromDirectoryMutation() {
   return useMutation({
     mutationFn: ({ directoryId, chartId }: { directoryId: string; chartId: string }) =>
       removeChartFromDirectory(directoryId, chartId),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ["directoryChartsMetadata", vars.directoryId] });
-      qc.invalidateQueries({ queryKey: ["directoryCharts", vars.directoryId] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["directoryChartsMetadata"] });
+      qc.invalidateQueries({ queryKey: ["directoryCharts"] });
+      qc.invalidateQueries({ queryKey: ["chartsMetadata", "unassigned"] });
     },
   });
 }
