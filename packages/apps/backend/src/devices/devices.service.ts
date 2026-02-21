@@ -23,19 +23,23 @@ export class DevicesService {
   ) {}
 
   convertDeviceEntity(deviceEntity: DeviceEntity): Device {
-    const { id, model, name, type, ipAddress, ports } = deviceEntity;
+    const { id, model, name, type, ipAddress, ports, createdAt,createdByUserId,updatedAt,updatedByUserId} = deviceEntity;
     return {
       id,
       name,
-      type: type,
+      type,
       ipAddress,
       vendor: model.vendor,
-      model: model,
+      model,
       ports: ports ?? [],
+      createdAt,
+      createdByUserId,
+      updatedAt,
+      updatedByUserId
     } as Device;
   }
 
-  async createDevice(dto: DeviceCreate): Promise<Device> {
+  async createDevice(dto: DeviceCreate,createdByUserId:string): Promise<Device> {
     const type = await this.deviceTypesRepo.findOne({
       where: { id: dto.typeId },
     });
@@ -51,6 +55,7 @@ export class DevicesService {
       ...dto,
       type,
       model,
+      createdByUserId,
     });
     return this.convertDeviceEntity(await this.devicesRepo.save(device));
   }
@@ -127,7 +132,7 @@ export class DevicesService {
     return await this.convertDeviceEntity(device);
   }
 
-  async updateDevice(id: string, dto: DeviceUpdate): Promise<Device> {
+  async updateDevice(id: string, dto: DeviceUpdate,updatedByUserId:string): Promise<Device> {
     const device = await this.devicesRepo.findOne({
       where: { id },
       relations: ["type","model", "model.vendor"],
@@ -153,7 +158,7 @@ export class DevicesService {
       if (!model) throw new NotFoundException("Model not found");
       device.model = model;
     }
-
+    device.updatedByUserId=updatedByUserId
     return await this.convertDeviceEntity(await this.devicesRepo.save(device));
   }
 

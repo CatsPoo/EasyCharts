@@ -15,19 +15,19 @@ export class AuthService {
   ) {}
 
   async validateUser(username:string,password:string) : Promise<string>{
-    const user = await this.usersService.getsUerWithPasswordByUsername(username)
-    const isPasswordsMatch : boolean = await bcrypt.compare(password,await user.password)
-    if(!isPasswordsMatch || !user.isActive) throw new UnauthorizedException('Invalid cradentials')
+    const user = await this.usersService.getUserWithPasswordByUsername(username)
+    const isPasswordsMatch : boolean = await bcrypt.compare(password, user.password)
+    if(!isPasswordsMatch || !user.isActive) throw new UnauthorizedException('Invalid credentials')
     return user.id
 
   }
 
   async valudateRefreshToken(userId:string,refreshToken:string) : Promise<User>{
     try{
-      const user : User = await this.usersService.getUserById(userId)
-      const isTokensMatch : boolean = await bcrypt.compare(refreshToken,await user.refreshTokenHash)
+      const userEntity = await this.usersService.getUserEntityById(userId)
+      const isTokensMatch : boolean = await bcrypt.compare(refreshToken, userEntity.refreshTokenHash ?? '')
       if(!isTokensMatch) throw new UnauthorizedException("Invalid refresh Token");
-      return user
+      return this.usersService.convertUserEntity(userEntity)
     }
     catch{
       throw new UnauthorizedException("Invalid refresh Token");
@@ -35,7 +35,7 @@ export class AuthService {
 
   }
 
-  async generateTockens(userId:string) : Promise<AuthTokens>{
+  async generateTokens(userId:string) : Promise<AuthTokens>{
     const payload : AuthJwtPayload = {sub:userId}
     const [token, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload),
@@ -51,7 +51,7 @@ export class AuthService {
   }
 
   async login(userId:string):Promise<AuthResponse>{
-    const {token,refreshToken} : AuthTokens = await this.generateTockens(userId)
+    const {token,refreshToken} : AuthTokens = await this.generateTokens(userId)
     await this.usersService.updateUserRefreshToken(userId,refreshToken)
     const user : User = await this.usersService.getUserById(userId)
     return {
@@ -64,11 +64,11 @@ export class AuthService {
   async refreshToken(userId:string):Promise<AuthRefreshResponse>{
     const payload : AuthJwtPayload = {sub:userId}
     const user : User = await this.usersService.getUserById(userId)
-    const token : string = this.jwtService.sign(payload)
+    const token : string = await this.jwtService.signAsync(payload)
     return {user,token}
   }
 
   async logout(userId: string):Promise<void>{
-    this.usersService.updateUserRefreshToken(userId,null);
+    await this.usersService.updateUserRefreshToken(userId,null);
   }
 }

@@ -25,11 +25,8 @@ export class LinessService {
     private readonly bondRepo: Repository<BondEntity>
   ) {}
   convertLineEntity(lineEntity: LineEntity): Line {
-    const { id, sourcePort, targetPort } = lineEntity;
     return {
-      id,
-      sourcePort,
-      targetPort,
+      ...lineEntity
     } as Line;
   }
 
@@ -72,16 +69,16 @@ export class LinessService {
     .map(m => m.id);
 
   return {
-    id: bondEntity.id,
-    name: bondEntity.name,
     membersLines: memberIds,
+    ...bondEntity
   } as Bond;
 }
 
-  async createEmptyBond(bondCreate: BondCreate): Promise<Bond> {
+  async createEmptyBond(bondCreate: BondCreate,createdByUserId:string): Promise<Bond> {
     const newBond: BondEntity = await this.bondRepo.save({
       id: bondCreate.id,
       name: bondCreate.name,
+      created_by_user_id:createdByUserId
     });
 
     return this.convertBondEntitytoBond(newBond);
@@ -96,13 +93,15 @@ export class LinessService {
     return this.convertBondEntitytoBond(bond);
   }
 
-  async updateBond(id: string, bondUpdate: BondUpdate): Promise<Bond> {
+  async updateBond(id: string, bondUpdate: BondUpdate,updatedByUserId:string): Promise<Bond> {
     const bond = await this.bondRepo.findOne({
       where: { id },
       relations: { members: true },
     });
     if (!bond) throw new NotFoundException(`Bond ${id} not found`);
 
+    bond.updatedByUserId=updatedByUserId
+    
     if (bondUpdate.name) {
       bond.name = bondUpdate.name;
       await this.bondRepo.save(bond);
@@ -169,18 +168,18 @@ export class LinessService {
     this.bondRepo.delete(id);
   }
 
-  async upsertLines(manager: EntityManager, lines: Line[]): Promise<void> {
+  async upsertLines(manager: EntityManager, lines: Line[],userId:string): Promise<void> {
     if (!lines?.length) return;
     const repo = manager.getRepository(LineEntity);
     await repo.upsert(
-      lines.map((l) => this.convertLineToEntity(l)),
+      lines.map((l) => {return {...this.convertLineToEntity(l),createdByUserId:userId,updatedByUserId:userId}}),
       { conflictPaths: ["id"], skipUpdateIfNoValuesChanged: true }
     );
   }
 
   // 2) Ensure BondEntity exists and update membership (global only)
 
-  async ensureAndUpdateBonds(manager: EntityManager, bonds: Bond[]): Promise<void> {
+  async ensureAndUpdateBonds(manager: EntityManager, bonds: Bond[],userId:string): Promise<void> {
     if (!bonds || bonds.length === 0) return;
 
     const bondRepo = manager.getRepository(BondEntity);
@@ -193,9 +192,10 @@ export class LinessService {
       // 1) Ensure bond exists (name update if provided)
       let bond = await bondRepo.findOne({ where: { id: bondId } });
       if (!bond) {
-        bond = await bondRepo.save({ id: bondId, name: b.name });
+        bond = await bondRepo.save({ id: bondId, name: b.name,createdByUserId:userId } as Partial<BondEntity>);
       } else if (b.name && b.name !== bond.name) {
         bond.name = b.name;
+        bond.updatedByUserId = userId
         await bondRepo.save(bond);
       }
 

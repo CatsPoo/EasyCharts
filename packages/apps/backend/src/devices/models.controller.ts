@@ -17,6 +17,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../common/zodValidation.pipe";
@@ -25,7 +26,7 @@ import { ModelsService } from "./model.service";
 import { JwdAuthGuard } from "../auth/guards/jwtAuth.guard";
 import { PermissionsGuard } from "../auth/guards/permissions.guard";
 import { RequirePermissions } from "../auth/decorators/permissions.decorator";
-@UseGuards(JwdAuthGuard,PermissionsGuard)
+@UseGuards(JwdAuthGuard, PermissionsGuard)
 @Controller("models")
 export class ModelsController {
   constructor(private readonly modelsService: ModelsService) {}
@@ -34,8 +35,10 @@ export class ModelsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(
-    @Body(new ZodValidationPipe(ModelCreateSchema)) payload: ModelCreate) {
-    return this.modelsService.createModel(payload);
+    @Body(new ZodValidationPipe(ModelCreateSchema)) payload: ModelCreate,
+    @Req() req: { user: string }
+  ) {
+    return this.modelsService.createModel(payload,req.user);
   }
 
   @RequirePermissions(Permission.ASSET_READ)
@@ -54,9 +57,10 @@ export class ModelsController {
   @Put(":id")
   update(
     @Param("id", new ParseUUIDPipe()) id: string,
-    @Body(new ZodValidationPipe(ModelUpdateSchema)) payload: ModelUpdate
+    @Body(new ZodValidationPipe(ModelUpdateSchema)) payload: ModelUpdate,
+    @Req() req: { user: string }
   ) {
-    return this.modelsService.updateModel(id, payload);
+    return this.modelsService.updateModel(id, payload,req.user);
   }
 
   @RequirePermissions(Permission.ASSET_DELETE)

@@ -1,21 +1,20 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
-  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   type Relation
 } from "typeorm";
-import { DeviceOnChartEntity } from "./deviceOnChart.entity";
-import { LineOnChartEntity } from "./lineonChart.emtity";
 import { UserEntity } from "../../auth/entities/user.entity";
 import { BondOnChartEntity } from "./BondOnChart.emtity";
+import { DeviceOnChartEntity } from "./deviceOnChart.entity";
+import { LineOnChartEntity } from "./lineonChart.emtity";
+import { AuditableEntity } from "../../auth/entities/auditableEntity.culumns";
 
 @Entity({ name: "charts" })
-export class ChartEntity {
+export class ChartEntity extends AuditableEntity {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -25,29 +24,23 @@ export class ChartEntity {
   @Column({ nullable: false, default: "" })
   description!: string;
 
-  @CreateDateColumn({
-    name: "created_at",
+  @Column({
+    name: "locked_at",
     type: "timestamptz",
-    default: () => "CURRENT_TIMESTAMP",
+    nullable: true,
+    default: null,
   })
-  createdAt!: Date;
+  lockedAt?: Date | null;
 
-  @Column({ name: "created_by_id", type: "uuid" })
-  createdById!: string;
-
-  @ManyToOne(() => UserEntity, { onDelete: "CASCADE", eager: false })
-  @JoinColumn({ name: "created_by_id" })
-  createdBy!: Relation<UserEntity>;
-
-  @Column({ name: "locked_at", type: "timestamptz",nullable:true,default:null })
-  lockedAt?:Date | null
-
-
-  @Column({ name: "locked_by_id", type: "uuid",nullable:true,default:null })
+  @Column({ name: "locked_by_id", type: "uuid", nullable: true, default: null })
   lockedById?: string | null;
 
-  @ManyToOne(() => UserEntity, {onDelete: "SET NULL", eager: true ,nullable:true})
-  @JoinColumn({ name: "locked_by_id"})
+  @ManyToOne(() => UserEntity, {
+    onDelete: "SET NULL",
+    eager: true,
+    nullable: true,
+  })
+  @JoinColumn({ name: "locked_by_id" })
   lockedBy?: Relation<UserEntity> | null;
 
   @OneToMany(() => DeviceOnChartEntity, (doc) => doc.chart, {

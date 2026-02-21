@@ -133,7 +133,6 @@ export function UsersPage() {
           displayName: username,
           isActive,
           permissions,
-          refreshTokenHash: "",
         };
 
         const newUser: User = await createUserMut({

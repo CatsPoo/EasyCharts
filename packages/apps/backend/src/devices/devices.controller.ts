@@ -17,6 +17,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards
 } from '@nestjs/common';
 import { JwdAuthGuard } from "../auth/guards/jwtAuth.guard";
@@ -33,8 +34,9 @@ export class DevicesController {
   @RequirePermissions(Permission.ASSET_CREATE)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body(new ZodValidationPipe(DeviceCreateSchema)) dto: DeviceCreate) {
-    return this.devicesService.createDevice(dto);
+  create(@Body(new ZodValidationPipe(DeviceCreateSchema),
+) dto: DeviceCreate,@Req() req: { user: string }) {
+    return this.devicesService.createDevice(dto, req.user);
   }
 
   @RequirePermissions(Permission.ASSET_READ)
@@ -53,9 +55,10 @@ export class DevicesController {
   @Put(":id")
   update(
     @Param("id", new ParseUUIDPipe()) id: string,
-    @Body(new ZodValidationPipe(DeviceUpdateSchema)) payload: DeviceUpdate
+    @Body(new ZodValidationPipe(DeviceUpdateSchema)) payload: DeviceUpdate,
+    @Req() req: { user: string }
   ) {
-    return this.devicesService.updateDevice(id, payload);
+    return this.devicesService.updateDevice(id, payload,req.user);
   }
 
   @RequirePermissions(Permission.ASSET_DELETE)

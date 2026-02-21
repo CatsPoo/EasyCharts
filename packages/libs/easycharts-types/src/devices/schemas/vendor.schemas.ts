@@ -1,4 +1,4 @@
-import { IdentifiableSchema } from "./../../generic.schema.js";
+import { AuditableSchema, IdentifiableSchema } from "./../../generic.schema.js";
 import z from "zod";
 
 export const VendorBaseSchema = z.object({
@@ -8,4 +8,4 @@ export const VendorBaseSchema = z.object({
 export const VendorCreateSchema = VendorBaseSchema;
 export const VendorUpdateSchema = VendorBaseSchema.partial().refine(v => Object.keys(v).length > 0, { message: 'At least one field is required' });;
 
-export const VendorSchema = IdentifiableSchema.merge(VendorBaseSchema);
+export const VendorSchema = IdentifiableSchema.extend(VendorBaseSchema.shape).extend(AuditableSchema.shape);

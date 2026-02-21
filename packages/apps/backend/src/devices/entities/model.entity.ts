@@ -1,9 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, UpdateDateColumn, CreateDateColumn } from 'typeorm';
 import { VendorEntity } from './vendor.entity';
 import { DeviceEntity } from './device.entity';
+import { AuditableEntity } from '../../auth/entities/auditableEntity.culumns';
 
 @Entity({ name: "models" })
-export class ModelEntity {
+export class ModelEntity extends AuditableEntity{
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 

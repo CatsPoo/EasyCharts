@@ -10,6 +10,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "../common/zodValidation.pipe";
@@ -35,9 +36,10 @@ export class DeviceTypeController {
   @HttpCode(HttpStatus.CREATED)
   create(
     @Body(new ZodValidationPipe(DeviceTypeCreateSchema))
-    payload: DeviceTypeCreate
+    payload: DeviceTypeCreate,
+    @Req() req : {user:string}
   ) {
-    return this.deviceTypeService.createDeviceType(payload);
+    return this.deviceTypeService.createDeviceType(payload,req.user);
   }
 
   @RequirePermissions(Permission.ASSET_READ)
@@ -57,9 +59,10 @@ export class DeviceTypeController {
   update(
     @Param("id", new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(DeviceTypeUpdateSchema))
-    payload: DeviceTypeUpdate
+    payload: DeviceTypeUpdate,
+    @Req() req : {user:string}
   ) {
-    return this.deviceTypeService.updateDeviceType(id, payload);
+    return this.deviceTypeService.updateDeviceType(id, payload,req.user);
   }
 
   @RequirePermissions(Permission.ASSET_DELETE)

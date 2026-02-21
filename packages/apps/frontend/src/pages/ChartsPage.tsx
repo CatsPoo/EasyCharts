@@ -22,7 +22,7 @@ import { useAuth } from "../auth/useAuth";
 import AssetTab from "../components/AssetsList/AssetTab";
 import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/chartEditorHandle.interfaces";
-import { ChartListSidebar } from "../components/ChartsViewer/ChartListSideBar";
+import { DirectoryBrowserSidebar } from "../components/ChartsViewer/DirectoryBrowserSidebar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { useChartById } from "../hooks/chartsHooks";
@@ -38,8 +38,9 @@ export function ChartsPage() {
   // dialog state:
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editChart, setEditChart] = useState<Chart | undefined>(undefined);
-  const [editorMageChanges, setEditorMadeChanges] = useState<boolean>(false);
+  const [editorMadeChanges, setEditorMadeChanges] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
 
   const chartEditorRef = useRef<ChartEditorHandle>(null);
 
@@ -92,7 +93,7 @@ export function ChartsPage() {
   }, [dialogOpen, selectedChart]);
 
   const handleDialogClose = async  () => {
-    if (editorMageChanges) {
+    if (editorMadeChanges) {
       const leave = window.confirm(
         "You have unsaved changes. Are you sure you want to close without saving?"
       );
@@ -117,10 +118,12 @@ export function ChartsPage() {
         throw new Error('Unable to save the chart')
       // do any parent-side updates you want
       await unlockChart()
-      setSelectedId(saved.id);
+      setEditMode(false);
       setDialogOpen(false);
       setEditorMadeChanges(false);
       setEditChart(undefined);
+      setSelectedId(saved.id);
+      setPreviewKey(k => k + 1);
     } catch (err) {
       console.error("updateChart failed:", err);
     } finally {
@@ -134,7 +137,7 @@ export function ChartsPage() {
         display: "flex",
         flexDirection: "column",
         height: "100vh",
-        width: "100Vw",
+        width: "100vw",
       }}
     >
       {/* Top tabs */}
@@ -146,8 +149,7 @@ export function ChartsPage() {
             textColor="inherit"
             indicatorColor="secondary"
           >
-            <Tab label="My Charts" />
-            <Tab label="Shared Charts" />
+            <Tab label="Charts" />
             <Tab label="Assets" />
           </Tabs>
         </div>
@@ -155,7 +157,7 @@ export function ChartsPage() {
 
       <Box sx={{ display: "flex", flex: 1 }}>
         <AnimatePresence initial={false}>
-          {tab !== 2 && (
+          {tab !== 1 && (
             <motion.div
               key="chart-sidebar"
               initial={{ width: 0, opacity: 0 }}
@@ -167,8 +169,7 @@ export function ChartsPage() {
              bg-transparent dark:bg-slate-900
              transition-colors duration-200"
             >
-              <ChartListSidebar
-                isMyCharts={tab === 0}
+              <DirectoryBrowserSidebar
                 onSelect={setSelectedId}
                 onEdit={handleEdit}
               />
@@ -176,7 +177,7 @@ export function ChartsPage() {
           )}
         </AnimatePresence>
 
-        {tab !== 2 ? (
+        {tab !== 1 ? (
           <Box sx={{ flex: 1, position: "relative" }}>
             {selectedChartError ? (
               <Box
@@ -194,7 +195,7 @@ export function ChartsPage() {
               </Box>
             ) : selectedChart ? (
               <ChartEditor
-                key={selectedChart.id}
+                key={`${selectedChart.id}-${previewKey}`}
                 chart={selectedChart}
                 setChart={nope}
                 editMode={false}
@@ -208,11 +209,11 @@ export function ChartsPage() {
               </Box>
             )}
           </Box>
-        ) : (
+        ) : tab === 1 ? (
           <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex" }}>
             <AssetTab />
           </Box>
-        )}
+        ) : null}
       </Box>
       <Dialog fullScreen open={dialogOpen}>
         <AppBar position="relative">
@@ -274,7 +275,7 @@ export function ChartsPage() {
                 color="success"
                 variant="contained"
                 onClick={handleSaveClick}
-                disabled={saving || !editorMageChanges}
+                disabled={saving || !editorMadeChanges}
               >
                 {saving ? "Saving…" : "Save"}
               </Button>

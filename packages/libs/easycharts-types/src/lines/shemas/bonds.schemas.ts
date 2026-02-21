@@ -1,3 +1,4 @@
+import { AuditableSchema } from "../../generic.schema.js";
 import z from "zod";
 
 export const BondCreateSchema = z.object({
@@ -8,4 +9,4 @@ export const BondCreateSchema = z.object({
 
 export const BondUpdateSchema = BondCreateSchema.partial().omit({id:true});
 
-export const BondSchema = BondCreateSchema
+export const BondSchema = BondCreateSchema.extend(AuditableSchema.shape)

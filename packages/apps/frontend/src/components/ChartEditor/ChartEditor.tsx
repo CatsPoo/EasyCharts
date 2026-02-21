@@ -56,7 +56,7 @@ import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
 import type { DeleteSets } from "./interfaces/deleteSets.interfaces";
-import type { EditLineDialogFormRespone } from "./interfaces/editLineDialogForm.interfaces";
+import type { EditLineDialogFormResponse } from "./interfaces/editLineDialogForm.interfaces";
 
 interface ChardEditorProps {
   chart: Chart;
@@ -439,7 +439,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     }, [setEditLineDialogOpen, setSelectedEditLine]);
 
     const onEditLineDialgSubmit = useCallback(
-      (newValue: EditLineDialogFormRespone) => {
+      (newValue: EditLineDialogFormResponse) => {
         applyChartChange((prev) => {
           return {
             ...prev,

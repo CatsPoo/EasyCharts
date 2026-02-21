@@ -19,9 +19,10 @@ export class ModelsService {
     private readonly vendorRepo: Repository<VendorEntity>
   ) {}
 
-  async createModel(dto: ModelCreate): Promise<Model> {
+  async createModel(dto: ModelCreate,createdByUserId:string): Promise<Model> {
     const model = this.modelsRepo.create({
       name: dto.name,
+      createdByUserId
     });
 
     if (dto.vendorId) {
@@ -35,7 +36,7 @@ export class ModelsService {
     return this.modelsRepo.save(model);
   }
 
-  async updateModel(id: string, dto: ModelUpdate): Promise<Model> {
+  async updateModel(id: string, dto: ModelUpdate,updatedByUserId:string): Promise<Model> {
     const model: ModelEntity | null = await this.modelsRepo.findOne({
       where: { id },
       relations: ["vendor"],
@@ -52,7 +53,7 @@ export class ModelsService {
       model.vendor = vendor;
     }
 
-    return this.modelsRepo.save(model);
+    return this.modelsRepo.save({...model,updatedByUserId});
   }
 
   async listModels(q: ListModelsQueryDto):Promise<{rows:Model[],total:number}>{
@@ -84,7 +85,7 @@ export class ModelsService {
 
   async getModelById(id: string) : Promise<Model> {
     const found = await this.modelsRepo.findOne({ where: { id } });
-    if (!found) throw new NotFoundException("Vendor not found");
+    if (!found) throw new NotFoundException("Model not found");
     return found;
   }
 

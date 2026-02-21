@@ -71,7 +71,7 @@ export function createHttp(baseURL = "/api") {
 export function setupHttpAuth(opts: {
   getAccessToken: () => string | null;
   getRefreshToken: () => string | null;
-  performRefresh: (refreshToken: string) => Promise<RefreshReturn>;
+  performRefresh: (refreshToken: string) => Promise<AuthResponse>;
   setTokens: (at: string, rt?: string | null) => void;
   handleLogout: () => void;
 }) {

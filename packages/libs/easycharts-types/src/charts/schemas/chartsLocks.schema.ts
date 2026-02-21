@@ -7,5 +7,5 @@ export const ChartLockSchema = z.object({
   chartId: z.string(),
   lockedById: z.string().nullable(),
   lockedByName: z.string(),
-  lockedAt: z.object(Date).nullable(),
+  lockedAt: z.coerce.date().nullable(),
 });
