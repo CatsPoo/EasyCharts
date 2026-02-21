@@ -16,13 +16,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LS_ACCESS = "access_token";
 const LS_REFRESH = "refresh_token";
+const LS_USER = "user";
 
 const authHttp = axios.create({ baseURL: "/api" }); // bare client for login/refresh
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem(LS_ACCESS));
   const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem(LS_REFRESH));
-  const [user,setUser] = useState<User|null>(null)
+  const [user, setUser] = useState<User|null>(() => {
+    try {
+      const stored = localStorage.getItem(LS_USER);
+      return stored ? (JSON.parse(stored) as User) : null;
+    } catch {
+      return null;
+    }
+  });
   const isAuthenticated = !!accessToken;
 
   useEffect(() => {
@@ -50,8 +58,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       handleLogout: () => {
         setAccessToken(null);
         setRefreshToken(null);
+        setUser(null);
         localStorage.removeItem(LS_ACCESS);
         localStorage.removeItem(LS_REFRESH);
+        localStorage.removeItem(LS_USER);
       },
     });
   }, [accessToken, refreshToken]);
@@ -64,15 +74,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     localStorage.setItem(LS_REFRESH, rt);
     setAccessToken(at);
     setRefreshToken(rt);
-    setUser(user)
+    setUser(user);
+    localStorage.setItem(LS_USER, JSON.stringify(user));
   }, []);
 
   const logout = useCallback(() => {
     setAccessToken(null);
     setRefreshToken(null);
-    setUser(null)
+    setUser(null);
     localStorage.removeItem(LS_ACCESS);
     localStorage.removeItem(LS_REFRESH);
+    localStorage.removeItem(LS_USER);
   }, []);
 
   const value = useMemo(() => ({ isAuthenticated, accessToken, login, logout,user }), [isAuthenticated, accessToken, login, logout,user]);
