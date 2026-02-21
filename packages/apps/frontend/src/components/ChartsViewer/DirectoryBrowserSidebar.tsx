@@ -4,20 +4,22 @@ import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import DriveFileMoveIcon from "@mui/icons-material/DriveFileMove";
-import ShareIcon from "@mui/icons-material/Share";
 import FolderIcon from "@mui/icons-material/Folder";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import InboxIcon from "@mui/icons-material/Inbox";
+import ShareIcon from "@mui/icons-material/Share";
 import {
+  Box,
+  Breadcrumbs,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
-  Fab,
   IconButton,
   LinearProgress,
+  Link,
   List,
   ListItem,
   ListItemButton,
@@ -31,7 +33,6 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import Box from "@mui/material/Box";
 import { useCallback, useState } from "react";
 import { RequirePermissions } from "../../auth/RequirePermissions";
 import type { ChartCreate } from "@easy-charts/easycharts-types";
@@ -41,12 +42,14 @@ import {
 } from "../../hooks/chartsHooks";
 import {
   useAddChartToDirectoryMutation,
+  useChildDirectoriesQuery,
   useCreateDirectoryMutation,
   useDeleteDirectoryMutation,
   useDirectoryChartsMetadataQuery,
   useRemoveChartFromDirectoryMutation,
   useRootDirectoriesQuery,
   useUnassignedChartsQuery,
+  useUpdateDirectoryMutation,
 } from "../../hooks/chartsDirectoriesHooks";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import { CreateChartDialog } from "../CreateChartDialog";
@@ -58,95 +61,126 @@ interface DirectoryBrowserSidebarProps {
   onEdit: (chartId: string) => void;
 }
 
-type View = "directories" | "directory-charts" | "unassigned";
+type NavEntry = { id: string; name: string };
 
 export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSidebarProps) {
-  const [view, setView] = useState<View>("directories");
-  const [selectedDirId, setSelectedDirId] = useState<string | null>(null);
-  const [selectedDirName, setSelectedDirName] = useState<string>("");
+  // ── Navigation ─────────────────────────────────────────────────────────────
+  // navStack: empty = root; top entry = current directory
+  const [navStack, setNavStack] = useState<NavEntry[]>([]);
+  const [showUnassigned, setShowUnassigned] = useState(false);
+  const currentDir = navStack.at(-1) ?? null;
+  const isAtRoot = navStack.length === 0 && !showUnassigned;
+  const isInsideDir = navStack.length > 0 && !showUnassigned;
 
-  // Delete chart state
+  // ── State ──────────────────────────────────────────────────────────────────
   const [deleteChartDialogOpen, setDeleteChartDialogOpen] = useState(false);
   const [pendingChartToDelete, setPendingChartToDelete] = useState("");
 
-  // Delete directory state
   const [deleteDirDialogOpen, setDeleteDirDialogOpen] = useState(false);
   const [pendingDirToDelete, setPendingDirToDelete] = useState("");
 
-  // Create chart dialog
   const [createChartOpen, setCreateChartOpen] = useState(false);
 
-  // Create directory state
   const [createDirOpen, setCreateDirOpen] = useState(false);
   const [newDirName, setNewDirName] = useState("");
 
-  // Context menu state
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; chartId: string } | null>(null);
 
-  // Move chart dialog state
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [pendingChartToMove, setPendingChartToMove] = useState("");
   const [pendingChartSourceDirId, setPendingChartSourceDirId] = useState<string | null>(null);
+  // Move dialog has its own internal navigation stack
+  const [moveNavStack, setMoveNavStack] = useState<NavEntry[]>([]);
+  const moveCurrentDir = moveNavStack.at(-1) ?? null;
 
-  // Share chart dialog state
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [pendingChartToShare, setPendingChartToShare] = useState("");
 
-  // Directory context menu state
   const [dirContextMenu, setDirContextMenu] = useState<{ mouseX: number; mouseY: number; dirId: string } | null>(null);
 
-  // Share directory dialog state
   const [shareDirDialogOpen, setShareDirDialogOpen] = useState(false);
   const [pendingDirToShare, setPendingDirToShare] = useState("");
 
-  const { data: directories, isLoading: dirsLoading } = useRootDirectoriesQuery();
+  // Move directory dialog state
+  const [moveDirDialogOpen, setMoveDirDialogOpen] = useState(false);
+  const [pendingDirToMove, setPendingDirToMove] = useState("");
+  const [moveDirNavStack, setMoveDirNavStack] = useState<NavEntry[]>([]);
+  const moveDirCurrentDir = moveDirNavStack.at(-1) ?? null;
+
+  // ── Queries ────────────────────────────────────────────────────────────────
+  const { data: rootDirs, isLoading: rootDirsLoading } = useRootDirectoriesQuery();
+  // Children of current directory (main nav)
+  const { data: childDirs, isLoading: childDirsLoading } = useChildDirectoriesQuery(
+    isInsideDir ? currentDir!.id : null,
+  );
   const { data: dirCharts, isLoading: dirChartsLoading } = useDirectoryChartsMetadataQuery(
-    view === "directory-charts" ? selectedDirId : null,
+    isInsideDir ? currentDir!.id : null,
   );
   const { data: unassignedCharts, isLoading: unassignedLoading } = useUnassignedChartsQuery();
+  // Children for chart move-dialog navigation
+  const { data: moveDirChildren } = useChildDirectoriesQuery(moveCurrentDir?.id ?? null);
+  // Children for directory move-dialog navigation (separate query)
+  const { data: moveDirDialogChildren } = useChildDirectoriesQuery(moveDirCurrentDir?.id ?? null);
 
+  // ── Mutations ──────────────────────────────────────────────────────────────
   const createChartMutation = useCreateChartMutation();
   const deleteChartMutation = useDeleteChartMutation();
   const addChartToDirectoryMutation = useAddChartToDirectoryMutation();
   const removeChartFromDirectoryMutation = useRemoveChartFromDirectoryMutation();
   const createDirMutation = useCreateDirectoryMutation();
   const deleteDirMutation = useDeleteDirectoryMutation();
+  const updateDirectoryMutation = useUpdateDirectoryMutation();
 
+  // ── Navigation handlers ────────────────────────────────────────────────────
   const handleOpenDirectory = useCallback((id: string, name: string) => {
-    setSelectedDirId(id);
-    setSelectedDirName(name);
-    setView("directory-charts");
-    onSelect(""); // deselect chart
+    setNavStack((prev) => [...prev, { id, name }]);
+    setShowUnassigned(false);
+    onSelect("");
   }, [onSelect]);
 
   const handleOpenUnassigned = useCallback(() => {
-    setSelectedDirId(null);
-    setSelectedDirName("");
-    setView("unassigned");
+    setShowUnassigned(true);
+    setNavStack([]);
     onSelect("");
   }, [onSelect]);
 
   const handleBack = useCallback(() => {
-    setView("directories");
-    setSelectedDirId(null);
+    if (showUnassigned) {
+      setShowUnassigned(false);
+    } else {
+      setNavStack((prev) => prev.slice(0, -1));
+    }
+    onSelect("");
+  }, [showUnassigned, onSelect]);
+
+  const handleBreadcrumbNavigate = useCallback((index: number) => {
+    // index = -1 → root; index >= 0 → that stack entry
+    if (index < 0) {
+      setNavStack([]);
+    } else {
+      setNavStack((prev) => prev.slice(0, index + 1));
+    }
     onSelect("");
   }, [onSelect]);
 
+  // ── Create handlers ────────────────────────────────────────────────────────
   const handleCreateChart = useCallback(async (dto: ChartCreate) => {
     const newChart = await createChartMutation.mutateAsync(dto);
-    if (selectedDirId) {
-      await addChartToDirectoryMutation.mutateAsync({ directoryId: selectedDirId, chartId: newChart.id });
+    if (currentDir?.id) {
+      await addChartToDirectoryMutation.mutateAsync({ directoryId: currentDir.id, chartId: newChart.id });
     }
     setCreateChartOpen(false);
-  }, [createChartMutation, addChartToDirectoryMutation, selectedDirId]);
+  }, [createChartMutation, addChartToDirectoryMutation, currentDir]);
 
   const handleCreateDirectory = useCallback(async () => {
     if (!newDirName.trim()) return;
-    await createDirMutation.mutateAsync({ name: newDirName.trim(), parentId: null });
+    // parentId = current directory (or null for root)
+    await createDirMutation.mutateAsync({ name: newDirName.trim(), parentId: currentDir?.id ?? null, description: "" });
     setNewDirName("");
     setCreateDirOpen(false);
-  }, [createDirMutation, newDirName]);
+  }, [createDirMutation, newDirName, currentDir]);
 
+  // ── Delete handlers ────────────────────────────────────────────────────────
   const handleDeleteChart = useCallback((chartId: string) => {
     setPendingChartToDelete(chartId);
     setDeleteChartDialogOpen(true);
@@ -165,11 +199,17 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
   }, []);
 
   const handleConfirmDeleteDir = useCallback(() => {
-    deleteDirMutation.mutateAsync(pendingDirToDelete);
+    const idToDelete = pendingDirToDelete;
+    deleteDirMutation.mutateAsync(idToDelete).then(() => {
+      // If the deleted directory is in our nav stack, pop back to before it
+      const idx = navStack.findIndex((e) => e.id === idToDelete);
+      if (idx >= 0) setNavStack((prev) => prev.slice(0, idx));
+    });
     setPendingDirToDelete("");
     setDeleteDirDialogOpen(false);
-  }, [deleteDirMutation, pendingDirToDelete]);
+  }, [deleteDirMutation, pendingDirToDelete, navStack]);
 
+  // ── Chart context menu handlers ────────────────────────────────────────────
   const handleChartContextMenu = useCallback((e: React.MouseEvent, chartId: string) => {
     e.preventDefault();
     setContextMenu({ mouseX: e.clientX, mouseY: e.clientY, chartId });
@@ -192,10 +232,11 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
   const handleContextMenuMove = useCallback(() => {
     if (!contextMenu) return;
     setPendingChartToMove(contextMenu.chartId);
-    setPendingChartSourceDirId(selectedDirId);
+    setPendingChartSourceDirId(currentDir?.id ?? null); // snapshot at right-click time
+    setMoveNavStack([]); // reset move dialog to root
     setMoveDialogOpen(true);
     setContextMenu(null);
-  }, [contextMenu, selectedDirId]);
+  }, [contextMenu, currentDir]);
 
   const handleContextMenuShare = useCallback(() => {
     if (!contextMenu) return;
@@ -206,7 +247,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
 
   const handleMoveToDirectory = useCallback(async (targetDirId: string) => {
     if (pendingChartSourceDirId) {
-      await removeChartFromDirectoryMutation.mutateAsync({ directoryId: pendingChartSourceDirId, chartId: pendingChartToMove });
+      await removeChartFromDirectoryMutation.mutateAsync({
+        directoryId: pendingChartSourceDirId,
+        chartId: pendingChartToMove,
+      });
     }
     await addChartToDirectoryMutation.mutateAsync({ directoryId: targetDirId, chartId: pendingChartToMove });
     setPendingChartToMove("");
@@ -216,12 +260,16 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
 
   const handleMakeUnassigned = useCallback(async () => {
     if (!pendingChartSourceDirId) return;
-    await removeChartFromDirectoryMutation.mutateAsync({ directoryId: pendingChartSourceDirId, chartId: pendingChartToMove });
+    await removeChartFromDirectoryMutation.mutateAsync({
+      directoryId: pendingChartSourceDirId,
+      chartId: pendingChartToMove,
+    });
     setPendingChartToMove("");
     setPendingChartSourceDirId(null);
     setMoveDialogOpen(false);
   }, [pendingChartSourceDirId, pendingChartToMove, removeChartFromDirectoryMutation]);
 
+  // ── Directory context menu handlers ────────────────────────────────────────
   const handleDirContextMenu = useCallback((e: React.MouseEvent, dirId: string) => {
     e.preventDefault();
     setDirContextMenu({ mouseX: e.clientX, mouseY: e.clientY, dirId });
@@ -242,7 +290,41 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
     setDirContextMenu(null);
   }, [dirContextMenu, handleDeleteDir]);
 
-  const isLoading = dirsLoading || (view === "directory-charts" && dirChartsLoading) || (view === "unassigned" && unassignedLoading);
+  const handleMoveDirClick = useCallback((dirId: string) => {
+    setPendingDirToMove(dirId);
+    setMoveDirNavStack([]);
+    setMoveDirDialogOpen(true);
+  }, []);
+
+  const handleDirContextMenuMove = useCallback(() => {
+    if (!dirContextMenu) return;
+    handleMoveDirClick(dirContextMenu.dirId);
+    setDirContextMenu(null);
+  }, [dirContextMenu, handleMoveDirClick]);
+
+  const handleMoveDirToTarget = useCallback(async (targetParentId: string | null) => {
+    await updateDirectoryMutation.mutateAsync({ id: pendingDirToMove, data: { parentId: targetParentId } });
+    setPendingDirToMove("");
+    setMoveDirDialogOpen(false);
+  }, [updateDirectoryMutation, pendingDirToMove]);
+
+  // ── Derived ────────────────────────────────────────────────────────────────
+  const isLoading =
+    (isAtRoot && rootDirsLoading) ||
+    (isInsideDir && (childDirsLoading || dirChartsLoading)) ||
+    (showUnassigned && unassignedLoading);
+
+  const dirsToShow = isInsideDir ? (childDirs ?? []) : isAtRoot ? (rootDirs ?? []) : [];
+  const chartsToShow: ChartMetadata[] = isInsideDir
+    ? (dirCharts ?? [])
+    : showUnassigned
+    ? (unassignedCharts ?? [])
+    : [];
+  // Chart move dialog: children of currently-navigated dir, or root dirs
+  const dirsForMoveDialog = moveCurrentDir ? (moveDirChildren ?? []) : (rootDirs ?? []);
+  // Directory move dialog: same but exclude the directory being moved (can't move into itself)
+  const dirsForMoveDirDialog = (moveDirCurrentDir ? (moveDirDialogChildren ?? []) : (rootDirs ?? []))
+    .filter((d) => d.id !== pendingDirToMove);
 
   const sidebarSx = (t: any) => ({
     width: "100%",
@@ -258,25 +340,67 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
     overflow: "hidden",
   });
 
-  const chartsToShow: ChartMetadata[] =
-    view === "directory-charts" ? (dirCharts ?? []) :
-    view === "unassigned" ? (unassignedCharts ?? []) :
-    [];
-
   if (isLoading) return <LinearProgress />;
 
-  // ─── Directory list view ────────────────────────────────────────────────────
-  if (view === "directories") {
-    return (
-      <Box sx={sidebarSx}>
+  return (
+    <Box sx={sidebarSx}>
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      {isAtRoot ? (
         <Box sx={{ px: 1.5, pt: 1.5, pb: 0.5 }}>
           <Typography variant="caption" color="text.secondary" fontWeight={600} letterSpacing={1}>
             DIRECTORIES
           </Typography>
         </Box>
+      ) : (
+        <Box sx={{ display: "flex", alignItems: "center", px: 1, pt: 0.5, minHeight: 40, gap: 0.5, overflow: "hidden" }}>
+          <IconButton size="small" onClick={handleBack} sx={{ flexShrink: 0 }}>
+            <ArrowBackIosIcon fontSize="small" />
+          </IconButton>
 
-        <List dense sx={{ flex: 1, overflowY: "auto" }}>
-          {/* Unassigned charts option */}
+          {showUnassigned ? (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <InboxIcon fontSize="small" color="action" />
+              <Typography variant="caption" fontWeight={600} noWrap>Unassigned Charts</Typography>
+            </Box>
+          ) : (
+            // Breadcrumb trail: Root > Ancestor1 > Ancestor2 > CurrentDir
+            <Breadcrumbs
+              maxItems={4}
+              sx={{ fontSize: 12, minWidth: 0, "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" } }}
+            >
+              <Link
+                component="button"
+                variant="caption"
+                underline="hover"
+                onClick={() => handleBreadcrumbNavigate(-1)}
+                sx={{ cursor: "pointer", color: "text.secondary" }}
+              >
+                Root
+              </Link>
+              {navStack.slice(0, -1).map((entry, i) => (
+                <Link
+                  key={entry.id}
+                  component="button"
+                  variant="caption"
+                  underline="hover"
+                  onClick={() => handleBreadcrumbNavigate(i)}
+                  sx={{ cursor: "pointer", color: "text.secondary" }}
+                >
+                  {entry.name}
+                </Link>
+              ))}
+              <Typography variant="caption" fontWeight={600} noWrap color="text.primary">
+                {currentDir?.name}
+              </Typography>
+            </Breadcrumbs>
+          )}
+        </Box>
+      )}
+
+      {/* ── List ────────────────────────────────────────────────────────────── */}
+      <List dense sx={{ flex: 1, overflowY: "auto" }}>
+        {/* Unassigned shortcut (root only) */}
+        {isAtRoot && (
           <ListItem disablePadding>
             <ListItemButton onClick={handleOpenUnassigned}>
               <ListItemIcon sx={{ minWidth: 32 }}>
@@ -285,160 +409,36 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
               <ListItemText primary="Unassigned Charts" primaryTypographyProps={{ fontSize: 13 }} />
             </ListItemButton>
           </ListItem>
-
-          {(directories ?? []).map((dir) => (
-            <ListItem
-              key={dir.id}
-              disablePadding
-              onContextMenu={(e) => handleDirContextMenu(e, dir.id)}
-            >
-              <ListItemButton onClick={() => handleOpenDirectory(dir.id, dir.name)}>
-                <ListItemIcon sx={{ minWidth: 32 }}>
-                  <FolderIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary={dir.name} primaryTypographyProps={{ fontSize: 13 }} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-
-          {(directories ?? []).length === 0 && (
-            <ListItem>
-              <ListItemText
-                secondary="No directories yet"
-                secondaryTypographyProps={{ fontSize: 12, textAlign: "center" }}
-              />
-            </ListItem>
-          )}
-        </List>
-
-        {/* FAB speed dial for creating directory or unassigned chart */}
-        <RequirePermissions required={[Permission.CHART_CREATE]}>
-          <SpeedDial
-            ariaLabel="Create"
-            icon={<SpeedDialIcon />}
-            sx={{ position: "fixed", right: 16, bottom: 16, zIndex: 1300 }}
-            FabProps={{ size: "small", color: "primary" }}
-          >
-            <SpeedDialAction
-              icon={<FolderIcon fontSize="small" />}
-              tooltipTitle="New directory"
-              tooltipOpen
-              onClick={() => setCreateDirOpen(true)}
-            />
-            <SpeedDialAction
-              icon={<AddIcon fontSize="small" />}
-              tooltipTitle="New unassigned chart"
-              tooltipOpen
-              onClick={() => setCreateChartOpen(true)}
-            />
-          </SpeedDial>
-          <CreateChartDialog
-            open={createChartOpen}
-            onClose={() => setCreateChartOpen(false)}
-            onSubmit={handleCreateChart}
-            submitting={createChartMutation.isPending}
-          />
-        </RequirePermissions>
-
-        {/* Create directory inline dialog (simple prompt) */}
-        {createDirOpen && (
-          <Box
-            sx={{
-              position: "fixed",
-              bottom: 80,
-              right: 16,
-              bgcolor: "background.paper",
-              boxShadow: 3,
-              borderRadius: 2,
-              p: 2,
-              zIndex: 1400,
-              display: "flex",
-              gap: 1,
-              alignItems: "center",
-            }}
-          >
-            <input
-              autoFocus
-              placeholder="Directory name"
-              value={newDirName}
-              onChange={(e) => setNewDirName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreateDirectory();
-                if (e.key === "Escape") setCreateDirOpen(false);
-              }}
-              style={{
-                border: "1px solid #ccc",
-                borderRadius: 4,
-                padding: "4px 8px",
-                fontSize: 13,
-                outline: "none",
-              }}
-            />
-            <button onClick={handleCreateDirectory} style={{ cursor: "pointer" }}>Add</button>
-            <button onClick={() => setCreateDirOpen(false)} style={{ cursor: "pointer" }}>✕</button>
-          </Box>
         )}
 
-        <ConfirmDialog
-          open={deleteDirDialogOpen}
-          onCancel={() => { setDeleteDirDialogOpen(false); setPendingDirToDelete(""); }}
-          onConfirm={handleConfirmDeleteDir}
-          confirmText="Delete"
-          confirmColor="error"
-          description="Permanently delete this directory? Charts inside will not be deleted."
-          cancelText="Cancel"
-        />
+        {/* Directory rows */}
+        {!showUnassigned && dirsToShow.map((dir) => (
+          <ListItem
+            key={dir.id}
+            disablePadding
+            onContextMenu={(e) => handleDirContextMenu(e, dir.id)}
+            secondaryAction={
+              <IconButton edge="end" size="small" onClick={() => handleMoveDirClick(dir.id)}>
+                <DriveFileMoveIcon fontSize="small" />
+              </IconButton>
+            }
+          >
+            <ListItemButton onClick={() => handleOpenDirectory(dir.id, dir.name)}>
+              <ListItemIcon sx={{ minWidth: 32 }}>
+                <FolderIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary={dir.name} primaryTypographyProps={{ fontSize: 13 }} />
+              <ArrowForwardIosIcon sx={{ fontSize: 12, color: "text.disabled", ml: 0.5 }} />
+            </ListItemButton>
+          </ListItem>
+        ))}
 
-        {/* Directory right-click context menu */}
-        <Menu
-          open={dirContextMenu !== null}
-          onClose={handleDirContextMenuClose}
-          anchorReference="anchorPosition"
-          anchorPosition={dirContextMenu ? { top: dirContextMenu.mouseY, left: dirContextMenu.mouseX } : undefined}
-        >
-          <MenuItem onClick={handleDirContextMenuShare}>
-            <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
-            Share
-          </MenuItem>
-          <Divider />
-          <RequirePermissions required={[Permission.CHART_DELETE]}>
-            <MenuItem onClick={handleDirContextMenuDelete} sx={{ color: "error.main" }}>
-              <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
-              Delete directory
-            </MenuItem>
-          </RequirePermissions>
-        </Menu>
+        {/* Divider between subdirs and charts (inside dir only) */}
+        {isInsideDir && dirsToShow.length > 0 && chartsToShow.length > 0 && (
+          <Divider sx={{ my: 0.5 }} />
+        )}
 
-        {/* Share directory dialog */}
-        <ShareDirectoryDialog
-          open={shareDirDialogOpen}
-          onClose={() => { setShareDirDialogOpen(false); setPendingDirToShare(""); }}
-          directoryId={pendingDirToShare}
-        />
-      </Box>
-    );
-  }
-
-  // ─── Charts list view (directory or unassigned) ──────────────────────────────
-  return (
-    <Box sx={sidebarSx}>
-      {/* Header with back button */}
-      <Box sx={{ display: "flex", alignItems: "center", px: 1, pt: 0.5 }}>
-        <IconButton size="small" onClick={handleBack}>
-          <ArrowBackIosIcon fontSize="small" />
-        </IconButton>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, overflow: "hidden" }}>
-          {view === "directory-charts"
-            ? <FolderOpenIcon fontSize="small" color="primary" />
-            : <InboxIcon fontSize="small" color="action" />
-          }
-          <Typography variant="caption" fontWeight={600} noWrap>
-            {view === "directory-charts" ? selectedDirName : "Unassigned Charts"}
-          </Typography>
-        </Box>
-      </Box>
-
-      <List dense sx={{ flex: 1, overflowY: "auto" }}>
+        {/* Chart rows */}
         {chartsToShow.map((chart) => (
           <ListItem
             key={chart.id}
@@ -463,29 +463,55 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           </ListItem>
         ))}
 
-        {chartsToShow.length === 0 && (
+        {/* Empty states */}
+        {isAtRoot && (rootDirs ?? []).length === 0 && (
           <ListItem>
             <ListItemText
-              secondary="No charts here"
+              secondary="No directories yet. Right-click the + button below."
+              secondaryTypographyProps={{ fontSize: 12, textAlign: "center" }}
+            />
+          </ListItem>
+        )}
+        {isInsideDir && dirsToShow.length === 0 && chartsToShow.length === 0 && (
+          <ListItem>
+            <ListItemText
+              secondary="Empty directory"
+              secondaryTypographyProps={{ fontSize: 12, textAlign: "center" }}
+            />
+          </ListItem>
+        )}
+        {showUnassigned && chartsToShow.length === 0 && (
+          <ListItem>
+            <ListItemText
+              secondary="No unassigned charts"
               secondaryTypographyProps={{ fontSize: 12, textAlign: "center" }}
             />
           </ListItem>
         )}
       </List>
 
-      {/* FAB for creating a chart (only in directory view) */}
-      {view === "directory-charts" && (
+      {/* ── FAB (root + inside-dir) ──────────────────────────────────────────── */}
+      {(isAtRoot || isInsideDir) && (
         <RequirePermissions required={[Permission.CHART_CREATE]}>
-          <Tooltip title="Add chart">
-            <Fab
-              color="primary"
-              size="small"
+          <SpeedDial
+            ariaLabel="Create"
+            icon={<SpeedDialIcon />}
+            sx={{ position: "fixed", right: 16, bottom: 16, zIndex: 1300 }}
+            FabProps={{ size: "small", color: "primary" }}
+          >
+            <SpeedDialAction
+              icon={<FolderIcon fontSize="small" />}
+              tooltipTitle={isInsideDir ? "New subdirectory" : "New directory"}
+              tooltipOpen
+              onClick={() => setCreateDirOpen(true)}
+            />
+            <SpeedDialAction
+              icon={<AddIcon fontSize="small" />}
+              tooltipTitle={isInsideDir ? "New chart here" : "New unassigned chart"}
+              tooltipOpen
               onClick={() => setCreateChartOpen(true)}
-              sx={{ position: "fixed", right: 24, bottom: 24, zIndex: 1300 }}
-            >
-              <AddIcon />
-            </Fab>
-          </Tooltip>
+            />
+          </SpeedDial>
           <CreateChartDialog
             open={createChartOpen}
             onClose={() => setCreateChartOpen(false)}
@@ -495,6 +521,46 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
         </RequirePermissions>
       )}
 
+      {/* ── Create directory inline prompt ──────────────────────────────────── */}
+      {createDirOpen && (
+        <Box
+          sx={{
+            position: "fixed",
+            bottom: 80,
+            right: 16,
+            bgcolor: "background.paper",
+            boxShadow: 3,
+            borderRadius: 2,
+            p: 2,
+            zIndex: 1400,
+            display: "flex",
+            gap: 1,
+            alignItems: "center",
+          }}
+        >
+          <input
+            autoFocus
+            placeholder={isInsideDir ? "Subdirectory name" : "Directory name"}
+            value={newDirName}
+            onChange={(e) => setNewDirName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleCreateDirectory();
+              if (e.key === "Escape") setCreateDirOpen(false);
+            }}
+            style={{
+              border: "1px solid #ccc",
+              borderRadius: 4,
+              padding: "4px 8px",
+              fontSize: 13,
+              outline: "none",
+            }}
+          />
+          <button onClick={handleCreateDirectory} style={{ cursor: "pointer" }}>Add</button>
+          <button onClick={() => setCreateDirOpen(false)} style={{ cursor: "pointer" }}>✕</button>
+        </Box>
+      )}
+
+      {/* ── Confirm: delete chart ────────────────────────────────────────────── */}
       <ConfirmDialog
         open={deleteChartDialogOpen}
         onCancel={() => { setDeleteChartDialogOpen(false); setPendingChartToDelete(""); }}
@@ -505,7 +571,18 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
         cancelText="Cancel"
       />
 
-      {/* Right-click context menu */}
+      {/* ── Confirm: delete directory ────────────────────────────────────────── */}
+      <ConfirmDialog
+        open={deleteDirDialogOpen}
+        onCancel={() => { setDeleteDirDialogOpen(false); setPendingDirToDelete(""); }}
+        onConfirm={handleConfirmDeleteDir}
+        confirmText="Delete"
+        confirmColor="error"
+        description="Permanently delete this directory? Subdirectories will become root-level and charts inside will become unassigned."
+        cancelText="Cancel"
+      />
+
+      {/* ── Chart context menu ───────────────────────────────────────────────── */}
       <Menu
         open={contextMenu !== null}
         onClose={handleContextMenuClose}
@@ -533,11 +610,66 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
         </RequirePermissions>
       </Menu>
 
-      {/* Move to directory dialog */}
+      {/* ── Directory context menu ───────────────────────────────────────────── */}
+      <Menu
+        open={dirContextMenu !== null}
+        onClose={handleDirContextMenuClose}
+        anchorReference="anchorPosition"
+        anchorPosition={dirContextMenu ? { top: dirContextMenu.mouseY, left: dirContextMenu.mouseX } : undefined}
+      >
+        <MenuItem onClick={handleDirContextMenuMove}>
+          <ListItemIcon><DriveFileMoveIcon fontSize="small" /></ListItemIcon>
+          Move to…
+        </MenuItem>
+        <MenuItem onClick={handleDirContextMenuShare}>
+          <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
+          Share
+        </MenuItem>
+        <Divider />
+        <RequirePermissions required={[Permission.CHART_DELETE]}>
+          <MenuItem onClick={handleDirContextMenuDelete} sx={{ color: "error.main" }}>
+            <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
+            Delete directory
+          </MenuItem>
+        </RequirePermissions>
+      </Menu>
+
+      {/* ── Move chart dialog ────────────────────────────────────────────────── */}
       <Dialog open={moveDialogOpen} onClose={() => setMoveDialogOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Move chart to directory</DialogTitle>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1, pb: 1 }}>
+          {moveNavStack.length > 0 && (
+            <IconButton size="small" onClick={() => setMoveNavStack((prev) => prev.slice(0, -1))}>
+              <ArrowBackIosIcon fontSize="small" />
+            </IconButton>
+          )}
+          <Typography variant="subtitle1" sx={{ flex: 1 }}>
+            {moveCurrentDir ? `Inside "${moveCurrentDir.name}"` : "Move chart to…"}
+          </Typography>
+        </DialogTitle>
         <DialogContent dividers sx={{ p: 0 }}>
           <List dense>
+            {/* "Move into current dir" button (shown when navigated into a sub-dir) */}
+            {moveCurrentDir && (
+              <>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => handleMoveToDirectory(moveCurrentDir.id)}
+                    disabled={removeChartFromDirectoryMutation.isPending || addChartToDirectoryMutation.isPending}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <FolderOpenIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={`Move into "${moveCurrentDir.name}"`}
+                      primaryTypographyProps={{ fontStyle: "italic", fontSize: 13 }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+                <Divider />
+              </>
+            )}
+
+            {/* Unassigned option (only if chart is currently in a directory) */}
             {pendingChartSourceDirId && (
               <>
                 <ListItem disablePadding>
@@ -548,14 +680,33 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <InboxIcon fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText primary="Unassigned (no directory)" primaryTypographyProps={{ fontStyle: "italic" }} />
+                    <ListItemText
+                      primary="Unassigned (no directory)"
+                      primaryTypographyProps={{ fontStyle: "italic", fontSize: 13 }}
+                    />
                   </ListItemButton>
                 </ListItem>
                 <Divider />
               </>
             )}
-            {(directories ?? []).map((dir) => (
-              <ListItem key={dir.id} disablePadding>
+
+            {/* Directory rows: click = move here; arrow = navigate into */}
+            {dirsForMoveDialog.map((dir) => (
+              <ListItem
+                key={dir.id}
+                disablePadding
+                secondaryAction={
+                  <Tooltip title="Navigate into">
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      onClick={() => setMoveNavStack((prev) => [...prev, { id: dir.id, name: dir.name }])}
+                    >
+                      <ArrowForwardIosIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                }
+              >
                 <ListItemButton
                   onClick={() => handleMoveToDirectory(dir.id)}
                   disabled={removeChartFromDirectoryMutation.isPending || addChartToDirectoryMutation.isPending}
@@ -563,13 +714,17 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
                   <ListItemIcon sx={{ minWidth: 32 }}>
                     <FolderIcon fontSize="small" />
                   </ListItemIcon>
-                  <ListItemText primary={dir.name} />
+                  <ListItemText primary={dir.name} primaryTypographyProps={{ fontSize: 13 }} />
                 </ListItemButton>
               </ListItem>
             ))}
-            {(directories ?? []).length === 0 && (
+
+            {dirsForMoveDialog.length === 0 && (
               <ListItem>
-                <ListItemText secondary="No directories available" secondaryTypographyProps={{ textAlign: "center" }} />
+                <ListItemText
+                  secondary={moveCurrentDir ? "No subdirectories" : "No directories available"}
+                  secondaryTypographyProps={{ textAlign: "center" }}
+                />
               </ListItem>
             )}
           </List>
@@ -579,11 +734,118 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
         </DialogActions>
       </Dialog>
 
-      {/* Share chart dialog */}
+      {/* ── Move directory dialog ───────────────────────────────────────────── */}
+      <Dialog open={moveDirDialogOpen} onClose={() => setMoveDirDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1, pb: 1 }}>
+          {moveDirNavStack.length > 0 && (
+            <IconButton size="small" onClick={() => setMoveDirNavStack((prev) => prev.slice(0, -1))}>
+              <ArrowBackIosIcon fontSize="small" />
+            </IconButton>
+          )}
+          <Typography variant="subtitle1" sx={{ flex: 1 }}>
+            {moveDirCurrentDir ? `Inside "${moveDirCurrentDir.name}"` : "Move directory to…"}
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          <List dense>
+            {/* Move to root level */}
+            {!moveDirCurrentDir && (
+              <>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => handleMoveDirToTarget(null)}
+                    disabled={updateDirectoryMutation.isPending}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <FolderOpenIcon fontSize="small" color="action" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Root level (no parent)"
+                      primaryTypographyProps={{ fontStyle: "italic", fontSize: 13 }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+                <Divider />
+              </>
+            )}
+
+            {/* "Move into current dir" when navigated inside */}
+            {moveDirCurrentDir && (
+              <>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => handleMoveDirToTarget(moveDirCurrentDir.id)}
+                    disabled={updateDirectoryMutation.isPending}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <FolderOpenIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={`Move into "${moveDirCurrentDir.name}"`}
+                      primaryTypographyProps={{ fontStyle: "italic", fontSize: 13 }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+                <Divider />
+              </>
+            )}
+
+            {/* Directory rows: click = move here; arrow = navigate into */}
+            {dirsForMoveDirDialog.map((dir) => (
+              <ListItem
+                key={dir.id}
+                disablePadding
+                secondaryAction={
+                  <Tooltip title="Navigate into">
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      onClick={() => setMoveDirNavStack((prev) => [...prev, { id: dir.id, name: dir.name }])}
+                    >
+                      <ArrowForwardIosIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                }
+              >
+                <ListItemButton
+                  onClick={() => handleMoveDirToTarget(dir.id)}
+                  disabled={updateDirectoryMutation.isPending}
+                >
+                  <ListItemIcon sx={{ minWidth: 32 }}>
+                    <FolderIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary={dir.name} primaryTypographyProps={{ fontSize: 13 }} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+
+            {dirsForMoveDirDialog.length === 0 && moveDirCurrentDir && (
+              <ListItem>
+                <ListItemText
+                  secondary="No subdirectories"
+                  secondaryTypographyProps={{ textAlign: "center" }}
+                />
+              </ListItem>
+            )}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMoveDirDialogOpen(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Share chart dialog ───────────────────────────────────────────────── */}
       <ShareChartDialog
         open={shareDialogOpen}
         onClose={() => { setShareDialogOpen(false); setPendingChartToShare(""); }}
         chartId={pendingChartToShare}
+      />
+
+      {/* ── Share directory dialog ───────────────────────────────────────────── */}
+      <ShareDirectoryDialog
+        open={shareDirDialogOpen}
+        onClose={() => { setShareDirDialogOpen(false); setPendingDirToShare(""); }}
+        directoryId={pendingDirToShare}
       />
     </Box>
   );
