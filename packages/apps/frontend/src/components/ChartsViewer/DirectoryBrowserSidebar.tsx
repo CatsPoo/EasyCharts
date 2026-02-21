@@ -417,11 +417,6 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
             key={dir.id}
             disablePadding
             onContextMenu={(e) => handleDirContextMenu(e, dir.id)}
-            secondaryAction={
-              <IconButton edge="end" size="small" onClick={() => handleMoveDirClick(dir.id)}>
-                <DriveFileMoveIcon fontSize="small" />
-              </IconButton>
-            }
           >
             <ListItemButton onClick={() => handleOpenDirectory(dir.id, dir.name)}>
               <ListItemIcon sx={{ minWidth: 32 }}>
