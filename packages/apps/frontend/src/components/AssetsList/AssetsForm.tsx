@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import z from "zod";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
+import { DevicePortsTable } from "./DevicePortsTable";
 
 const schemas = {
   devices: z.object({
@@ -85,7 +86,7 @@ export function AssetForm<K extends AssetKind>({
   const selectedVendorId = useWatch({ control, name: "vendorId" });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth={kind === "devices" ? "md" : "sm"} fullWidth>
       <DialogTitle>
         {initial?.id
           ? `Edit ${kind.slice(0, -1)}`
@@ -139,11 +140,17 @@ export function AssetForm<K extends AssetKind>({
                   vendorIdFilter={selectedVendorId}
                 />
 
-                <TextField label="IP Address" 
-                {...register("ipAddress")} 
+                <TextField label="IP Address"
+                {...register("ipAddress")}
                 helperText={errors.ipAddress?.message as string}
                 error={!!errors.ipAddress}
               />
+                {(initial as any)?.id && (
+                  <DevicePortsTable
+                    deviceId={(initial as any).id}
+                    initialPorts={(initial as any).ports ?? []}
+                  />
+                )}
               </>
             )}
             {kind === "models" && (
