@@ -67,10 +67,9 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
   // ── Navigation ─────────────────────────────────────────────────────────────
   // navStack: empty = root; top entry = current directory
   const [navStack, setNavStack] = useState<NavEntry[]>([]);
-  const [showUnassigned, setShowUnassigned] = useState(false);
   const currentDir = navStack.at(-1) ?? null;
-  const isAtRoot = navStack.length === 0 && !showUnassigned;
-  const isInsideDir = navStack.length > 0 && !showUnassigned;
+  const isAtRoot = navStack.length === 0;
+  const isInsideDir = navStack.length > 0;
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [deleteChartDialogOpen, setDeleteChartDialogOpen] = useState(false);
@@ -134,24 +133,13 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
   // ── Navigation handlers ────────────────────────────────────────────────────
   const handleOpenDirectory = useCallback((id: string, name: string) => {
     setNavStack((prev) => [...prev, { id, name }]);
-    setShowUnassigned(false);
-    onSelect("");
-  }, [onSelect]);
-
-  const handleOpenUnassigned = useCallback(() => {
-    setShowUnassigned(true);
-    setNavStack([]);
     onSelect("");
   }, [onSelect]);
 
   const handleBack = useCallback(() => {
-    if (showUnassigned) {
-      setShowUnassigned(false);
-    } else {
-      setNavStack((prev) => prev.slice(0, -1));
-    }
+    setNavStack((prev) => prev.slice(0, -1));
     onSelect("");
-  }, [showUnassigned, onSelect]);
+  }, [onSelect]);
 
   const handleBreadcrumbNavigate = useCallback((index: number) => {
     // index = -1 → root; index >= 0 → that stack entry
@@ -310,16 +298,13 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const isLoading =
-    (isAtRoot && rootDirsLoading) ||
-    (isInsideDir && (childDirsLoading || dirChartsLoading)) ||
-    (showUnassigned && unassignedLoading);
+    (isAtRoot && (rootDirsLoading || unassignedLoading)) ||
+    (isInsideDir && (childDirsLoading || dirChartsLoading));
 
-  const dirsToShow = isInsideDir ? (childDirs ?? []) : isAtRoot ? (rootDirs ?? []) : [];
+  const dirsToShow = isInsideDir ? (childDirs ?? []) : (rootDirs ?? []);
   const chartsToShow: ChartMetadata[] = isInsideDir
     ? (dirCharts ?? [])
-    : showUnassigned
-    ? (unassignedCharts ?? [])
-    : [];
+    : (unassignedCharts ?? []);
   // Chart move dialog: children of currently-navigated dir, or root dirs
   const dirsForMoveDialog = moveCurrentDir ? (moveDirChildren ?? []) : (rootDirs ?? []);
   // Directory move dialog: same but exclude the directory being moved (can't move into itself)
@@ -357,12 +342,7 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
             <ArrowBackIosIcon fontSize="small" />
           </IconButton>
 
-          {showUnassigned ? (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <InboxIcon fontSize="small" color="action" />
-              <Typography variant="caption" fontWeight={600} noWrap>Unassigned Charts</Typography>
-            </Box>
-          ) : (
+          {(
             // Breadcrumb trail: Root > Ancestor1 > Ancestor2 > CurrentDir
             <Breadcrumbs
               maxItems={4}
@@ -399,20 +379,8 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
 
       {/* ── List ────────────────────────────────────────────────────────────── */}
       <List dense sx={{ flex: 1, overflowY: "auto" }}>
-        {/* Unassigned shortcut (root only) */}
-        {isAtRoot && (
-          <ListItem disablePadding>
-            <ListItemButton onClick={handleOpenUnassigned}>
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <InboxIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Unassigned Charts" primaryTypographyProps={{ fontSize: 13 }} />
-            </ListItemButton>
-          </ListItem>
-        )}
-
         {/* Directory rows */}
-        {!showUnassigned && dirsToShow.map((dir) => (
+        {dirsToShow.map((dir) => (
           <ListItem
             key={dir.id}
             disablePadding
@@ -428,8 +396,8 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           </ListItem>
         ))}
 
-        {/* Divider between subdirs and charts (inside dir only) */}
-        {isInsideDir && dirsToShow.length > 0 && chartsToShow.length > 0 && (
+        {/* Divider between dirs and charts */}
+        {dirsToShow.length > 0 && chartsToShow.length > 0 && (
           <Divider sx={{ my: 0.5 }} />
         )}
 
@@ -459,10 +427,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
         ))}
 
         {/* Empty states */}
-        {isAtRoot && (rootDirs ?? []).length === 0 && (
+        {isAtRoot && dirsToShow.length === 0 && chartsToShow.length === 0 && (
           <ListItem>
             <ListItemText
-              secondary="No directories yet. Right-click the + button below."
+              secondary="No directories yet. Use the + button below to create one."
               secondaryTypographyProps={{ fontSize: 12, textAlign: "center" }}
             />
           </ListItem>
@@ -471,14 +439,6 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           <ListItem>
             <ListItemText
               secondary="Empty directory"
-              secondaryTypographyProps={{ fontSize: 12, textAlign: "center" }}
-            />
-          </ListItem>
-        )}
-        {showUnassigned && chartsToShow.length === 0 && (
-          <ListItem>
-            <ListItemText
-              secondary="No unassigned charts"
               secondaryTypographyProps={{ fontSize: 12, textAlign: "center" }}
             />
           </ListItem>
