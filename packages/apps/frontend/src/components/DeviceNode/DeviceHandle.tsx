@@ -11,6 +11,7 @@ interface DeviceHandleProps {
   side: Side;
   offset: number;
   inUse: boolean;
+  isPairedHere: boolean;
   onHandleContextMenu: onHandleContextMenuPayload | undefined;
 }
 export default function DeviceHandle({
@@ -19,6 +20,7 @@ export default function DeviceHandle({
   side,
   offset,
   inUse,
+  isPairedHere,
   onHandleContextMenu,
 }: DeviceHandleProps) {
 
@@ -39,6 +41,12 @@ export default function DeviceHandle({
     background: "#ef4444", // Tailwind's red-500
     borderColor: "#b91c1c", // red-700
     boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.25)",
+  };
+
+  const greenHandleStyle = {
+    background: "#22c55e",
+    borderColor: "#15803d",
+    boxShadow: "0 0 0 2px rgba(34,197,94,0.25)",
   };
 
   const portTypeBadgeColor: Record<string, string> = {
@@ -85,9 +93,10 @@ export default function DeviceHandle({
   };
 
   const handleStyle = (): CSSProperties => {
+    const colorStyle = isPairedHere ? greenHandleStyle : inUse ? redHandleStyle : {};
     if (side === "left" || side === "right")
-      return { top: `${offset}%`, ...(inUse ? redHandleStyle : {}) };
-    return { left: `${offset}%`, ...(inUse ? redHandleStyle : {}) };
+      return { top: `${offset}%`, ...colorStyle };
+    return { left: `${offset}%`, ...colorStyle };
   };
 
   return (

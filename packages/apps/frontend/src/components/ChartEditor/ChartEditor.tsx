@@ -478,6 +478,36 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [applyChartChange, setDirty]
     );
 
+    const greenPortIds = useMemo(() => {
+      const inChartLines = new Set<string>();
+      for (const loc of chart.linesOnChart) {
+        inChartLines.add(loc.line.sourcePort.id);
+        inChartLines.add(loc.line.targetPort.id);
+      }
+      // Only ports actually placed as handles on chart nodes
+      const handlePortIds = new Set<string>();
+      for (const doc of chart.devicesOnChart) {
+        for (const side of ["left", "right", "top", "bottom"] as const) {
+          for (const h of doc.handles[side] ?? []) handlePortIds.add(h.port.id);
+        }
+      }
+      const green = new Set<string>();
+      for (const doc of chart.devicesOnChart) {
+        for (const port of doc.device.ports) {
+          if (
+            handlePortIds.has(port.id) &&
+            port.inUse &&
+            !inChartLines.has(port.id) &&
+            port.connectedPortId &&
+            handlePortIds.has(port.connectedPortId)
+          ) {
+            green.add(port.id);
+          }
+        }
+      }
+      return green;
+    }, [chart.linesOnChart, chart.devicesOnChart]);
+
     const convertDeviceToNode = useCallback(
       (deviceOnChart: DeviceOnChart): Node => {
         const { device, position } = deviceOnChart;
@@ -491,11 +521,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             updateDeviceOnChart,
             onRemoveNode,
             onHandleContextMenu,
+            greenPortIds,
           } as DeviceNodeData,
         };
         return node;
       },
-      [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart]
+      [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart, greenPortIds]
     );
 
     const { data: availableDevicesResponse } = useListAssets("devices", {

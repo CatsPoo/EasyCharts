@@ -7,6 +7,7 @@ export const PortBaseSchema = z.object({
   deviceId: z.uuid(),
   type: z.enum(PortTypeValues),
   inUse: z.boolean().default(false),
+  connectedPortId: z.string().uuid().optional(),
 });
 
 export const PortCreateSchema = PortBaseSchema.extend(IdentifiableSchema.shape)
