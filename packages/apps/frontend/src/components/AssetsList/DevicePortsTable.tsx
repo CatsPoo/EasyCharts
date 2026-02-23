@@ -3,40 +3,20 @@ import {
   Box,
   Button,
   Chip,
-  Checkbox,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
   IconButton,
-  MenuItem,
-  Stack,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
-  TextField,
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import z from "zod";
-import type { Port, PortUpdate } from "@easy-charts/easycharts-types";
-import { PortTypeValues } from "@easy-charts/easycharts-types";
+import type { Port } from "@easy-charts/easycharts-types";
 import { createPort, updatePort, deletePort } from "../../hooks/portsHooks";
-
-const portFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  type: z.enum(PortTypeValues),
-  inUse: z.boolean().default(false),
-});
-
-type PortFormValues = z.infer<typeof portFormSchema>;
+import { PortFormDialog, type PortFormValues } from "../PortFormDialog";
 
 type Props = {
   deviceId: string;
@@ -47,28 +27,16 @@ export function DevicePortsTable({ deviceId, initialPorts }: Props) {
   const [ports, setPorts] = useState<Port[]>(initialPorts);
   const [formOpen, setFormOpen] = useState(false);
   const [editingPort, setEditingPort] = useState<Port | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-
-  const {
-    register,
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<PortFormValues>({
-    resolver: zodResolver(portFormSchema),
-    defaultValues: { name: "", type: "rj45", inUse: false },
-  });
 
   const openCreate = () => {
     setEditingPort(null);
-    reset({ name: "", type: "rj45", inUse: false });
     setFormOpen(true);
   };
 
   const openEdit = (port: Port) => {
     setEditingPort(port);
-    reset({ name: port.name, type: port.type, inUse: port.inUse });
     setFormOpen(true);
   };
 
@@ -83,18 +51,24 @@ export function DevicePortsTable({ deviceId, initialPorts }: Props) {
   };
 
   const onSubmit = async (values: PortFormValues) => {
-    if (editingPort) {
-      const updated = await updatePort(editingPort.id, values as PortUpdate);
-      setPorts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-    } else {
-      const created = await createPort({
-        ...values,
-        deviceId,
-        id: crypto.randomUUID(),
-      });
-      setPorts((prev) => [...prev, created]);
+    setSubmitting(true);
+    try {
+      if (editingPort) {
+        const updated = await updatePort(editingPort.id, { ...values, inUse: editingPort.inUse });
+        setPorts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      } else {
+        const created = await createPort({
+          ...values,
+          inUse: false,
+          deviceId,
+          id: crypto.randomUUID(),
+        });
+        setPorts((prev) => [...prev, created]);
+      }
+      setFormOpen(false);
+    } finally {
+      setSubmitting(false);
     }
-    setFormOpen(false);
   };
 
   return (
@@ -162,67 +136,14 @@ export function DevicePortsTable({ deviceId, initialPorts }: Props) {
         </TableBody>
       </Table>
 
-      <Dialog
+      <PortFormDialog
         open={formOpen}
+        title={editingPort ? "Edit Port" : "Add Port"}
+        initial={editingPort ?? undefined}
+        loading={submitting}
         onClose={() => setFormOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>{editingPort ? "Edit Port" : "Add Port"}</DialogTitle>
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <DialogContent>
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField
-                label="Name"
-                {...register("name")}
-                error={!!errors.name}
-                helperText={errors.name?.message}
-                fullWidth
-              />
-              <Controller
-                control={control}
-                name="type"
-                render={({ field }) => (
-                  <TextField
-                    select
-                    label="Type"
-                    {...field}
-                    error={!!errors.type}
-                    helperText={errors.type?.message as string}
-                    fullWidth
-                  >
-                    {PortTypeValues.map((t) => (
-                      <MenuItem key={t} value={t}>
-                        {t.toUpperCase()}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                )}
-              />
-              <Controller
-                control={control}
-                name="inUse"
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={
-                      <Checkbox {...field} checked={field.value ?? false} />
-                    }
-                    label="In Use"
-                  />
-                )}
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setFormOpen(false)} variant="outlined">
-              Cancel
-            </Button>
-            <Button type="submit" variant="contained" disabled={isSubmitting}>
-              Save
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+        onSubmit={onSubmit}
+      />
     </Box>
   );
 }

@@ -2,7 +2,6 @@
 
 
 import {
-  PortTypeValues,
   type HandleInfo,
   type Port,
   type PortType,
@@ -11,19 +10,8 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
-  IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-} from "@mui/material";
+import { IconButton } from "@mui/material";
+import { PortFormDialog } from "../PortFormDialog";
 import { Fragment, useLayoutEffect, useMemo, useState, type CSSProperties } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
@@ -58,14 +46,8 @@ export default function DeviceNode({
 
   const updateInternals = useUpdateNodeInternals();
 
-  const portTypeOptions: string[] = Object.values(PortTypeValues) ?? [];
-
   const [selectedPortId, setSelectedPortId] = useState<string>("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newPortName, setNewPortName] = useState("");
-  const [newPortType, setNewPortType] = useState<string>(
-    portTypeOptions[0] ?? ""
-  );
   const [newPort, setNewPort] = useState<Port | null>(null);
 
   function spread(count: number, pad = 10) {
@@ -175,15 +157,9 @@ export default function DeviceNode({
     setSelectedPortId("");
   };
 
-  const onCreatePort = () => {
-    if (!pendingSide) return;
-    if (!newPort) return;
-
-    const portToUse: Port = {
-      ...newPort,
-      name: newPortName,
-      type: newPortType as PortType,
-    };
+  const onCreatePort = ({ name, type }: { name: string; type: PortType }) => {
+    if (!pendingSide || !newPort) return;
+    const portToUse: Port = { ...newPort, name, type };
     updateDeviceOnChart({
       ...deviceOnChart,
       device: { ...device, ports: [...device.ports, portToUse] },
@@ -191,12 +167,6 @@ export default function DeviceNode({
     setSelectedPortId(portToUse.id);
     setNewPort(null);
     setCreateDialogOpen(false);
-  };
-
-  const onDialogCreateButtonClick = async () => {
-    onCreatePort();
-    setCreateDialogOpen(false);
-    setNewPortName("");
   };
 
   const isPortInUse = (portId?: string) =>
@@ -424,50 +394,12 @@ export default function DeviceNode({
         </>
       )}
 
-      <Dialog
+      <PortFormDialog
         open={createDialogOpen}
+        title="Create Port"
         onClose={() => setCreateDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>Create Port</DialogTitle>
-        <DialogContent dividers>
-          <div className="flex flex-col gap-3 pt-1">
-            <TextField
-              label="Name"
-              size="small"
-              value={newPortName}
-              onChange={(e) => setNewPortName(e.target.value)}
-              autoFocus
-            />
-            <FormControl size="small">
-              <InputLabel id="port-type-label">Type</InputLabel>
-              <Select
-                labelId="port-type-label"
-                label="Type"
-                value={newPortType}
-                onChange={(e) => setNewPortType(String(e.target.value))}
-              >
-                {portTypeOptions.map((t) => (
-                  <MenuItem key={t} value={t}>
-                    {t}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </div>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={onDialogCreateButtonClick}
-            disabled={!newPortName.trim() || !newPortType}
-          >
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSubmit={onCreatePort}
+      />
     </div>
   );
 }
