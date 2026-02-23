@@ -41,6 +41,12 @@ export default function DeviceHandle({
     boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.25)",
   };
 
+  const portTypeBadgeColor: Record<string, string> = {
+    rj45: "bg-blue-500 text-white",
+    sfp:  "bg-green-500 text-white",
+    qsfp: "bg-purple-500 text-white",
+  };
+
   const labelClass = [
     "absolute text-[10px] leading-none px-1 py-0.5 rounded pointer-events-none select-none",
     isDark
@@ -123,9 +129,12 @@ export default function DeviceHandle({
       <div
         className={labelClass}
         style={labelStyle()}
-        title={port.name} // tooltip on hover
+        title={`${port.name} (${port.type.toUpperCase()})`}
       >
-        {port.name}
+        <div>{port.name}</div>
+        <div className={`text-[9px] font-semibold rounded px-0.5 mt-0.5 ${portTypeBadgeColor[port.type] ?? ""}`}>
+          {port.type.toUpperCase()}
+        </div>
       </div>
     </Fragment>
   );
