@@ -3,6 +3,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import {
   Alert,
   AppBar,
+  Box,
   Button,
   CircularProgress,
   Collapse,
@@ -12,9 +13,8 @@ import {
   Switch,
   Tab,
   Tabs,
-  Toolbar
+  Toolbar,
 } from "@mui/material";
-import Box from "@mui/material/Box";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RequirePermissions } from "../auth/RequirePermissions";
@@ -155,7 +155,7 @@ export function ChartsPage() {
         </div>
       </NavBar>
 
-      <Box sx={{ display: "flex", flex: 1 }}>
+      <Box sx={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
         <AnimatePresence initial={false}>
           {tab !== 1 && (
             <motion.div
@@ -164,10 +164,7 @@ export function ChartsPage() {
               animate={{ width: 210, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="flex-none overflow-hidden border-r
-             border-slate-200 dark:border-slate-700
-             bg-transparent dark:bg-slate-900
-             transition-colors duration-200"
+              style={{ flexShrink: 0, overflow: "hidden", height: "100%" }}
             >
               <DirectoryBrowserSidebar
                 onSelect={setSelectedId}
