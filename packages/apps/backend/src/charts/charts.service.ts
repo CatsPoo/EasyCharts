@@ -70,6 +70,28 @@ export class ChartsService {
     } as ChartLock;
   };
 
+  private async enrichPortsWithConnectedPortIds(chart: Chart): Promise<Chart> {
+    const portIds = chart.devicesOnChart.flatMap((doc) =>
+      doc.device.ports.map((p) => p.id)
+    );
+    const connectedMap = await this.linesService.getConnectedPortIdMap(portIds);
+    if (!connectedMap.size) return chart;
+    return {
+      ...chart,
+      devicesOnChart: chart.devicesOnChart.map((doc) => ({
+        ...doc,
+        device: {
+          ...doc.device,
+          ports: doc.device.ports.map((p) =>
+            connectedMap.has(p.id)
+              ? { ...p, connectedPortId: connectedMap.get(p.id) }
+              : p
+          ),
+        },
+      })),
+    } as Chart;
+  }
+
   convertChartEntityToChart = async (
     chartEnrity: ChartEntity
   ): Promise<Chart> => {
@@ -118,7 +140,8 @@ export class ChartsService {
       },
     });
     if (!chart) throw new NotFoundException("chart not found");
-    return await this.convertChartEntityToChart(chart);
+    const converted = await this.convertChartEntityToChart(chart);
+    return this.enrichPortsWithConnectedPortIds(converted);
   }
 
   async createChart(dto: ChartCreate,createdByUserId:string): Promise<Chart> {
@@ -250,8 +273,14 @@ export class ChartsService {
       // 3) Lines (global) + LineOnChart (instance)
       if (dto.linesOnChart !== undefined) {
         const wantedLines = dto.linesOnChart.map(l => l.line);
-        await this.linesService.upsertLines(manager, wantedLines,userId);   // global
-        await this.linesOnChartService.syncLinks(manager, chartId, dto.linesOnChart); // instance
+        const normalizedLines = await this.linesService.upsertLines(manager, wantedLines, userId); // global
+        // Build a map from old frontend UUID → normalized DB ID so syncLinks uses correct IDs
+        const idMap = new Map(wantedLines.map((l, i) => [l.id, normalizedLines[i]?.id ?? l.id]));
+        const normalizedLinesOnChart = dto.linesOnChart.map(loc => ({
+          ...loc,
+          line: { ...loc.line, id: idMap.get(loc.line.id) ?? loc.line.id },
+        }));
+        await this.linesOnChartService.syncLinks(manager, chartId, normalizedLinesOnChart); // instance
       }
 
       // 4) Bonds (global) + BondOnChart (instance)
@@ -287,7 +316,8 @@ export class ChartsService {
     await this.linesService.deleteOrphanLines();
     await this.portsService.recomputePortsInUse();
 
-    return this.convertChartEntityToChart(updated);
+    const converted = await this.convertChartEntityToChart(updated);
+    return this.enrichPortsWithConnectedPortIds(converted);
   }
 
   // ---------- lock/remove ----------

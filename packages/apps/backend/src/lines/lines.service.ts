@@ -10,11 +10,22 @@ import {
   BondCreate,
   BondUpdate,
   Line,
+  Port,
 } from "@easy-charts/easycharts-types";
 import { InjectRepository } from "@nestjs/typeorm";
-import { EntityManager, In, Repository } from "typeorm";
+import { EntityManager, In, IsNull, Not, Repository } from "typeorm";
 import { LineOnChartEntity } from "../charts/entities/lineonChart.emtity";
 import { BondEntity } from "./entities/bond.entity";
+import { PortEntity } from "../devices/entities/port.entity";
+
+export interface BondPortSiblingsResult {
+  bondId: string;
+  bondName: string;
+  sameSide: Port[];
+  otherSide: { deviceId: string; ports: Port[] }[];
+  /** Existing DB line IDs for each port pair in this bond, keyed as "portA_id:portB_id" in both directions */
+  memberLinePairs: { lineId: string; sourcePortId: string; targetPortId: string }[];
+}
 
 @Injectable()
 export class LinessService {
@@ -39,6 +50,123 @@ export class LinessService {
       targetPortId: targetPort.id,
       targetPort,
     } as LineEntity;
+  }
+
+  async getConnectedPortIdMap(portIds: string[]): Promise<Map<string, string>> {
+    if (!portIds.length) return new Map();
+    const lines = await this.linesrepo.find({
+      where: [{ sourcePortId: In(portIds) }, { targetPortId: In(portIds) }],
+      select: ["sourcePortId", "targetPortId"],
+    });
+    const map = new Map<string, string>();
+    for (const line of lines) {
+      if (line.sourcePortId && portIds.includes(line.sourcePortId))
+        map.set(line.sourcePortId, line.targetPortId);
+      if (line.targetPortId && portIds.includes(line.targetPortId))
+        map.set(line.targetPortId, line.sourcePortId);
+    }
+    return map;
+  }
+
+  private portEntityToPort(p: PortEntity): Port {
+    return {
+      id: p.id,
+      name: p.name,
+      deviceId: p.deviceId,
+      type: p.type,
+      inUse: p.inUse,
+      createdAt: p.createdAt,
+      createdByUserId: p.createdByUserId,
+      updatedAt: p.updatedAt,
+      updatedByUserId: p.updatedByUserId,
+    };
+  }
+
+  async getBondPortSiblings(
+    portId: string,
+    deviceId: string,
+  ): Promise<BondPortSiblingsResult | null> {
+    const line = await this.linesrepo.findOne({
+      where: [
+        { sourcePortId: portId, bondId: Not(IsNull()) },
+        { targetPortId: portId, bondId: Not(IsNull()) },
+      ],
+      select: ['id', 'bondId'],
+    });
+    if (!line?.bondId) return null;
+
+    const bond = await this.bondRepo.findOne({
+      where: { id: line.bondId },
+      relations: {
+        members: {
+          sourcePort: true,
+          targetPort: true,
+        },
+      },
+    });
+    if (!bond) return null;
+
+    const sameSideIds = new Set<string>();
+    const sameSide: Port[] = [];
+    const otherSidePortIds = new Map<string, Set<string>>();
+    const otherSideMap = new Map<string, Port[]>();
+
+    for (const member of bond.members ?? []) {
+      if (!member.sourcePort || !member.targetPort) continue;
+
+      // Each port's connectedPortId is the ID of the port at the other end of this line
+      const portsWithCounterpart: [PortEntity, string][] = [
+        [member.sourcePort, member.targetPortId],
+        [member.targetPort, member.sourcePortId],
+      ];
+
+      for (const [port, connectedPortId] of portsWithCounterpart) {
+        if (port.id === portId) continue;
+
+        if (port.deviceId === deviceId) {
+          if (sameSideIds.has(port.id)) continue;
+          sameSideIds.add(port.id);
+          sameSide.push({ ...this.portEntityToPort(port), connectedPortId });
+        } else {
+          const seenIds = otherSidePortIds.get(port.deviceId) ?? new Set<string>();
+          if (seenIds.has(port.id)) continue;
+          seenIds.add(port.id);
+          otherSidePortIds.set(port.deviceId, seenIds);
+          const list = otherSideMap.get(port.deviceId) ?? [];
+          list.push({ ...this.portEntityToPort(port), connectedPortId });
+          otherSideMap.set(port.deviceId, list);
+        }
+      }
+    }
+
+    if (sameSide.length === 0 && otherSideMap.size === 0) return null;
+
+    const memberLinePairs = (bond.members ?? [])
+      .filter((m) => m.sourcePort && m.targetPort)
+      .map((m) => ({ lineId: m.id, sourcePortId: m.sourcePortId, targetPortId: m.targetPortId }));
+
+    return {
+      bondId: bond.id,
+      bondName: bond.name,
+      sameSide,
+      otherSide: Array.from(otherSideMap.entries()).map(([dId, ports]) => ({
+        deviceId: dId,
+        ports,
+      })),
+      memberLinePairs,
+    };
+  }
+
+  async getConnectedPortInfo(portId: string): Promise<Port | null> {
+    const line = await this.linesrepo.findOne({
+      where: [{ sourcePortId: portId }, { targetPortId: portId }],
+      relations: { sourcePort: true, targetPort: true },
+    });
+    if (!line) return null;
+    const otherPort =
+      line.sourcePortId === portId ? line.targetPort : line.sourcePort;
+    if (!otherPort) return null;
+    return this.portEntityToPort(otherPort);
   }
 
   async deleteOrphanLines(manager?: EntityManager): Promise<number> {
@@ -168,13 +296,34 @@ export class LinessService {
     this.bondRepo.delete(id);
   }
 
-  async upsertLines(manager: EntityManager, lines: Line[],userId:string): Promise<void> {
-    if (!lines?.length) return;
+  async upsertLines(manager: EntityManager, lines: Line[], userId: string): Promise<Line[]> {
+    if (!lines?.length) return [];
     const repo = manager.getRepository(LineEntity);
+
+    // If the frontend generated a fresh UUID for a port pair that already exists in the
+    // DB (e.g. line shared with another chart), the upsert ON CONFLICT (id) would miss
+    // and then fail on UNIQUE(source_port_id, target_port_id).
+    // Fix: look up existing lines for these port pairs and reuse their IDs.
+    const portIds = [...new Set(lines.flatMap((l) => [l.sourcePort.id, l.targetPort.id]))];
+    const existingLines = await repo.find({
+      where: [{ sourcePortId: In(portIds) }, { targetPortId: In(portIds) }],
+      select: ['id', 'sourcePortId', 'targetPortId'],
+    });
+    const existingIdByPair = new Map<string, string>();
+    for (const el of existingLines) {
+      existingIdByPair.set(`${el.sourcePortId}:${el.targetPortId}`, el.id);
+    }
+    const normalizedLines = lines.map((l) => {
+      const existingId = existingIdByPair.get(`${l.sourcePort.id}:${l.targetPort.id}`);
+      return existingId ? { ...l, id: existingId } : l;
+    });
+
     await repo.upsert(
-      lines.map((l) => {return {...this.convertLineToEntity(l),createdByUserId:userId,updatedByUserId:userId}}),
-      { conflictPaths: ["id"], skipUpdateIfNoValuesChanged: true }
+      normalizedLines.map((l) => ({ ...this.convertLineToEntity(l), createdByUserId: userId, updatedByUserId: userId })),
+      { conflictPaths: ['id'], skipUpdateIfNoValuesChanged: true }
     );
+
+    return normalizedLines;
   }
 
   // 2) Ensure BondEntity exists and update membership (global only)

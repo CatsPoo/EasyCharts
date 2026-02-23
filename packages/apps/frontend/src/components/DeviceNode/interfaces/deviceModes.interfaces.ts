@@ -1,4 +1,4 @@
-import type { DeviceOnChart } from "@easy-charts/easycharts-types";
+import type { DeviceOnChart, Side } from "@easy-charts/easycharts-types";
 import type { onHandleContextMenuPayload } from "./contexMenue.interfaces";
 
 export interface DeviceNodeData{
@@ -6,5 +6,7 @@ export interface DeviceNodeData{
     editMode:boolean,
     updateDeviceOnChart: (deviceOnChart:DeviceOnChart) => void
     onRemoveNode:(deviceId:string) =>void,
-    onHandleContextMenu?: onHandleContextMenuPayload
+    onHandleContextMenu?: onHandleContextMenuPayload,
+    greenPortIds: Set<string>,
+    onPortAdded?: (portId: string, deviceId: string, side: Side) => void,
 }

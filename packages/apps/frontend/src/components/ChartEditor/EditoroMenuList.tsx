@@ -7,14 +7,16 @@ interface EditorMenuListProps  {
   kind: CtxKind;
   onAction: (a: EditorMenuListKeys) => void;
   isUndoEnabled : boolean,
-  isRedoEnabled : boolean
+  isRedoEnabled : boolean,
+  canConnectPaired?: boolean,
 }
 
 export default function EditorMenuList({
   kind,
   onAction,
   isRedoEnabled,
-  isUndoEnabled
+  isUndoEnabled,
+  canConnectPaired = false,
 }: EditorMenuListProps) {
   const itemsByKind: Record<
     CtxKind,
@@ -63,6 +65,9 @@ export default function EditorMenuList({
 
   const items = [
     ...(itemsByKind[kind] ?? []),
+    ...(canConnectPaired && (kind === "handle" || kind === "node")
+      ? [{ key: EditorMenuListKeys.CONNECT_PAIRED_PORTS, label: "Connect Paired Ports" }]
+      : []),
     ...(itemsByKind["common"] ?? []),
   ];
   return (

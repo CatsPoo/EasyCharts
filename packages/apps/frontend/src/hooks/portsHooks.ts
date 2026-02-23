@@ -1,4 +1,4 @@
-import type { Port, PortCreate } from "@easy-charts/easycharts-types";
+import type { Port, PortCreate, PortUpdate } from "@easy-charts/easycharts-types";
 import { http } from "../api/http";
 
 export async function getPortById(portId: string): Promise<Port> {
@@ -16,5 +16,22 @@ export async function createPort(dto: PortCreate): Promise<Port> {
     return data
   } catch (err: any) {
     throw new Error(err || `Failed to create portk`);
+  }
+}
+
+export async function updatePort(id: string, dto: PortUpdate): Promise<Port> {
+  try {
+    const { data } = await http.put<Port>(`/ports/${id}`, dto);
+    return data;
+  } catch (err: any) {
+    throw new Error(err || `Failed to update port`);
+  }
+}
+
+export async function deletePort(id: string): Promise<void> {
+  try {
+    await http.delete(`/ports/${id}`);
+  } catch (err: any) {
+    throw new Error(err || `Failed to delete port`);
   }
 }

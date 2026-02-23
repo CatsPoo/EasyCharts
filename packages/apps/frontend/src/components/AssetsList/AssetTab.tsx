@@ -27,8 +27,10 @@ import {
   Permission,
 } from "@easy-charts/easycharts-types";
 import { AssetForm } from "./AssetsForm";
+import { DevicePortsViewDialog } from "./DevicePortsViewDialog";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import { RequirePermissions } from "../../auth/RequirePermissions";
+import type { Device } from "@easy-charts/easycharts-types";
 
 export default function AssetTab() {
   const [kind, setKind] = useState<AssetKind>("devices");
@@ -43,6 +45,7 @@ export default function AssetTab() {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AnyAsset | null>(null);
+  const [viewingPorts, setViewingPorts] = useState<Device | null>(null);
 
   const sort = sortModel[0];
   const sortBy = sort?.field;
@@ -90,10 +93,19 @@ export default function AssetTab() {
       {
         field: "__actions",
         headerName: "",
-        width: 160,
+        width: kind === "devices" ? 220 : 160,
         sortable: false,
         renderCell: (params: any) => (
           <Box sx={{ display: "flex", gap: 1 }}>
+            {kind === "devices" && (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => setViewingPorts(params.row as Device)}
+              >
+                Ports
+              </Button>
+            )}
             <RequirePermissions required={[Permission.ASSET_EDIT]}>
               <Button size="small" onClick={() => setEditing(params.row)}>
                 Edit
@@ -247,6 +259,12 @@ export default function AssetTab() {
           }}
         />
       )}
+
+      <DevicePortsViewDialog
+        device={viewingPorts}
+        open={viewingPorts !== null}
+        onClose={() => setViewingPorts(null)}
+      />
 
       <ConfirmDialog
         open={confirmOpen}
