@@ -46,6 +46,7 @@ import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
 import { DevicesSidebar } from "./DevicesSideBar";
+import { Alert, Snackbar } from "@mui/material";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import DeviceNode from "../DeviceNode/DeviceNode";
 import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";
@@ -74,6 +75,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       useState<boolean>(false);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
+    const [portTypeMismatch, setPortTypeMismatch] = useState(false);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [pandingDelete, setPandingDelete] = useState<{
       value: Node | Edge | null;
@@ -709,6 +711,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         const targetPort: Port = chart.devicesOnChart
           .find((d) => d.device.id === c.target)!
           .device.ports.find((p) => p.id === c.targetHandle)!;
+        if (sourcePort.type !== targetPort.type) {
+          setPortTypeMismatch(true);
+          return;
+        }
         const newLine: LineOnChart = {
           chartId: chart.id,
           line: {
@@ -1137,6 +1143,19 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           onCancel={onconfigDialofClose}
           onConfirm={onConfirmDialogConfirm}
         />
+        <Snackbar
+          open={portTypeMismatch}
+          autoHideDuration={4000}
+          onClose={() => setPortTypeMismatch(false)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            severity="error"
+            onClose={() => setPortTypeMismatch(false)}
+          >
+            Cannot connect ports of different types.
+          </Alert>
+        </Snackbar>
       </div>
     );
   }
