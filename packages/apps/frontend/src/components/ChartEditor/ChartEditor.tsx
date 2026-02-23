@@ -45,7 +45,7 @@ import { useListAssets } from "../../hooks/assetsHooks";
 import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
-import { fetchBondPortSiblings, fetchConnectedPortIds, type BondPortSiblingsResponse } from "../../hooks/linesHooks";
+import { fetchBondPortSiblings, fetchConnectedPortIds, fetchConnectedPortInfo, type BondPortSiblingsResponse } from "../../hooks/linesHooks";
 import { DevicesSidebar } from "./DevicesSideBar";
 import { Alert, Button, Snackbar } from "@mui/material";
 import { ConfirmDialog } from "../DeleteAlertDialog";
@@ -85,6 +85,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     } | null>(null);
     const [bondOtherSideToast, setBondOtherSideToast] = useState<{
       result: BondPortSiblingsResponse;
+      side: Side;
+    } | null>(null);
+    const [connectedPortToast, setConnectedPortToast] = useState<{
+      connectedPort: Port;
+      triggeredPortId: string;
+      triggeredDeviceId: string;
+      deviceName: string;
       side: Side;
     } | null>(null);
     const greenPortIdsRef = useRef<Set<string>>(new Set());
@@ -147,6 +154,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     );
 
     const devicesByIdRef = useRef<Map<string, Device>>(new Map());
+    const chartRef = useRef<Chart>(chart);
     const pendingBondRef = useRef<{ bondId: string; bondName: string; lineMap: Map<string, string> } | null>(null);
 
     const deleteSetsRef = useRef<DeleteSets>({
@@ -611,9 +619,36 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     );
 
     const onPortAdded = useCallback(async (portId: string, deviceId: string, side: Side) => {
-      const result = await fetchBondPortSiblings(portId, deviceId);
-      if (!result || result.sameSide.length === 0) return;
-      setBondSiblingToast({ result, deviceId, side });
+      const [bondResult, connectedPort] = await Promise.all([
+        fetchBondPortSiblings(portId, deviceId),
+        fetchConnectedPortInfo(portId),
+      ]);
+
+      if (bondResult && bondResult.sameSide.length > 0) {
+        setBondSiblingToast({ result: bondResult, deviceId, side });
+        return;
+      }
+
+      if (connectedPort) {
+        const currentChart = chartRef.current;
+        const alreadyOnChart = currentChart.devicesOnChart.some((doc) =>
+          (["left", "right", "top", "bottom"] as Side[]).some((s) =>
+            doc.handles[s]?.some((h) => h.port.id === connectedPort.id)
+          )
+        );
+        if (!alreadyOnChart) {
+          const deviceName =
+            devicesByIdRef.current.get(connectedPort.deviceId)?.name ??
+            "Unknown Device";
+          setConnectedPortToast({
+            connectedPort,
+            triggeredPortId: portId,
+            triggeredDeviceId: deviceId,
+            deviceName,
+            side,
+          });
+        }
+      }
     }, []);
 
     const onBondSiblingAdd = useCallback(() => {
@@ -738,6 +773,92 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       setMadeChanges(true);
     }, [bondOtherSideToast, applyChartChange, setMadeChanges]);
 
+    const onConnectedPortAdd = useCallback(() => {
+      if (!connectedPortToast) return;
+      const { connectedPort, triggeredPortId, triggeredDeviceId, side } = connectedPortToast;
+      const enrichedConnectedPort: Port = { ...connectedPort, connectedPortId: triggeredPortId };
+
+      applyChartChange((prev) => {
+        // 1) Set connectedPortId on the port that was just added
+        let next: Chart = {
+          ...prev,
+          devicesOnChart: prev.devicesOnChart.map((doc) => {
+            if (doc.device.id !== triggeredDeviceId) return doc;
+            return {
+              ...doc,
+              device: {
+                ...doc.device,
+                ports: doc.device.ports.map((p) =>
+                  p.id === triggeredPortId ? { ...p, connectedPortId: connectedPort.id } : p
+                ),
+              },
+            };
+          }),
+        } as Chart;
+
+        // 2) Add the connected port — either to an existing device or a new one
+        const existingDoc = next.devicesOnChart.find((d) => d.device.id === connectedPort.deviceId);
+        if (existingDoc) {
+          const existingHandleIds = new Set([
+            ...(existingDoc.handles.left ?? []).map((h) => h.port.id),
+            ...(existingDoc.handles.right ?? []).map((h) => h.port.id),
+            ...(existingDoc.handles.top ?? []).map((h) => h.port.id),
+            ...(existingDoc.handles.bottom ?? []).map((h) => h.port.id),
+          ]);
+          if (existingHandleIds.has(connectedPort.id)) return next;
+          next = {
+            ...next,
+            devicesOnChart: next.devicesOnChart.map((doc) => {
+              if (doc.device.id !== connectedPort.deviceId) return doc;
+              return {
+                ...doc,
+                device: {
+                  ...doc.device,
+                  ports: doc.device.ports.map((p) =>
+                    p.id === connectedPort.id ? { ...p, connectedPortId: triggeredPortId } : p
+                  ),
+                },
+                handles: {
+                  ...doc.handles,
+                  [side]: [...(doc.handles[side] ?? []), { port: enrichedConnectedPort }],
+                },
+              };
+            }),
+          } as Chart;
+        } else {
+          const device = devicesByIdRef.current.get(connectedPort.deviceId);
+          if (!device) return next;
+          const enrichedDevice: Device = {
+            ...device,
+            ports: device.ports.map((p) =>
+              p.id === connectedPort.id ? { ...p, connectedPortId: triggeredPortId } : p
+            ),
+          };
+          next = {
+            ...next,
+            devicesOnChart: [
+              ...next.devicesOnChart,
+              {
+                chartId: prev.id,
+                device: enrichedDevice,
+                position: { x: 150 + Math.random() * 300, y: 150 + Math.random() * 300 },
+                handles: {
+                  left: [],
+                  right: [],
+                  top: [],
+                  bottom: [],
+                  [side]: [{ port: enrichedConnectedPort }],
+                },
+              } as DeviceOnChart,
+            ],
+          } as Chart;
+        }
+        return next;
+      });
+
+      setConnectedPortToast(null);
+    }, [connectedPortToast, applyChartChange]);
+
     const convertDeviceToNode = useCallback(
       (deviceOnChart: DeviceOnChart): Node => {
         const { device, position } = deviceOnChart;
@@ -789,7 +910,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [availableDevices]
     );
     devicesByIdRef.current = devicesById;
-
+    chartRef.current = chart;
 
     const buildBridgeView = useCallback((bondsOnChart : BondOnChart[],linesOnChart:LineOnChart[]) => {
       const bridgeNodes: Node<BondBridgeNodeData>[] = [];
@@ -1509,6 +1630,29 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             }
           >
             Add the other side of bond &ldquo;{bondOtherSideToast?.result.bondName}&rdquo; to the chart?
+          </Alert>
+        </Snackbar>
+        <Snackbar
+          open={connectedPortToast !== null}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        >
+          <Alert
+            severity="info"
+            onClose={() => setConnectedPortToast(null)}
+            action={
+              <>
+                <Button color="inherit" size="small" onClick={onConnectedPortAdd}>
+                  Add
+                </Button>
+                <Button color="inherit" size="small" onClick={() => setConnectedPortToast(null)}>
+                  Cancel
+                </Button>
+              </>
+            }
+          >
+            Port &ldquo;{connectedPortToast?.connectedPort.name}&rdquo; on{" "}
+            &ldquo;{connectedPortToast?.deviceName}&rdquo; is connected to this port.
+            Add it to the chart?
           </Alert>
         </Snackbar>
         <Snackbar

@@ -20,6 +20,11 @@ export interface BondPortSiblingsResponse {
   memberLinePairs: { lineId: string; sourcePortId: string; targetPortId: string }[];
 }
 
+export async function fetchConnectedPortInfo(portId: string): Promise<Port | null> {
+  const { data } = await http.post<Port | null>('/lines/connected-port-info', { portId });
+  return data;
+}
+
 export async function fetchBondPortSiblings(
   portId: string,
   deviceId: string,
