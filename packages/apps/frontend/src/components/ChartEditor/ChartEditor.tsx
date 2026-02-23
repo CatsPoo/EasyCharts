@@ -45,7 +45,7 @@ import { useListAssets } from "../../hooks/assetsHooks";
 import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
-import { DevicesSidebar } from "../ChartsViewer/DevicesSideBar";
+import { DevicesSidebar } from "./DevicesSideBar";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import DeviceNode from "../DeviceNode/DeviceNode";
 import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";

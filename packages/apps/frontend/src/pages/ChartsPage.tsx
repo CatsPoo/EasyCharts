@@ -22,7 +22,7 @@ import { useAuth } from "../auth/useAuth";
 import AssetTab from "../components/AssetsList/AssetTab";
 import { ChartEditor } from "../components/ChartEditor/ChartEditor";
 import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/chartEditorHandle.interfaces";
-import { DirectoryBrowserSidebar } from "../components/ChartsViewer/DirectoryBrowserSidebar";
+import { DirectoryBrowserSidebar } from "../components/ChartEditor/DirectoryBrowserSidebar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { useChartById } from "../hooks/chartsHooks";
