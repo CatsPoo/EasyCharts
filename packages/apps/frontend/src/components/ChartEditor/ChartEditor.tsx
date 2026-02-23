@@ -330,10 +330,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 device: {
                   ...doc.device,
                   ports: doc.device.ports.map((p) => {
-                    return {
-                      ...p,
-                      inUse: !used.has(p.id),
-                    } as Port;
+                    return used.has(p.id) ? { ...p, inUse: false } : p;
                   }),
                 },
               } as DeviceOnChart;
@@ -502,7 +499,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         for (const port of doc.device.ports) {
           if (
             handlePortIds.has(port.id) &&
-            port.inUse &&
             !inChartLines.has(port.id) &&
             port.connectedPortId &&
             handlePortIds.has(port.connectedPortId)
