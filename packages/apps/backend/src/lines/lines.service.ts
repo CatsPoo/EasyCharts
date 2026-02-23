@@ -157,6 +157,18 @@ export class LinessService {
     };
   }
 
+  async getConnectedPortInfo(portId: string): Promise<Port | null> {
+    const line = await this.linesrepo.findOne({
+      where: [{ sourcePortId: portId }, { targetPortId: portId }],
+      relations: { sourcePort: true, targetPort: true },
+    });
+    if (!line) return null;
+    const otherPort =
+      line.sourcePortId === portId ? line.targetPort : line.sourcePort;
+    if (!otherPort) return null;
+    return this.portEntityToPort(otherPort);
+  }
+
   async deleteOrphanLines(manager?: EntityManager): Promise<number> {
     const man = manager ?? this.linesrepo.manager;
     return man.transaction(async (m) => {
@@ -284,13 +296,34 @@ export class LinessService {
     this.bondRepo.delete(id);
   }
 
-  async upsertLines(manager: EntityManager, lines: Line[],userId:string): Promise<void> {
-    if (!lines?.length) return;
+  async upsertLines(manager: EntityManager, lines: Line[], userId: string): Promise<Line[]> {
+    if (!lines?.length) return [];
     const repo = manager.getRepository(LineEntity);
+
+    // If the frontend generated a fresh UUID for a port pair that already exists in the
+    // DB (e.g. line shared with another chart), the upsert ON CONFLICT (id) would miss
+    // and then fail on UNIQUE(source_port_id, target_port_id).
+    // Fix: look up existing lines for these port pairs and reuse their IDs.
+    const portIds = [...new Set(lines.flatMap((l) => [l.sourcePort.id, l.targetPort.id]))];
+    const existingLines = await repo.find({
+      where: [{ sourcePortId: In(portIds) }, { targetPortId: In(portIds) }],
+      select: ['id', 'sourcePortId', 'targetPortId'],
+    });
+    const existingIdByPair = new Map<string, string>();
+    for (const el of existingLines) {
+      existingIdByPair.set(`${el.sourcePortId}:${el.targetPortId}`, el.id);
+    }
+    const normalizedLines = lines.map((l) => {
+      const existingId = existingIdByPair.get(`${l.sourcePort.id}:${l.targetPort.id}`);
+      return existingId ? { ...l, id: existingId } : l;
+    });
+
     await repo.upsert(
-      lines.map((l) => {return {...this.convertLineToEntity(l),createdByUserId:userId,updatedByUserId:userId}}),
-      { conflictPaths: ["id"], skipUpdateIfNoValuesChanged: true }
+      normalizedLines.map((l) => ({ ...this.convertLineToEntity(l), createdByUserId: userId, updatedByUserId: userId })),
+      { conflictPaths: ['id'], skipUpdateIfNoValuesChanged: true }
     );
+
+    return normalizedLines;
   }
 
   // 2) Ensure BondEntity exists and update membership (global only)
