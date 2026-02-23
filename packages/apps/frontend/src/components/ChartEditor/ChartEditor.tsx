@@ -54,6 +54,7 @@ import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interf
 import { BondBridgeNode, type BondBridgeNodeData } from "./BondBadgeNode";
 import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
+import { PortsEditorDialog } from "./PortsEditorDialog";
 import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
@@ -74,6 +75,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
   ) {
     const [isEditlineDialogOpen, setEditLineDialogOpen] =
       useState<boolean>(false);
+    const [portsEditorDevice, setPortsEditorDevice] =
+      useState<DeviceOnChart | null>(null);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
     const [portTypeMismatch, setPortTypeMismatch] = useState(false);
@@ -248,6 +251,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         }
       ) => {
         e.preventDefault();
+        e.stopPropagation();
         setCtx({
           open: true,
           x: e.clientX,
@@ -360,6 +364,36 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         });
       },
       [applyChartChange, setEdges]
+    );
+
+    const onMoveHandle = useCallback(
+      (deviceId: string, portId: string, fromSide: Side, toSide: Side) => {
+        if (fromSide === toSide) return;
+        applyChartChange((prev) => {
+          return {
+            ...prev,
+            devicesOnChart: prev.devicesOnChart.map((doc) => {
+              if (doc.device.id !== deviceId) return doc;
+              const handleToMove = doc.handles[fromSide]?.find(
+                (h) => h.port.id === portId
+              );
+              if (!handleToMove) return doc;
+              return {
+                ...doc,
+                handles: {
+                  ...doc.handles,
+                  [fromSide]: (doc.handles[fromSide] ?? []).filter(
+                    (h) => h.port.id !== portId
+                  ),
+                  [toSide]: [...(doc.handles[toSide] ?? []), handleToMove],
+                },
+              };
+            }),
+          } as Chart;
+        });
+        setDirty(true);
+      },
+      [applyChartChange, setDirty]
     );
 
     //remove handle from chart but keep iit in database
@@ -1391,6 +1425,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           case EditorMenuListKeys.EDIT_DEVICE:
             break;
 
+          case EditorMenuListKeys.EDIT_PORTS: {
+            const doc = chart.devicesOnChart.find(
+              (d) => d.device.id === payload.node.id
+            );
+            if (doc) setPortsEditorDevice(doc);
+            break;
+          }
+
           case EditorMenuListKeys.REMOVE_DEVICE_FROM_CHART:
             onRemoveNode(payload.node.id);
             break;
@@ -1438,11 +1480,24 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               connectPairedPorts(deviceGreenPorts);
             }
             break;
+
+          case EditorMenuListKeys.MOVE_HANDLE_TO_LEFT:
+            onMoveHandle(payload.deviceId, payload.portId, payload.side, 'left');
+            break;
+          case EditorMenuListKeys.MOVE_HANDLE_TO_RIGHT:
+            onMoveHandle(payload.deviceId, payload.portId, payload.side, 'right');
+            break;
+          case EditorMenuListKeys.MOVE_HANDLE_TO_TOP:
+            onMoveHandle(payload.deviceId, payload.portId, payload.side, 'top');
+            break;
+          case EditorMenuListKeys.MOVE_HANDLE_TO_BOTTOM:
+            onMoveHandle(payload.deviceId, payload.portId, payload.side, 'bottom');
+            break;
         }
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, chart.devicesOnChart]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart]
     );
 
     const onSave = useCallback(
@@ -1522,7 +1577,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 className="fixed inset-0 z-[9998] bg-transparent"
               />
               <div
-                className="fixed z-[9999] min-w-[180px] rounded-md border border-slate-200 bg-white shadow-lg"
+                className={[
+                  "fixed z-[9999] min-w-[180px] rounded-md border shadow-lg",
+                  isDark
+                    ? "bg-slate-800 border-slate-700 text-slate-100"
+                    : "bg-white border-slate-200 text-slate-900",
+                ].join(" ")}
                 style={{ left: ctx.x, top: ctx.y }}
                 onContextMenu={(e) => e.preventDefault()}
               >
@@ -1565,6 +1625,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           line={selectedEditLine ?? edges[0]}
           onClose={onEditLineDialogClose}
           onSubmit={onEditLineDialgSubmit}
+        />
+        <PortsEditorDialog
+          open={portsEditorDevice !== null}
+          deviceOnChart={portsEditorDevice}
+          onClose={() => setPortsEditorDevice(null)}
+          onConfirm={(newHandles) => {
+            if (!portsEditorDevice) return;
+            updateDeviceOnChart({ ...portsEditorDevice, handles: newHandles });
+          }}
         />
         <ConfirmDialog
           open={confirmDeleteOpen}
