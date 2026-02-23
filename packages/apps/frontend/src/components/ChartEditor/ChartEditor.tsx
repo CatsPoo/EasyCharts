@@ -1634,7 +1634,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         </Snackbar>
         <Snackbar
           open={connectedPortToast !== null}
-          anchorOrigin={{ vertical: "top", horizontal: "center" }}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
           <Alert
             severity="info"
