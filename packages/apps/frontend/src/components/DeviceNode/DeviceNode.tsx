@@ -33,7 +33,7 @@ export default function DeviceNode({
   data,
   selected,
 }: NodeProps<DeviceNodeData>) {
-  const { deviceOnChart, editMode, updateDeviceOnChart,onRemoveNode,onHandleContextMenu } = data;
+  const { deviceOnChart, editMode, updateDeviceOnChart, onRemoveNode, onHandleContextMenu, greenPortIds } = data;
   const { device, handles } = deviceOnChart;
   const { id: deviceId, name, ipAddress, model } = device;
   const { name: modelName, iconUrl, vendor } = model;
@@ -66,6 +66,10 @@ export default function DeviceNode({
     type: "rj45",
     deviceId,
     inUse: false,
+    createdAt: new Date(),
+    createdByUserId: "",
+    updatedAt: null,
+    updatedByUserId: null,
   };
 
   const leftYs = useMemo(() => spread(handles.left.length), [handles.left]);
@@ -189,6 +193,7 @@ export default function DeviceNode({
         side={side}
         offset={offset}
         inUse={isPortInUse(port.id)}
+        isPairedHere={greenPortIds.has(port.id)}
         onHandleContextMenu={onHandleContextMenu}
         />;
   }

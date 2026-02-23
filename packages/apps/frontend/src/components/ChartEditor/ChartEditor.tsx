@@ -45,7 +45,9 @@ import { useListAssets } from "../../hooks/assetsHooks";
 import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
+import { fetchConnectedPortIds } from "../../hooks/linesHooks";
 import { DevicesSidebar } from "./DevicesSideBar";
+import { Alert, Button, Snackbar } from "@mui/material";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import DeviceNode from "../DeviceNode/DeviceNode";
 import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";
@@ -74,6 +76,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       useState<boolean>(false);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
+    const [portTypeMismatch, setPortTypeMismatch] = useState(false);
+    const [pairedToastOpen, setPairedToastOpen] = useState(false);
+    const greenPortIdsRef = useRef<Set<string>>(new Set());
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [pandingDelete, setPandingDelete] = useState<{
       value: Node | Edge | null;
@@ -188,14 +193,17 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
       e.preventDefault();
+      const doc = chart.devicesOnChart.find((d) => d.device.id === node.id);
+      const canConnectPaired = doc?.device.ports.some((p) => greenPortIdsRef.current.has(p.id)) ?? false;
       setCtx({
         open: true,
         x: e.clientX,
         y: e.clientY,
         kind: "node",
         payload: { node },
+        canConnectPaired,
       });
-    }, []);
+    }, [chart.devicesOnChart]);
 
     const onEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
       e.preventDefault();
@@ -226,6 +234,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           y: e.clientY,
           kind: "handle",
           payload: info,
+          canConnectPaired: greenPortIdsRef.current.has(info.portId),
         });
       },
       []
@@ -322,10 +331,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 device: {
                   ...doc.device,
                   ports: doc.device.ports.map((p) => {
-                    return {
-                      ...p,
-                      inUse: !used.has(p.id),
-                    } as Port;
+                    return used.has(p.id) ? { ...p, inUse: false } : p;
                   }),
                 },
               } as DeviceOnChart;
@@ -476,6 +482,81 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [applyChartChange, setDirty]
     );
 
+    const greenPortIds = useMemo(() => {
+      const inChartLines = new Set<string>();
+      for (const loc of chart.linesOnChart) {
+        inChartLines.add(loc.line.sourcePort.id);
+        inChartLines.add(loc.line.targetPort.id);
+      }
+      // Only ports actually placed as handles on chart nodes
+      const handlePortIds = new Set<string>();
+      for (const doc of chart.devicesOnChart) {
+        for (const side of ["left", "right", "top", "bottom"] as const) {
+          for (const h of doc.handles[side] ?? []) handlePortIds.add(h.port.id);
+        }
+      }
+      const green = new Set<string>();
+      for (const doc of chart.devicesOnChart) {
+        for (const port of doc.device.ports) {
+          if (
+            handlePortIds.has(port.id) &&
+            !inChartLines.has(port.id) &&
+            port.connectedPortId &&
+            handlePortIds.has(port.connectedPortId)
+          ) {
+            green.add(port.id);
+          }
+        }
+      }
+      return green;
+    }, [chart.linesOnChart, chart.devicesOnChart]);
+
+    greenPortIdsRef.current = greenPortIds;
+
+    useEffect(() => {
+      if (greenPortIds.size > 0) setPairedToastOpen(true);
+      else setPairedToastOpen(false);
+    }, [greenPortIds]);
+
+    const connectPairedPorts = useCallback(
+      (specificPortIds?: string[]) => {
+        const idsToProcess = specificPortIds ? new Set(specificPortIds) : greenPortIds;
+        const newLines: LineOnChart[] = [];
+        const processed = new Set<string>();
+
+        for (const doc of chart.devicesOnChart) {
+          for (const port of doc.device.ports) {
+            if (!idsToProcess.has(port.id) || processed.has(port.id) || !port.connectedPortId) continue;
+            let targetPort: Port | undefined;
+            for (const doc2 of chart.devicesOnChart) {
+              targetPort = doc2.device.ports.find((p) => p.id === port.connectedPortId);
+              if (targetPort) break;
+            }
+            if (!targetPort) continue;
+            const newLine: LineOnChart = {
+              chartId: chart.id,
+              line: { id: uuidv4(), sourcePort: port, targetPort } as Line,
+              type: "step",
+              label: "",
+            };
+            port.inUse = true;
+            targetPort.inUse = true;
+            newLines.push(newLine);
+            processed.add(port.id);
+            processed.add(port.connectedPortId);
+          }
+        }
+        if (!newLines.length) return;
+        setEdges((eds) => [...eds, ...newLines.map(convertLineToEdge)]);
+        setMadeChanges(true);
+        applyChartChange((prev) => ({
+          ...prev,
+          linesOnChart: [...prev.linesOnChart, ...newLines],
+        } as Chart));
+      },
+      [chart, greenPortIds, convertLineToEdge, setEdges, setMadeChanges, applyChartChange]
+    );
+
     const convertDeviceToNode = useCallback(
       (deviceOnChart: DeviceOnChart): Node => {
         const { device, position } = deviceOnChart;
@@ -489,11 +570,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             updateDeviceOnChart,
             onRemoveNode,
             onHandleContextMenu,
+            greenPortIds,
           } as DeviceNodeData,
         };
         return node;
       },
-      [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart]
+      [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart, greenPortIds]
     );
 
     const { data: availableDevicesResponse } = useListAssets("devices", {
@@ -709,6 +791,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         const targetPort: Port = chart.devicesOnChart
           .find((d) => d.device.id === c.target)!
           .device.ports.find((p) => p.id === c.targetHandle)!;
+        if (sourcePort.type !== targetPort.type) {
+          setPortTypeMismatch(true);
+          return;
+        }
         const newLine: LineOnChart = {
           chartId: chart.id,
           line: {
@@ -877,7 +963,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     );
 
     const onDrop = useCallback(
-      (e: React.DragEvent) => {
+      async (e: React.DragEvent) => {
         if (!editMode || !reactFlowWrapper.current) return;
         e.preventDefault();
         const deviceId = e.dataTransfer.getData("application/reactflow");
@@ -896,8 +982,39 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           top: [],
           bottom: [],
         };
+
+        // Fetch connected port IDs from backend for all inUse ports on the
+        // dropped device, then merge with any already-known connectedPortId
+        // data from devices currently on the chart.
+        const inUsePorts = device.ports.filter((p) => p.inUse).map((p) => p.id);
+        const apiMap = await fetchConnectedPortIds(inUsePorts);
+
+        const connectedMap = new Map<string, string>(Object.entries(apiMap));
+        for (const doc of chart.devicesOnChart) {
+          for (const p of doc.device.ports) {
+            if (p.connectedPortId && !connectedMap.has(p.id)) {
+              connectedMap.set(p.id, p.connectedPortId);
+              connectedMap.set(p.connectedPortId, p.id);
+            }
+          }
+        }
+
+        const enrich = (d: Device): Device =>
+          connectedMap.size
+            ? {
+                ...d,
+                ports: d.ports.map((p) =>
+                  !p.connectedPortId && connectedMap.has(p.id)
+                    ? { ...p, connectedPortId: connectedMap.get(p.id) }
+                    : p
+                ),
+              }
+            : d;
+
+        const enrichedDevice = enrich(device);
+
         const newNode: Node = convertDeviceToNode({
-          device,
+          device: enrichedDevice,
           position,
           handles: defaultHandles,
         } as DeviceOnChart);
@@ -907,10 +1024,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           return {
             ...chart,
             devicesOnChart: [
-              ...chart.devicesOnChart,
+              // Re-enrich existing devices in case they are the "other side"
+              // of a pair whose connectedPortId we just learned from the API.
+              ...chart.devicesOnChart.map((doc) => ({
+                ...doc,
+                device: enrich(doc.device),
+              })),
               {
                 chartId: chart.id,
-                device,
+                device: enrichedDevice,
                 position,
                 handles: defaultHandles,
               } as DeviceOnChart,
@@ -1000,11 +1122,23 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
           case EditorMenuListKeys.FIT:
             break;
+
+          case EditorMenuListKeys.CONNECT_PAIRED_PORTS:
+            if (ctx.kind === 'handle') {
+              connectPairedPorts([payload.portId]);
+            } else if (ctx.kind === 'node') {
+              const doc = chart.devicesOnChart.find(d => d.device.id === payload.node.id);
+              const deviceGreenPorts = doc?.device.ports
+                .filter(p => greenPortIdsRef.current.has(p.id))
+                .map(p => p.id) ?? [];
+              connectPairedPorts(deviceGreenPorts);
+            }
+            break;
         }
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, chart.devicesOnChart]
     );
 
     const onSave = useCallback(
@@ -1093,6 +1227,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                   onAction={onCtxAction}
                   isRedoEnabled={canRedo}
                   isUndoEnabled={canUndo}
+                  canConnectPaired={ctx.canConnectPaired ?? false}
                 />
               </div>
             </>
@@ -1137,6 +1272,39 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           onCancel={onconfigDialofClose}
           onConfirm={onConfirmDialogConfirm}
         />
+        <Snackbar
+          open={portTypeMismatch}
+          autoHideDuration={4000}
+          onClose={() => setPortTypeMismatch(false)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            severity="error"
+            onClose={() => setPortTypeMismatch(false)}
+          >
+            Cannot connect ports of different types.
+          </Alert>
+        </Snackbar>
+        <Snackbar
+          open={pairedToastOpen}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            severity="info"
+            onClose={() => setPairedToastOpen(false)}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => { connectPairedPorts(); setPairedToastOpen(false); }}
+              >
+                Connect
+              </Button>
+            }
+          >
+            Paired ports detected — connect them?
+          </Alert>
+        </Snackbar>
       </div>
     );
   }

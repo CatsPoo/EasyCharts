@@ -41,6 +41,22 @@ export class LinessService {
     } as LineEntity;
   }
 
+  async getConnectedPortIdMap(portIds: string[]): Promise<Map<string, string>> {
+    if (!portIds.length) return new Map();
+    const lines = await this.linesrepo.find({
+      where: [{ sourcePortId: In(portIds) }, { targetPortId: In(portIds) }],
+      select: ["sourcePortId", "targetPortId"],
+    });
+    const map = new Map<string, string>();
+    for (const line of lines) {
+      if (line.sourcePortId && portIds.includes(line.sourcePortId))
+        map.set(line.sourcePortId, line.targetPortId);
+      if (line.targetPortId && portIds.includes(line.targetPortId))
+        map.set(line.targetPortId, line.sourcePortId);
+    }
+    return map;
+  }
+
   async deleteOrphanLines(manager?: EntityManager): Promise<number> {
     const man = manager ?? this.linesrepo.manager;
     return man.transaction(async (m) => {

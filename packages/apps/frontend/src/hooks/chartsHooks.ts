@@ -103,13 +103,10 @@ export function useDeleteChartMutation() {
 
   return useMutation({
     mutationFn: ({ id}: { id: string }) => deleteChart(id),
-    onSuccess: (saved, vars) => {
-
-      // AND/OR invalidate so useChartById refetches:
+    onSuccess: (_saved, vars) => {
       qc.invalidateQueries({ queryKey: ['chart', vars.id] });
-
-      // if your list shows names, also refresh metadata list
       qc.invalidateQueries({ queryKey: ['chartsMetadata'] });
+      qc.invalidateQueries({ queryKey: ['directoryChartsMetadata'] });
     },
   });
 }

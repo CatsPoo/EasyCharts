@@ -6,5 +6,6 @@ export interface DeviceNodeData{
     editMode:boolean,
     updateDeviceOnChart: (deviceOnChart:DeviceOnChart) => void
     onRemoveNode:(deviceId:string) =>void,
-    onHandleContextMenu?: onHandleContextMenuPayload
+    onHandleContextMenu?: onHandleContextMenuPayload,
+    greenPortIds: Set<string>,
 }
