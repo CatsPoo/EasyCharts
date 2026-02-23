@@ -41,7 +41,11 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
-import { useListAssets } from "../../hooks/assetsHooks";
+import { useListAssets, useUpdateAsset } from "../../hooks/assetsHooks";
+import { updatePort } from "../../hooks/portsHooks";
+import { AssetForm } from "../AssetsList/AssetsForm";
+import { PortFormDialog } from "../PortFormDialog";
+import type { PortFormValues } from "../PortFormDialog";
 import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
@@ -76,6 +80,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [isEditlineDialogOpen, setEditLineDialogOpen] =
       useState<boolean>(false);
     const [portsEditorDevice, setPortsEditorDevice] =
+      useState<DeviceOnChart | null>(null);
+    const [editPortTarget, setEditPortTarget] = useState<{
+      port: Port;
+      deviceId: string;
+    } | null>(null);
+    const [editDeviceTarget, setEditDeviceTarget] =
       useState<DeviceOnChart | null>(null);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
@@ -140,6 +150,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [canRedo, setCanRedo] = useState(false);
 
     const updateMut = useUpdateChartMutation();
+    const updateDeviceMut = useUpdateAsset("devices");
     const { project,getEdge } = useReactFlow();
     const {devicePos} = useDevices({chart})
     const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,applyChartChange})
@@ -472,6 +483,49 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [setEditLineDialogOpen, setSelectedEditLine]
     );
 
+    const onDeletePort = useCallback(
+      (portId: string, deviceId: string) => {
+        onRemoveHandle(deviceId, portId);
+        deleteSetsRef.current[ChartEntitiesEnum.PORTS].add(portId);
+      },
+      [onRemoveHandle]
+    );
+
+    const onEditPortSubmit = useCallback(
+      async ({ name, type }: PortFormValues) => {
+        if (!editPortTarget) return;
+        const { port, deviceId } = editPortTarget;
+        try {
+          await updatePort(port.id, { name, type });
+          applyChartChange((prev) => ({
+            ...prev,
+            devicesOnChart: prev.devicesOnChart.map((doc) => {
+              if (doc.device.id !== deviceId) return doc;
+              const updatedPort = (p: Port) =>
+                p.id === port.id ? { ...p, name, type } : p;
+              const updatedHandle = (h: { port: Port }) =>
+                h.port.id === port.id ? { ...h, port: { ...h.port, name, type } } : h;
+              return {
+                ...doc,
+                device: { ...doc.device, ports: doc.device.ports.map(updatedPort) },
+                handles: {
+                  left: (doc.handles.left ?? []).map(updatedHandle),
+                  right: (doc.handles.right ?? []).map(updatedHandle),
+                  top: (doc.handles.top ?? []).map(updatedHandle),
+                  bottom: (doc.handles.bottom ?? []).map(updatedHandle),
+                },
+              };
+            }),
+          } as Chart));
+          setDirty(true);
+        } catch (e) {
+          console.error("Failed to update port:", e);
+        }
+        setEditPortTarget(null);
+      },
+      [editPortTarget, applyChartChange, setDirty]
+    );
+
     const onConfirmDialogConfirm = useCallback(() => {
       if (!pandingDelete.kind) return;
       try {
@@ -481,12 +535,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         if (pandingDelete.kind === "lines") {
           onDeleteLine(pandingDelete.value as Edge);
         }
+        if (pandingDelete.kind === "ports") {
+          const { portId, deviceId } = pandingDelete.value as unknown as { portId: string; deviceId: string };
+          onDeletePort(portId, deviceId);
+        }
       } catch (e) {
         console.log("Delete failed: ", e);
       }
       setPandingDelete({ value: null });
       setConfirmDeleteOpen(false);
-    }, [onDeleteDevice, onDeleteLine, pandingDelete.kind, pandingDelete.value]);
+    }, [onDeleteDevice, onDeleteLine, onDeletePort, pandingDelete.kind, pandingDelete.value]);
 
     const onconfigDialofClose = useCallback(() => {
       setPandingDelete({ value: null });
@@ -534,6 +592,32 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         setDirty(true);
       },
       [applyChartChange, setDirty]
+    );
+
+    const onEditDeviceSubmit = useCallback(
+      async (formData: any) => {
+        if (!editDeviceTarget) return;
+        try {
+          const updated: Device = await updateDeviceMut.mutateAsync({
+            ...formData,
+            id: editDeviceTarget.device.id,
+          } as Device);
+          updateDeviceOnChart({
+            ...editDeviceTarget,
+            device: {
+              ...editDeviceTarget.device,
+              name: updated.name ?? editDeviceTarget.device.name,
+              ipAddress: updated.ipAddress ?? editDeviceTarget.device.ipAddress,
+              model: updated.model ?? editDeviceTarget.device.model,
+              type: updated.type ?? editDeviceTarget.device.type,
+            },
+          });
+        } catch (e) {
+          console.error("Failed to update device:", e);
+        }
+        setEditDeviceTarget(null);
+      },
+      [editDeviceTarget, updateDeviceMut, updateDeviceOnChart]
     );
 
     const greenPortIds = useMemo(() => {
@@ -1422,12 +1506,17 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             setConfirmDeleteOpen(true);
             break;
 
-          case EditorMenuListKeys.EDIT_DEVICE:
+          case EditorMenuListKeys.EDIT_DEVICE: {
+            const doc = chart.devicesOnChart.find(d => d.device.id === payload.node.id);
+            if (doc) setEditDeviceTarget(doc);
             break;
+          }
 
           case EditorMenuListKeys.EDIT_PORTS: {
+            const deviceId =
+              ctx.kind === "handle" ? payload.deviceId : payload.node.id;
             const doc = chart.devicesOnChart.find(
-              (d) => d.device.id === payload.node.id
+              (d) => d.device.id === deviceId
             );
             if (doc) setPortsEditorDevice(doc);
             break;
@@ -1460,11 +1549,26 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             createBond()
             break;
 
-          case EditorMenuListKeys.EDIT_PORT:
+          case EditorMenuListKeys.EDIT_PORT: {
+            const doc = chart.devicesOnChart.find(d => d.device.id === payload.deviceId);
+            const port = doc?.device.ports.find(p => p.id === payload.portId);
+            if (port) setEditPortTarget({ port, deviceId: payload.deviceId });
             break;
+          }
 
           case EditorMenuListKeys.REMOVE_PORT:
+            onRemoveHandle(payload.deviceId, payload.portId);
             break;
+
+          case EditorMenuListKeys.DELETE_PORT: {
+            const doc = chart.devicesOnChart.find(d => d.device.id === payload.deviceId);
+            const port = doc?.device.ports.find(p => p.id === payload.portId);
+            setPandingDelete({ value: { portId: payload.portId, deviceId: payload.deviceId } as unknown as Node, kind: "ports" });
+            setConfirmDialogTitle("Delete Port?");
+            setConfirmDialogDescription(`Permanently delete port "${port?.name ?? payload.portId}"?`);
+            setConfirmDeleteOpen(true);
+            break;
+          }
 
           case EditorMenuListKeys.FIT:
             break;
@@ -1497,7 +1601,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget]
     );
 
     const onSave = useCallback(
@@ -1634,6 +1738,20 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             if (!portsEditorDevice) return;
             updateDeviceOnChart({ ...portsEditorDevice, handles: newHandles });
           }}
+        />
+        <PortFormDialog
+          open={editPortTarget !== null}
+          title="Edit Port"
+          initial={editPortTarget ? { name: editPortTarget.port.name, type: editPortTarget.port.type } : undefined}
+          onClose={() => setEditPortTarget(null)}
+          onSubmit={onEditPortSubmit}
+        />
+        <AssetForm
+          kind="devices"
+          open={editDeviceTarget !== null}
+          initial={editDeviceTarget?.device}
+          onClose={() => setEditDeviceTarget(null)}
+          onSubmit={onEditDeviceSubmit}
         />
         <ConfirmDialog
           open={confirmDeleteOpen}
