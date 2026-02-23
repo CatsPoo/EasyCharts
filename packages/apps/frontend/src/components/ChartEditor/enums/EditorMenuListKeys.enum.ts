@@ -11,6 +11,7 @@ export enum  EditorMenuListKeys{
     DELETE_LINE = 'delete_line',
     BOND_LINES = 'bond_lines',
     EDIT_PORT = 'edit_port',
-    REMOVE_PORT = 'remove_port'
+    REMOVE_PORT = 'remove_port',
+    CONNECT_PAIRED_PORTS = 'connect_paired_ports',
 
 }

@@ -5,4 +5,5 @@ interface CtxState  {
   y: number;
   kind: CtxKind;
   payload?: any;
+  canConnectPaired?: boolean;
 };

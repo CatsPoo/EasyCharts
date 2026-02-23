@@ -46,7 +46,7 @@ import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
 import { DevicesSidebar } from "./DevicesSideBar";
-import { Alert, Snackbar } from "@mui/material";
+import { Alert, Button, Snackbar } from "@mui/material";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import DeviceNode from "../DeviceNode/DeviceNode";
 import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";
@@ -76,6 +76,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
     const [portTypeMismatch, setPortTypeMismatch] = useState(false);
+    const [pairedToastOpen, setPairedToastOpen] = useState(false);
+    const greenPortIdsRef = useRef<Set<string>>(new Set());
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [pandingDelete, setPandingDelete] = useState<{
       value: Node | Edge | null;
@@ -190,14 +192,17 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
       e.preventDefault();
+      const doc = chart.devicesOnChart.find((d) => d.device.id === node.id);
+      const canConnectPaired = doc?.device.ports.some((p) => greenPortIdsRef.current.has(p.id)) ?? false;
       setCtx({
         open: true,
         x: e.clientX,
         y: e.clientY,
         kind: "node",
         payload: { node },
+        canConnectPaired,
       });
-    }, []);
+    }, [chart.devicesOnChart]);
 
     const onEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
       e.preventDefault();
@@ -228,6 +233,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           y: e.clientY,
           kind: "handle",
           payload: info,
+          canConnectPaired: greenPortIdsRef.current.has(info.portId),
         });
       },
       []
@@ -507,6 +513,52 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       }
       return green;
     }, [chart.linesOnChart, chart.devicesOnChart]);
+
+    greenPortIdsRef.current = greenPortIds;
+
+    useEffect(() => {
+      if (greenPortIds.size > 0) setPairedToastOpen(true);
+      else setPairedToastOpen(false);
+    }, [greenPortIds]);
+
+    const connectPairedPorts = useCallback(
+      (specificPortIds?: string[]) => {
+        const idsToProcess = specificPortIds ? new Set(specificPortIds) : greenPortIds;
+        const newLines: LineOnChart[] = [];
+        const processed = new Set<string>();
+
+        for (const doc of chart.devicesOnChart) {
+          for (const port of doc.device.ports) {
+            if (!idsToProcess.has(port.id) || processed.has(port.id) || !port.connectedPortId) continue;
+            let targetPort: Port | undefined;
+            for (const doc2 of chart.devicesOnChart) {
+              targetPort = doc2.device.ports.find((p) => p.id === port.connectedPortId);
+              if (targetPort) break;
+            }
+            if (!targetPort) continue;
+            const newLine: LineOnChart = {
+              chartId: chart.id,
+              line: { id: uuidv4(), sourcePort: port, targetPort } as Line,
+              type: "step",
+              label: "",
+            };
+            port.inUse = true;
+            targetPort.inUse = true;
+            newLines.push(newLine);
+            processed.add(port.id);
+            processed.add(port.connectedPortId);
+          }
+        }
+        if (!newLines.length) return;
+        setEdges((eds) => [...eds, ...newLines.map(convertLineToEdge)]);
+        setMadeChanges(true);
+        applyChartChange((prev) => ({
+          ...prev,
+          linesOnChart: [...prev.linesOnChart, ...newLines],
+        } as Chart));
+      },
+      [chart, greenPortIds, convertLineToEdge, setEdges, setMadeChanges, applyChartChange]
+    );
 
     const convertDeviceToNode = useCallback(
       (deviceOnChart: DeviceOnChart): Node => {
@@ -1037,11 +1089,23 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
           case EditorMenuListKeys.FIT:
             break;
+
+          case EditorMenuListKeys.CONNECT_PAIRED_PORTS:
+            if (ctx.kind === 'handle') {
+              connectPairedPorts([payload.portId]);
+            } else if (ctx.kind === 'node') {
+              const doc = chart.devicesOnChart.find(d => d.device.id === payload.node.id);
+              const deviceGreenPorts = doc?.device.ports
+                .filter(p => greenPortIdsRef.current.has(p.id))
+                .map(p => p.id) ?? [];
+              connectPairedPorts(deviceGreenPorts);
+            }
+            break;
         }
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, chart.devicesOnChart]
     );
 
     const onSave = useCallback(
@@ -1130,6 +1194,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                   onAction={onCtxAction}
                   isRedoEnabled={canRedo}
                   isUndoEnabled={canUndo}
+                  canConnectPaired={ctx.canConnectPaired ?? false}
                 />
               </div>
             </>
@@ -1185,6 +1250,26 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             onClose={() => setPortTypeMismatch(false)}
           >
             Cannot connect ports of different types.
+          </Alert>
+        </Snackbar>
+        <Snackbar
+          open={pairedToastOpen}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            severity="info"
+            onClose={() => setPairedToastOpen(false)}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => { connectPairedPorts(); setPairedToastOpen(false); }}
+              >
+                Connect
+              </Button>
+            }
+          >
+            Paired ports detected — connect them?
           </Alert>
         </Snackbar>
       </div>
