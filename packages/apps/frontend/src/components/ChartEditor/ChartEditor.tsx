@@ -45,6 +45,7 @@ import { useListAssets } from "../../hooks/assetsHooks";
 import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
+import { fetchConnectedPortIds } from "../../hooks/linesHooks";
 import { DevicesSidebar } from "./DevicesSideBar";
 import { Alert, Button, Snackbar } from "@mui/material";
 import { ConfirmDialog } from "../DeleteAlertDialog";
@@ -962,7 +963,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     );
 
     const onDrop = useCallback(
-      (e: React.DragEvent) => {
+      async (e: React.DragEvent) => {
         if (!editMode || !reactFlowWrapper.current) return;
         e.preventDefault();
         const deviceId = e.dataTransfer.getData("application/reactflow");
@@ -981,8 +982,39 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           top: [],
           bottom: [],
         };
+
+        // Fetch connected port IDs from backend for all inUse ports on the
+        // dropped device, then merge with any already-known connectedPortId
+        // data from devices currently on the chart.
+        const inUsePorts = device.ports.filter((p) => p.inUse).map((p) => p.id);
+        const apiMap = await fetchConnectedPortIds(inUsePorts);
+
+        const connectedMap = new Map<string, string>(Object.entries(apiMap));
+        for (const doc of chart.devicesOnChart) {
+          for (const p of doc.device.ports) {
+            if (p.connectedPortId && !connectedMap.has(p.id)) {
+              connectedMap.set(p.id, p.connectedPortId);
+              connectedMap.set(p.connectedPortId, p.id);
+            }
+          }
+        }
+
+        const enrich = (d: Device): Device =>
+          connectedMap.size
+            ? {
+                ...d,
+                ports: d.ports.map((p) =>
+                  !p.connectedPortId && connectedMap.has(p.id)
+                    ? { ...p, connectedPortId: connectedMap.get(p.id) }
+                    : p
+                ),
+              }
+            : d;
+
+        const enrichedDevice = enrich(device);
+
         const newNode: Node = convertDeviceToNode({
-          device,
+          device: enrichedDevice,
           position,
           handles: defaultHandles,
         } as DeviceOnChart);
@@ -992,10 +1024,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           return {
             ...chart,
             devicesOnChart: [
-              ...chart.devicesOnChart,
+              // Re-enrich existing devices in case they are the "other side"
+              // of a pair whose connectedPortId we just learned from the API.
+              ...chart.devicesOnChart.map((doc) => ({
+                ...doc,
+                device: enrich(doc.device),
+              })),
               {
                 chartId: chart.id,
-                device,
+                device: enrichedDevice,
                 position,
                 handles: defaultHandles,
               } as DeviceOnChart,
