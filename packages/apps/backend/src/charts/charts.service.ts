@@ -273,8 +273,14 @@ export class ChartsService {
       // 3) Lines (global) + LineOnChart (instance)
       if (dto.linesOnChart !== undefined) {
         const wantedLines = dto.linesOnChart.map(l => l.line);
-        await this.linesService.upsertLines(manager, wantedLines,userId);   // global
-        await this.linesOnChartService.syncLinks(manager, chartId, dto.linesOnChart); // instance
+        const normalizedLines = await this.linesService.upsertLines(manager, wantedLines, userId); // global
+        // Build a map from old frontend UUID → normalized DB ID so syncLinks uses correct IDs
+        const idMap = new Map(wantedLines.map((l, i) => [l.id, normalizedLines[i]?.id ?? l.id]));
+        const normalizedLinesOnChart = dto.linesOnChart.map(loc => ({
+          ...loc,
+          line: { ...loc.line, id: idMap.get(loc.line.id) ?? loc.line.id },
+        }));
+        await this.linesOnChartService.syncLinks(manager, chartId, normalizedLinesOnChart); // instance
       }
 
       // 4) Bonds (global) + BondOnChart (instance)

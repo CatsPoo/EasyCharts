@@ -181,7 +181,7 @@ export class PortsService {
         type: p.type as any,
         deviceId,
         updatedBuUserid,
-        createdByUserId:p.createdByUserId ?? updatedBuUserid
+        createdByUserId:p.createdByUserId || updatedBuUserid
       })),
       { conflictPaths: ["id"], skipUpdateIfNoValuesChanged: true }
     );
