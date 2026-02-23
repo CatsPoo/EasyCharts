@@ -1,3 +1,4 @@
+import type { Port } from "@easy-charts/easycharts-types";
 import { http } from "../api/http";
 
 export async function fetchConnectedPortIds(
@@ -7,6 +8,25 @@ export async function fetchConnectedPortIds(
   const { data } = await http.post<Record<string, string>>(
     "/lines/connected-port-ids",
     { portIds },
+  );
+  return data;
+}
+
+export interface BondPortSiblingsResponse {
+  bondId: string;
+  bondName: string;
+  sameSide: Port[];
+  otherSide: { deviceId: string; ports: Port[] }[];
+  memberLinePairs: { lineId: string; sourcePortId: string; targetPortId: string }[];
+}
+
+export async function fetchBondPortSiblings(
+  portId: string,
+  deviceId: string,
+): Promise<BondPortSiblingsResponse | null> {
+  const { data } = await http.post<BondPortSiblingsResponse | null>(
+    "/lines/bond-port-siblings",
+    { portId, deviceId },
   );
   return data;
 }

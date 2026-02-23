@@ -45,7 +45,7 @@ import { useListAssets } from "../../hooks/assetsHooks";
 import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
-import { fetchConnectedPortIds } from "../../hooks/linesHooks";
+import { fetchBondPortSiblings, fetchConnectedPortIds, type BondPortSiblingsResponse } from "../../hooks/linesHooks";
 import { DevicesSidebar } from "./DevicesSideBar";
 import { Alert, Button, Snackbar } from "@mui/material";
 import { ConfirmDialog } from "../DeleteAlertDialog";
@@ -78,6 +78,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const [portTypeMismatch, setPortTypeMismatch] = useState(false);
     const [pairedToastOpen, setPairedToastOpen] = useState(false);
+    const [bondSiblingToast, setBondSiblingToast] = useState<{
+      result: BondPortSiblingsResponse;
+      deviceId: string;
+      side: Side;
+    } | null>(null);
+    const [bondOtherSideToast, setBondOtherSideToast] = useState<{
+      result: BondPortSiblingsResponse;
+      side: Side;
+    } | null>(null);
     const greenPortIdsRef = useRef<Set<string>>(new Set());
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [pandingDelete, setPandingDelete] = useState<{
@@ -136,6 +145,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       }),
       []
     );
+
+    const devicesByIdRef = useRef<Map<string, Device>>(new Map());
+    const pendingBondRef = useRef<{ bondId: string; bondName: string; lineMap: Map<string, string> } | null>(null);
 
     const deleteSetsRef = useRef<DeleteSets>({
       devices: new Set(),
@@ -533,9 +545,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               if (targetPort) break;
             }
             if (!targetPort) continue;
+            const existingLineId = pendingBondRef.current?.lineMap.get(`${port.id}:${targetPort.id}`)
+              ?? pendingBondRef.current?.lineMap.get(`${targetPort.id}:${port.id}`);
             const newLine: LineOnChart = {
               chartId: chart.id,
-              line: { id: uuidv4(), sourcePort: port, targetPort } as Line,
+              line: { id: existingLineId ?? uuidv4(), sourcePort: port, targetPort } as Line,
               type: "step",
               label: "",
             };
@@ -549,13 +563,180 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         if (!newLines.length) return;
         setEdges((eds) => [...eds, ...newLines.map(convertLineToEdge)]);
         setMadeChanges(true);
-        applyChartChange((prev) => ({
-          ...prev,
-          linesOnChart: [...prev.linesOnChart, ...newLines],
-        } as Chart));
+
+        // If user arrived here via the bond toast flow, also surface the bond bridge node
+        const pendingBond = pendingBondRef.current;
+        pendingBondRef.current = null;
+
+        applyChartChange((prev) => {
+          const next: Chart = { ...prev, linesOnChart: [...prev.linesOnChart, ...newLines] };
+          if (!pendingBond) return next;
+
+          const newLineIds = newLines.map((l) => l.line.id);
+          // Check if this bond is already on the chart
+          const existingBoc = next.bondsOnChart.find((b) => b.bond.id === pendingBond.bondId);
+          if (existingBoc) {
+            return {
+              ...next,
+              bondsOnChart: next.bondsOnChart.map((b) =>
+                b.bond.id === pendingBond.bondId
+                  ? { ...b, bond: { ...b.bond, membersLines: [...b.bond.membersLines, ...newLineIds] } }
+                  : b
+              ),
+            } as Chart;
+          }
+
+          // Compute bridge position: average midpoint of all connected device pairs
+          const docByDeviceId = new Map(prev.devicesOnChart.map((d) => [d.device.id, d]));
+          let cx = 0, cy = 0, cnt = 0;
+          for (const loc of newLines) {
+            const src = docByDeviceId.get(loc.line.sourcePort.deviceId)?.position;
+            const tgt = docByDeviceId.get(loc.line.targetPort.deviceId)?.position;
+            if (!src || !tgt) continue;
+            cx += (src.x + tgt.x) / 2;
+            cy += (src.y + tgt.y) / 2;
+            cnt++;
+          }
+          if (cnt > 0) { cx /= cnt; cy /= cnt; }
+
+          const bondOnChart: BondOnChart = {
+            chartId: prev.id,
+            bond: { id: pendingBond.bondId, name: pendingBond.bondName, membersLines: newLineIds } as Bond,
+            position: { x: cx - 42, y: cy - 24 },
+          };
+          return { ...next, bondsOnChart: [...(next.bondsOnChart ?? []), bondOnChart] } as Chart;
+        });
       },
       [chart, greenPortIds, convertLineToEdge, setEdges, setMadeChanges, applyChartChange]
     );
+
+    const onPortAdded = useCallback(async (portId: string, deviceId: string, side: Side) => {
+      const result = await fetchBondPortSiblings(portId, deviceId);
+      if (!result || result.sameSide.length === 0) return;
+      setBondSiblingToast({ result, deviceId, side });
+    }, []);
+
+    const onBondSiblingAdd = useCallback(() => {
+      if (!bondSiblingToast) return;
+      const { result, deviceId, side } = bondSiblingToast;
+
+      applyChartChange((prev) => ({
+        ...prev,
+        devicesOnChart: prev.devicesOnChart.map((doc) => {
+          if (doc.device.id !== deviceId) return doc;
+          const existingHandleIds = new Set([
+            ...(doc.handles.left ?? []).map((h) => h.port.id),
+            ...(doc.handles.right ?? []).map((h) => h.port.id),
+            ...(doc.handles.top ?? []).map((h) => h.port.id),
+            ...(doc.handles.bottom ?? []).map((h) => h.port.id),
+          ]);
+          const newHandles = result.sameSide
+            .filter((p) => !existingHandleIds.has(p.id))
+            .map((p) => ({ port: p }));
+          return {
+            ...doc,
+            device: {
+              ...doc.device,
+              ports: doc.device.ports.map((p) => {
+                const updated = result.sameSide.find((s) => s.id === p.id);
+                return updated ? { ...p, connectedPortId: updated.connectedPortId } : p;
+              }),
+            },
+            handles: {
+              ...doc.handles,
+              [side]: [...(doc.handles[side] ?? []), ...newHandles],
+            },
+          };
+        }),
+      } as Chart));
+
+      const lineMap = new Map<string, string>();
+      for (const { lineId, sourcePortId, targetPortId } of result.memberLinePairs) {
+        lineMap.set(`${sourcePortId}:${targetPortId}`, lineId);
+        lineMap.set(`${targetPortId}:${sourcePortId}`, lineId);
+      }
+      pendingBondRef.current = { bondId: result.bondId, bondName: result.bondName, lineMap };
+      setBondSiblingToast(null);
+      if (result.otherSide.length > 0) {
+        setBondOtherSideToast({ result, side });
+      }
+    }, [bondSiblingToast, applyChartChange]);
+
+    const onBondOtherSideAdd = useCallback(() => {
+      if (!bondOtherSideToast) return;
+      const { result, side } = bondOtherSideToast;
+
+      applyChartChange((prev) => {
+        let next = { ...prev, devicesOnChart: [...prev.devicesOnChart] };
+        for (const { deviceId: otherDeviceId, ports: otherPorts } of result.otherSide) {
+          const existing = next.devicesOnChart.find((d) => d.device.id === otherDeviceId);
+          if (existing) {
+            const existingHandleIds = new Set([
+              ...(existing.handles.left ?? []).map((h) => h.port.id),
+              ...(existing.handles.right ?? []).map((h) => h.port.id),
+              ...(existing.handles.top ?? []).map((h) => h.port.id),
+              ...(existing.handles.bottom ?? []).map((h) => h.port.id),
+            ]);
+            const newHandles = otherPorts
+              .filter((p) => !existingHandleIds.has(p.id))
+              .map((p) => ({ port: p }));
+            next = {
+              ...next,
+              devicesOnChart: next.devicesOnChart.map((doc) =>
+                doc.device.id === otherDeviceId
+                  ? {
+                      ...doc,
+                      device: {
+                        ...doc.device,
+                        ports: doc.device.ports.map((p) => {
+                          const updated = otherPorts.find((op) => op.id === p.id);
+                          return updated ? { ...p, connectedPortId: updated.connectedPortId } : p;
+                        }),
+                      },
+                      handles: {
+                        ...doc.handles,
+                        [side]: [...(doc.handles[side] ?? []), ...newHandles],
+                      },
+                    }
+                  : doc
+              ),
+            };
+          } else {
+            const device = devicesByIdRef.current.get(otherDeviceId);
+            if (!device) continue;
+            const enrichedDevice: Device = {
+              ...device,
+              ports: device.ports.map((p) => {
+                const bondPort = otherPorts.find((op) => op.id === p.id);
+                return bondPort ? { ...p, connectedPortId: bondPort.connectedPortId } : p;
+              }),
+            };
+            next = {
+              ...next,
+              devicesOnChart: [
+                ...next.devicesOnChart,
+                {
+                  chartId: prev.id,
+                  device: enrichedDevice,
+                  position: { x: 150 + Math.random() * 300, y: 150 + Math.random() * 300 },
+                  handles: {
+                    left: [],
+                    right: [],
+                    top: [],
+                    bottom: [],
+                    [side]: otherPorts.map((p) => ({ port: p })),
+                  },
+                } as DeviceOnChart,
+              ],
+            };
+          }
+        }
+        return next as Chart;
+      });
+
+      setBondOtherSideToast(null);
+      setMadeChanges(true);
+    }, [bondOtherSideToast, applyChartChange, setMadeChanges]);
 
     const convertDeviceToNode = useCallback(
       (deviceOnChart: DeviceOnChart): Node => {
@@ -571,11 +752,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             onRemoveNode,
             onHandleContextMenu,
             greenPortIds,
+            onPortAdded,
           } as DeviceNodeData,
         };
         return node;
       },
-      [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart, greenPortIds]
+      [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart, greenPortIds, onPortAdded]
     );
 
     const { data: availableDevicesResponse } = useListAssets("devices", {
@@ -606,6 +788,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         ),
       [availableDevices]
     );
+    devicesByIdRef.current = devicesById;
 
 
     const buildBridgeView = useCallback((bondsOnChart : BondOnChart[],linesOnChart:LineOnChart[]) => {
@@ -1283,6 +1466,39 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             onClose={() => setPortTypeMismatch(false)}
           >
             Cannot connect ports of different types.
+          </Alert>
+        </Snackbar>
+        <Snackbar
+          open={bondSiblingToast !== null}
+          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        >
+          <Alert
+            severity="info"
+            onClose={() => setBondSiblingToast(null)}
+            action={
+              <Button color="inherit" size="small" onClick={onBondSiblingAdd}>
+                Add
+              </Button>
+            }
+          >
+            Port is part of bond &ldquo;{bondSiblingToast?.result.bondName}&rdquo;.
+            Add {bondSiblingToast?.result.sameSide.length} sibling port(s) to this device?
+          </Alert>
+        </Snackbar>
+        <Snackbar
+          open={bondOtherSideToast !== null}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        >
+          <Alert
+            severity="info"
+            onClose={() => setBondOtherSideToast(null)}
+            action={
+              <Button color="inherit" size="small" onClick={onBondOtherSideAdd}>
+                Add
+              </Button>
+            }
+          >
+            Add the other side of bond &ldquo;{bondOtherSideToast?.result.bondName}&rdquo; to the chart?
           </Alert>
         </Snackbar>
         <Snackbar

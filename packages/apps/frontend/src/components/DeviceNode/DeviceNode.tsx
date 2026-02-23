@@ -33,7 +33,7 @@ export default function DeviceNode({
   data,
   selected,
 }: NodeProps<DeviceNodeData>) {
-  const { deviceOnChart, editMode, updateDeviceOnChart, onRemoveNode, onHandleContextMenu, greenPortIds } = data;
+  const { deviceOnChart, editMode, updateDeviceOnChart, onRemoveNode, onHandleContextMenu, greenPortIds, onPortAdded } = data;
   const { device, handles } = deviceOnChart;
   const { id: deviceId, name, ipAddress, model } = device;
   const { name: modelName, iconUrl, vendor } = model;
@@ -67,7 +67,7 @@ export default function DeviceNode({
     deviceId,
     inUse: false,
     createdAt: new Date(),
-    createdByUserId: "",
+    createdByUserId: undefined as any,
     updatedAt: null,
     updatedByUserId: null,
   };
@@ -125,6 +125,7 @@ export default function DeviceNode({
     });
     setIsEditorOpen(false);
     updateInternals(deviceId);
+    onPortAdded?.(port.id, deviceId, side);
   };
 
   const cancelInlineEditor = () => {
