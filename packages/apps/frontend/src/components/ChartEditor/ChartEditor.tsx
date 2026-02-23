@@ -1470,15 +1470,20 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         </Snackbar>
         <Snackbar
           open={bondSiblingToast !== null}
-          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
           <Alert
             severity="info"
             onClose={() => setBondSiblingToast(null)}
             action={
-              <Button color="inherit" size="small" onClick={onBondSiblingAdd}>
-                Add
-              </Button>
+              <>
+                <Button color="inherit" size="small" onClick={onBondSiblingAdd}>
+                  Add
+                </Button>
+                <Button color="inherit" size="small" onClick={() => setBondSiblingToast(null)}>
+                  Cancel
+                </Button>
+              </>
             }
           >
             Port is part of bond &ldquo;{bondSiblingToast?.result.bondName}&rdquo;.
@@ -1487,15 +1492,20 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         </Snackbar>
         <Snackbar
           open={bondOtherSideToast !== null}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
           <Alert
             severity="info"
             onClose={() => setBondOtherSideToast(null)}
             action={
-              <Button color="inherit" size="small" onClick={onBondOtherSideAdd}>
-                Add
-              </Button>
+              <>
+                <Button color="inherit" size="small" onClick={onBondOtherSideAdd}>
+                  Add
+                </Button>
+                <Button color="inherit" size="small" onClick={() => setBondOtherSideToast(null)}>
+                  Cancel
+                </Button>
+              </>
             }
           >
             Add the other side of bond &ldquo;{bondOtherSideToast?.result.bondName}&rdquo; to the chart?
@@ -1509,13 +1519,18 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             severity="info"
             onClose={() => setPairedToastOpen(false)}
             action={
-              <Button
-                color="inherit"
-                size="small"
-                onClick={() => { connectPairedPorts(); setPairedToastOpen(false); }}
-              >
-                Connect
-              </Button>
+              <>
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => { connectPairedPorts(); setPairedToastOpen(false); }}
+                >
+                  Connect
+                </Button>
+                <Button color="inherit" size="small" onClick={() => setPairedToastOpen(false)}>
+                  Cancel
+                </Button>
+              </>
             }
           >
             Paired ports detected — connect them?
