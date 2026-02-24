@@ -11,7 +11,13 @@ export enum  EditorMenuListKeys{
     DELETE_LINE = 'delete_line',
     BOND_LINES = 'bond_lines',
     EDIT_PORT = 'edit_port',
+    DELETE_PORT = 'delete_port',
     REMOVE_PORT = 'remove_port',
+    EDIT_PORTS = 'edit_ports',
     CONNECT_PAIRED_PORTS = 'connect_paired_ports',
+    MOVE_HANDLE_TO_LEFT = 'move_handle_to_left',
+    MOVE_HANDLE_TO_RIGHT = 'move_handle_to_right',
+    MOVE_HANDLE_TO_TOP = 'move_handle_to_top',
+    MOVE_HANDLE_TO_BOTTOM = 'move_handle_to_bottom',
 
 }

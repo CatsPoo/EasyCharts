@@ -56,7 +56,7 @@ export default function DeviceHandle({
   };
 
   const labelClass = [
-    "absolute text-[10px] leading-none px-1 py-0.5 rounded pointer-events-none select-none",
+    "absolute text-[10px] leading-none px-1 py-0.5 rounded select-none cursor-context-menu",
     isDark
       ? "bg-slate-700 text-white"
       : "bg-white text-slate-700 border border-slate-300",
@@ -139,6 +139,11 @@ export default function DeviceHandle({
         className={labelClass}
         style={labelStyle()}
         title={`${port.name} (${port.type.toUpperCase()})`}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onHandleContextMenu?.(e, { deviceId, portId: pid, role: "source", side });
+        }}
       >
         <div>{port.name}</div>
         <div className={`text-[9px] font-semibold rounded px-0.5 mt-0.5 ${portTypeBadgeColor[port.type] ?? ""}`}>
