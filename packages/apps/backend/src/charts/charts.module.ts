@@ -13,9 +13,11 @@ import { PortOnChartEntity } from './entities/portOnChart.entity';
 import { LineOnChartEntity } from './entities/lineonChart.emtity';
 import { AuthModule } from '../auth/auth.module';
 import { BondOnChartEntity } from './entities/BondOnChart.emtity';
+import { NoteOnChartEntity } from './entities/noteOnChart.entity';
 import { LinesOnChartService } from './lineOnChart.service';
 import { DevicesOnChartService } from './deviceOnChart.service';
 import { BondsOnChartService } from './bondOnChart.service';
+import { NotesOnChartService } from './noteOnChart.service';
 import { PortsOnChartService } from './portsOnChart.service';
 import { ChartShareEntity } from './entities/chartShare.entity';
 import { ChartInDirectoryEntity } from '../chartsDirectories/entities/chartsInDirectory.entity';
@@ -33,6 +35,7 @@ import { DirectoryShareEntity } from '../chartsDirectories/entities/directorySha
            PortOnChartEntity,
            LineOnChartEntity,
            BondOnChartEntity,
+           NoteOnChartEntity,
            ChartShareEntity,
            ChartInDirectoryEntity,
            DirectoryShareEntity,
@@ -42,7 +45,7 @@ import { DirectoryShareEntity } from '../chartsDirectories/entities/directorySha
         AuthModule
     ],
     controllers: [ChartsController],
-    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,PortsOnChartService],
+    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,PortsOnChartService],
     exports:[ChartsService]
 })
 export class ChartsModule {}

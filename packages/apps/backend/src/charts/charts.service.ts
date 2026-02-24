@@ -22,6 +22,7 @@ import { PortsService } from "../devices/ports.service";
 import { LineEntity } from "../lines/entities/line.entity";
 import { LinessService } from "../lines/lines.service";
 import { BondsOnChartService } from "./bondOnChart.service";
+import { NotesOnChartService } from "./noteOnChart.service";
 import { ChartLockFeilds } from "./chartLockes.types";
 import { DevicesOnChartService } from "./deviceOnChart.service";
 import { ChartEntity } from "./entities/chart.entity";
@@ -58,7 +59,8 @@ export class ChartsService {
     private readonly devicesOnChartService: DevicesOnChartService,
     private readonly linesOnChartService: LinesOnChartService,
     private readonly bondsOnChartService: BondsOnChartService,
-    private readonly portsOnChartService:PortsOnChartService,
+    private readonly notesOnChartService: NotesOnChartService,
+    private readonly portsOnChartService: PortsOnChartService,
   ) {}
 
   getLockFromChartEntity = (chartEntiy: ChartLockFeilds): ChartLock => {
@@ -95,7 +97,7 @@ export class ChartsService {
   convertChartEntityToChart = async (
     chartEnrity: ChartEntity
   ): Promise<Chart> => {
-    const { devicesOnChart, linesOnChart, bondOnChart,createdAt,createdByUserId,updatedAt,updatedByUserId, ...chartData } = chartEnrity;
+    const { devicesOnChart, linesOnChart, bondOnChart, notesOnChart, createdAt, createdByUserId, updatedAt, updatedByUserId, ...chartData } = chartEnrity;
     const convertedDeviceOnCharts: DeviceOnChart[] = [];
     for (const dl of devicesOnChart) convertedDeviceOnCharts.push(await this.devicesOnChartService.convertDeviceOnChartEntity(dl));
 
@@ -105,11 +107,16 @@ export class ChartsService {
     const convertedBondOnChart: BondOnChart[] = [];
     for (const b of bondOnChart ?? []) convertedBondOnChart.push(this.bondsOnChartService.convertBondOnChartEntity(b));
 
+    const convertedNotesOnChart = (notesOnChart ?? []).map((n) =>
+      this.notesOnChartService.convertNoteOnChartEntity(n)
+    );
+
     return {
       devicesOnChart: convertedDeviceOnCharts,
       linesOnChart: convertedLinesOnChart,
-      lock: this.getLockFromChartEntity(chartEnrity),
       bondsOnChart: convertedBondOnChart,
+      notesOnChart: convertedNotesOnChart,
+      lock: this.getLockFromChartEntity(chartEnrity),
       createdAt,
       createdByUserId,
       updatedAt,
@@ -137,6 +144,7 @@ export class ChartsService {
         },
         linesOnChart: { line: { sourcePort: true, targetPort: true } },
         bondOnChart: { bond: { members: true } },
+        notesOnChart: true,
       },
     });
     if (!chart) throw new NotFoundException("chart not found");
@@ -262,7 +270,7 @@ export class ChartsService {
       // 1) Meta (global)
       if (dto.name !== undefined) chart.name = dto.name;
       if (dto.description !== undefined) chart.description = dto.description ?? "";
-      chart.updatedByUserId=userId
+      chart.updatedByUserId = userId;
       if (dto.name !== undefined || dto.description !== undefined) await chartsRepo.save(chart);
 
       // 2) DevicesOnChart (instance only)
@@ -290,7 +298,12 @@ export class ChartsService {
         await this.bondsOnChartService.syncLinks(manager, chartId, dto.bondsOnChart); // instance
       }
 
-      // 5) Hard deletes (global)
+      // 5) Notes (instance only — no global entity)
+      if (dto.notesOnChart !== undefined) {
+        await this.notesOnChartService.syncNotes(manager, chartId, dto.notesOnChart);
+      }
+
+      // 6) Hard deletes (global)
       if (dto.deletes) {
         const { devices, lines, ports } = dto.deletes;
         if (devices?.length) await manager.getRepository(DeviceEntity).delete(devices);
@@ -298,7 +311,7 @@ export class ChartsService {
         if (ports?.length)   await manager.getRepository(PortEntity).delete(ports);
       }
 
-      // 6) Return fresh chart
+      // 7) Return fresh chart
       return chartsRepo.findOneOrFail({
         where: { id: chartId },
         relations: {
@@ -308,6 +321,7 @@ export class ChartsService {
           },
           linesOnChart: { line: { sourcePort: true, targetPort: true } },
           bondOnChart: { bond: { members: true } },
+          notesOnChart: true,
         },
       });
     });

@@ -8,6 +8,7 @@ import {
   type Handles,
   type Line,
   type LineOnChart,
+  type NoteOnChart,
   type Port,
   type Side
 } from "@easy-charts/easycharts-types";
@@ -58,6 +59,7 @@ import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interf
 import { BondBridgeNode, type BondBridgeNodeData } from "./BondBadgeNode";
 import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
+import NoteNode, { type NoteNodeData } from "./NoteNode";
 import { PortsEditorDialog } from "./PortsEditorDialog";
 import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
@@ -163,6 +165,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       () => ({
         device: DeviceNode,
         bridge: BondBridgeNode,
+        note: NoteNode,
       }),
       []
     );
@@ -227,6 +230,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
       e.preventDefault();
+      // Notes don't have a context menu
+      if (node.type === "note") return;
       const doc = chart.devicesOnChart.find((d) => d.device.id === node.id);
       const canConnectPaired = doc?.device.ports.some((p) => greenPortIdsRef.current.has(p.id)) ?? false;
       setCtx({
@@ -999,6 +1004,46 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart, greenPortIds, onPortAdded]
     );
 
+    const updateNoteContent = useCallback(
+      (id: string, content: string) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+            n.id === id ? { ...n, content } : n
+          ),
+        } as Chart));
+      },
+      [applyChartChange]
+    );
+
+    const updateNoteSize = useCallback(
+      (id: string, width: number, height: number) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+            n.id === id ? { ...n, size: { width, height } } : n
+          ),
+        } as Chart));
+      },
+      [applyChartChange]
+    );
+
+    const convertNoteToNode = useCallback(
+      (note: NoteOnChart): Node => ({
+        id: note.id,
+        type: "note",
+        position: note.position,
+        style: { width: note.size.width, height: note.size.height },
+        data: {
+          note,
+          editMode,
+          onContentChange: updateNoteContent,
+          onSizeChange: updateNoteSize,
+        } as NoteNodeData,
+      }),
+      [editMode, updateNoteContent, updateNoteSize]
+    );
+
     const { data: availableDevicesResponse } = useListAssets("devices", {
       page: 0,
       pageSize: 100000,
@@ -1182,9 +1227,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             : base;
         });
         const { bridgeNodes } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
-        return [...devicesNodes, ...bridgeNodes];
+        const noteNodes: Node[] = (chart.notesOnChart ?? []).map(convertNoteToNode);
+        return [...devicesNodes, ...bridgeNodes, ...noteNodes];
       });
-    }, [buildBridgeView, chart.bondsOnChart, chart.devicesOnChart, chart.linesOnChart, convertDeviceToNode, setNodes]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, convertDeviceToNode, convertNoteToNode, setNodes]);
 
     useEffect(() => {
       const { displayEdges } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
@@ -1379,6 +1425,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 ),
               } as Chart)
           );
+        } else if (node.type === "note") {
+          applyChartChange((prev) => ({
+            ...prev,
+            notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+              n.id === node.id ? { ...n, position: node.position } : n
+            ),
+          } as Chart));
         }
       },
       [applyChartChange]
@@ -1388,6 +1441,36 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       async (e: React.DragEvent) => {
         if (!editMode || !reactFlowWrapper.current) return;
         e.preventDefault();
+
+        // ── Chart element drop (e.g. Note) ──
+        const elementRaw = e.dataTransfer.getData("application/reactflow-element");
+        if (elementRaw) {
+          try {
+            const { type } = JSON.parse(elementRaw) as { type: string };
+            if (type === "note") {
+              const bounds = reactFlowWrapper.current.getBoundingClientRect();
+              const position = project({
+                x: e.clientX - bounds.left,
+                y: e.clientY - bounds.top,
+              });
+              const newNote: NoteOnChart = {
+                id: uuidv4(),
+                content: "",
+                position,
+                size: { width: 220, height: 130 },
+              };
+              applyChartChange((prev) => ({
+                ...prev,
+                notesOnChart: [...(prev.notesOnChart ?? []), newNote],
+              } as Chart));
+            }
+          } catch {
+            // ignore malformed element data
+          }
+          return;
+        }
+
+        // ── Device drop ──
         const deviceId = e.dataTransfer.getData("application/reactflow");
         if (!deviceId) return;
 
@@ -1635,6 +1718,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         chart.id,
         chart.linesOnChart,
         chart.name,
+        chart.notesOnChart,
         setDirty,
         updateMut,
       ]
