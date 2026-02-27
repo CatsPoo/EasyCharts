@@ -12,72 +12,148 @@ export interface CloudNodeData {
 
 const handleStyle = { width: 10, height: 10, borderRadius: 5 };
 
+// Material-design cloud path normalised to a 24×16 viewBox so it fills
+// the node rectangle cleanly via preserveAspectRatio="none".
+// Original icon viewBox is 24×24; the cloud lives at y=4–20, so we
+// shift it up by 4 to sit at y=0–16.
+const CLOUD_PATH =
+  "M19.35 6.04A7.49 7.49 0 0 0 12 0C9.11 0 6.6 1.64 5.35 4.04A5.994 5.994 0 0 0 0 10c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z";
+
 function CloudNode({ data, selected }: NodeProps<CloudNodeData>) {
   const { cloudOnChart, editMode, onRemove } = data;
   const { isDark } = useThemeMode();
 
-  const bg = isDark ? "#0c2340" : "#e0f2fe";
-  const border = isDark ? "#1e6fa8" : "#38bdf8";
-  const headerBg = isDark ? "#0e3258" : "#bae6fd";
+  const fill   = isDark ? "#0c2340" : "#e0f2fe";
+  const stroke = selected ? "#6366f1" : isDark ? "#38bdf8" : "#0ea5e9";
   const textColor = isDark ? "#93c5fd" : "#0369a1";
+  const subColor  = isDark ? "#7dd3fc" : "#0c4a6e";
 
   return (
-    <div
-      className="w-full h-full flex flex-col rounded-xl overflow-hidden relative"
-      style={{
-        background: bg,
-        border: `2px solid ${border}`,
-        boxShadow: selected
-          ? "0 0 0 2px #6366f1"
-          : isDark
-          ? "2px 2px 8px rgba(0,0,0,0.5)"
-          : "2px 2px 8px rgba(56,189,248,0.25)",
-      }}
-    >
+    <div style={{ width: "100%", height: "100%", position: "relative" }}>
       {editMode && (
         <NodeResizer
           minWidth={140}
           minHeight={80}
-          lineStyle={{ borderColor: "#38bdf8" }}
-          handleStyle={{ background: "#38bdf8", border: "none", borderRadius: 2, width: 8, height: 8 }}
+          lineStyle={{ borderColor: stroke }}
+          handleStyle={{
+            background: stroke,
+            border: "none",
+            borderRadius: 2,
+            width: 8,
+            height: 8,
+          }}
         />
       )}
 
-      {/* Header */}
-      <div
-        className="flex items-center gap-1.5 px-2 py-1.5 flex-none select-none"
-        style={{ background: headerBg, borderBottom: `1px solid ${border}` }}
+      {/* ── Cloud-shaped background ── */}
+      <svg
+        viewBox="0 0 24 16"
+        preserveAspectRatio="none"
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
       >
-        {/* Cloud icon */}
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: textColor, flexShrink: 0 }}>
-          <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
-        </svg>
-        <span className="text-[11px] font-semibold truncate flex-1" style={{ color: textColor }}>
-          {cloudOnChart.cloud.name}
-        </span>
-        {editMode && (
-          <button
-            className="flex-none ml-1 rounded hover:bg-red-500 hover:text-white transition-colors px-1 text-[10px]"
-            style={{ color: textColor }}
-            onClick={(e) => { e.stopPropagation(); onRemove(cloudOnChart.cloudId); }}
-            title="Remove cloud from chart"
+        <path
+          d={CLOUD_PATH}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth="1.5"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+
+      {/* ── Content ── */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          // nudge content down into the wider "body" of the cloud
+          paddingTop: "22%",
+          paddingLeft: 10,
+          paddingRight: 10,
+          gap: 3,
+          pointerEvents: "none",
+        }}
+      >
+        {/* Name row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            maxWidth: "100%",
+            pointerEvents: "auto",
+          }}
+        >
+          {/* Small cloud icon */}
+          <svg
+            width="11"
+            height="11"
+            viewBox="0 0 24 24"
+            fill={textColor}
+            style={{ flexShrink: 0 }}
           >
-            ✕
-          </button>
+            <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
+          </svg>
+
+          <span
+            style={{
+              color: textColor,
+              fontWeight: 700,
+              fontSize: 11,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {cloudOnChart.cloud.name}
+          </span>
+
+          {editMode && (
+            <button
+              style={{
+                color: textColor,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: "0 2px",
+                fontSize: 10,
+                lineHeight: 1,
+                flexShrink: 0,
+                pointerEvents: "auto",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(cloudOnChart.cloudId);
+              }}
+              title="Remove cloud from chart"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Optional description */}
+        {cloudOnChart.cloud.description && (
+          <span
+            style={{
+              color: subColor,
+              fontSize: 9,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "80%",
+              pointerEvents: "auto",
+            }}
+          >
+            {cloudOnChart.cloud.description}
+          </span>
         )}
       </div>
 
-      {/* Description (if any) */}
-      {cloudOnChart.cloud.description && (
-        <div
-          className="flex-1 px-2 py-1.5 text-[10px] overflow-auto"
-          style={{ color: isDark ? "#7dd3fc" : "#0c4a6e" }}
-        >
-          {cloudOnChart.cloud.description}
-        </div>
-      )}
-
-      {/* Handles — target type so device ports (source) connect to clouds */}
+      {/* ── React Flow handles (target — device sources connect to these) ── */}
       <Handle type="target" position={Position.Left}   id="left"   style={handleStyle} />
       <Handle type="target" position={Position.Right}  id="right"  style={handleStyle} />
       <Handle type="target" position={Position.Top}    id="top"    style={handleStyle} />
