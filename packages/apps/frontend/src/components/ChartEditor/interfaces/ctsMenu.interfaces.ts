@@ -1,4 +1,4 @@
-type CtxKind = 'common'|'pane' | 'node' | 'edge' | 'handle' | 'note';
+type CtxKind = 'common'|'pane' | 'node' | 'edge' | 'handle' | 'note' | 'bond';
 interface CtxState  {
   open: boolean;
   x: number;

@@ -1,6 +1,6 @@
 import { useReactFlow, type Edge } from "reactflow";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 
 export const NOTE_COLORS: { key: string; light: string; dark: string; label: string }[] = [
@@ -12,6 +12,17 @@ export const NOTE_COLORS: { key: string; light: string; dark: string; label: str
   { key: "purple", light: "#ede9fe", dark: "#2a1a3d", label: "Purple" },
   { key: "gray",   light: "#f1f5f9", dark: "#1e293b", label: "Gray"   },
 ];
+
+// Vibrant swatch dots shown next to each label in the color list
+const NOTE_SWATCH: Record<string, string> = {
+  yellow: "#fde047",
+  orange: "#fb923c",
+  pink:   "#f472b6",
+  blue:   "#60a5fa",
+  green:  "#4ade80",
+  purple: "#a78bfa",
+  gray:   "#94a3b8",
+};
 
 interface EditorMenuListProps {
   kind: CtxKind;
@@ -40,6 +51,19 @@ export default function EditorMenuList({
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
   const [colorSubmenuOpen, setColorSubmenuOpen] = useState(false);
   const { isDark } = useThemeMode();
+  const colorMenuRef = useRef<HTMLLIElement>(null);
+
+  // Close color submenu on outside click
+  useEffect(() => {
+    if (!colorSubmenuOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (colorMenuRef.current && !colorMenuRef.current.contains(e.target as Node)) {
+        setColorSubmenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [colorSubmenuOpen]);
 
   const itemsByKind: Record<CtxKind, Array<{ key: EditorMenuListKeys; label: string }>> = {
     common: [
@@ -70,6 +94,11 @@ export default function EditorMenuList({
     ],
     note: [
       { key: EditorMenuListKeys.DELETE_NOTE, label: "Delete Note" },
+    ],
+    bond: [
+      { key: EditorMenuListKeys.EDIT_BOND, label: "Edit" },
+      { key: EditorMenuListKeys.UNBOND_PORTS, label: "Unbond Ports" },
+      { key: EditorMenuListKeys.REMOVE_BOND_FROM_CHART, label: "Remove from Chart" },
     ],
   };
 
@@ -148,39 +177,60 @@ export default function EditorMenuList({
         </li>
       )}
 
-      {/* Color submenu (note) */}
+      {/* Color submenu (note) — click-based so native color picker can open without closing the panel */}
       {kind === "note" && (
-        <li
-          className="relative"
-          onMouseEnter={() => setColorSubmenuOpen(true)}
-          onMouseLeave={() => setColorSubmenuOpen(false)}
-        >
-          <button className={`${btnClass} flex justify-between items-center`}>
+        <li ref={colorMenuRef} className="relative">
+          <button
+            className={`${btnClass} flex justify-between items-center`}
+            onClick={() => setColorSubmenuOpen((v) => !v)}
+          >
             Color...
             <span className="ml-2 text-slate-400">›</span>
           </button>
+
           {colorSubmenuOpen && (
-            <div
+            <ul
               className={[
-                "absolute left-full top-0 rounded-md border shadow-lg z-[10000] p-2",
+                "absolute left-full top-0 rounded-md border shadow-lg py-1 z-[10000] min-w-[140px]",
                 isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200",
               ].join(" ")}
             >
-              <div className="grid grid-cols-4 gap-1.5">
-                {NOTE_COLORS.map((c) => (
+              {NOTE_COLORS.map((c) => (
+                <li key={c.key}>
                   <button
-                    key={c.key}
-                    title={c.label}
-                    onClick={() => onNoteColorChange?.(c.key)}
-                    className={[
-                      "w-6 h-6 rounded border hover:scale-110 transition-transform",
-                      isDark ? "border-slate-600" : "border-slate-300",
-                    ].join(" ")}
-                    style={{ background: isDark ? c.dark : c.light }}
+                    className={`${btnClass} flex items-center gap-2`}
+                    onClick={() => { onNoteColorChange?.(c.key); setColorSubmenuOpen(false); }}
+                  >
+                    <span
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ background: NOTE_SWATCH[c.key] }}
+                    />
+                    {c.label}
+                  </button>
+                </li>
+              ))}
+
+              <li><hr className={dividerClass} /></li>
+
+              <li>
+                <button
+                  className={`${btnClass} flex items-center gap-2`}
+                  onClick={() => {
+                    setColorSubmenuOpen(false);
+                    onAction(EditorMenuListKeys.EDIT_NOTE_COLOR);
+                  }}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{
+                      background:
+                        "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)",
+                    }}
                   />
-                ))}
-              </div>
-            </div>
+                  Custom…
+                </button>
+              </li>
+            </ul>
           )}
         </li>
       )}

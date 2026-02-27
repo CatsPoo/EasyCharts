@@ -21,4 +21,7 @@ export enum  EditorMenuListKeys{
     MOVE_HANDLE_TO_BOTTOM = 'move_handle_to_bottom',
     DELETE_NOTE = 'delete_note',
     EDIT_NOTE_COLOR = 'edit_note_color',
+    EDIT_BOND = 'edit_bond',
+    UNBOND_PORTS = 'unbond_ports',
+    REMOVE_BOND_FROM_CHART = 'remove_bond_from_chart',
 }

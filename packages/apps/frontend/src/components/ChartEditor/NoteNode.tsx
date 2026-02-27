@@ -28,13 +28,23 @@ function NoteNode({ data, selected }: NodeProps<NoteNodeData>) {
   const { isDark } = useThemeMode();
 
   const colorKey = note.color ?? "yellow";
-  const palette = NOTE_COLORS.find((c) => c.key === colorKey) ?? NOTE_COLORS[0];
-  const accent = ACCENT[colorKey] ?? ACCENT["yellow"];
+  const isPreset = NOTE_COLORS.some((c) => c.key === colorKey);
 
-  const bg = isDark ? palette.dark : palette.light;
-  const border = isDark ? accent.borderDark : accent.borderLight;
-  const headerBg = isDark ? accent.headerDark : accent.headerLight;
-  const iconColor = isDark ? accent.iconDark : accent.iconLight;
+  let bg: string, border: string, headerBg: string, iconColor: string;
+  if (isPreset) {
+    const palette = NOTE_COLORS.find((c) => c.key === colorKey)!;
+    const accent = ACCENT[colorKey] ?? ACCENT["yellow"];
+    bg = isDark ? palette.dark : palette.light;
+    border = isDark ? accent.borderDark : accent.borderLight;
+    headerBg = isDark ? accent.headerDark : accent.headerLight;
+    iconColor = isDark ? accent.iconDark : accent.iconLight;
+  } else {
+    // colorKey is a raw hex value e.g. "#4a90d9"
+    bg = isDark ? `${colorKey}35` : `${colorKey}20`;
+    headerBg = isDark ? `${colorKey}66` : `${colorKey}99`;
+    border = colorKey;
+    iconColor = colorKey;
+  }
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {

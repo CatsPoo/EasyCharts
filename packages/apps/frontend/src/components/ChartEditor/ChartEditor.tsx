@@ -57,6 +57,7 @@ import { ConfirmDialog } from "../DeleteAlertDialog";
 import DeviceNode from "../DeviceNode/DeviceNode";
 import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";
 import { BondBridgeNode, type BondBridgeNodeData } from "./BondBadgeNode";
+import { EditBondDialog } from "./EditBondDialog";
 import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
 import NoteNode, { type NoteNodeData } from "./NoteNode";
@@ -118,6 +119,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [confimDialogTitle, setConfirmDialogTitle] = useState<string>("");
     const [confimDialogDescription, setConfirmDialogDescription] =
       useState<string>("");
+    const [colorPickerNoteId, setColorPickerNoteId] = useState<string | null>(null);
+    const [colorPickerValue, setColorPickerValue] = useState<string>("#4ade80");
+    const [editBondTarget, setEditBondTarget] = useState<{ bondId: string; bondName: string } | null>(null);
 
     const actionsHistory = useRef<Chart[]>([chart]);
     const actionsHistoryIndex = useRef<number>(
@@ -232,6 +236,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       e.preventDefault();
       if (node.type === "note") {
         setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "note", payload: { noteId: node.id } });
+        return;
+      }
+      if (node.type === "bridge") {
+        const bondId = node.id.replace("bridge-", "");
+        const bondOnChart = chart.bondsOnChart.find((b) => b.bond.id === bondId);
+        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "bond", payload: { bondId, bondName: bondOnChart?.bond.name ?? "" } });
         return;
       }
       const doc = chart.devicesOnChart.find((d) => d.device.id === node.id);
@@ -488,6 +498,53 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         setEditLineDialogOpen(true);
       },
       [setEditLineDialogOpen, setSelectedEditLine]
+    );
+
+    const onUnbondPorts = useCallback(
+      (bondId: string) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          bondsOnChart: (prev.bondsOnChart ?? []).filter((b) => b.bond.id !== bondId),
+        } as Chart));
+        setNodes((nds) => nds.filter((n) => n.id !== `bridge-${bondId}`));
+      },
+      [applyChartChange, setNodes]
+    );
+
+    const onRemoveBondFromChart = useCallback(
+      (bondId: string) => {
+        const bondOnChart = chart.bondsOnChart.find((b) => b.bond.id === bondId);
+        if (!bondOnChart) return;
+        const memberLineIds = new Set(bondOnChart.bond.membersLines);
+        const usedPortIds = new Set<string>();
+        for (const loc of chart.linesOnChart) {
+          if (memberLineIds.has(loc.line.id)) {
+            usedPortIds.add(loc.line.sourcePort.id);
+            usedPortIds.add(loc.line.targetPort.id);
+          }
+        }
+        applyChartChange((prev) => ({
+          ...prev,
+          bondsOnChart: (prev.bondsOnChart ?? []).filter((b) => b.bond.id !== bondId),
+          linesOnChart: prev.linesOnChart.filter((l) => !memberLineIds.has(l.line.id)),
+          devicesOnChart: prev.devicesOnChart.map((doc) => ({
+            ...doc,
+            device: {
+              ...doc.device,
+              ports: doc.device.ports.map((p) =>
+                usedPortIds.has(p.id) ? { ...p, inUse: false } : p
+              ),
+            },
+          })),
+        } as Chart));
+        setNodes((nds) => nds.filter((n) => n.id !== `bridge-${bondId}`));
+        setEdges((eds) => eds.filter((e) =>
+          !e.id.endsWith("-a") && !e.id.endsWith("-b")
+            ? true
+            : !memberLineIds.has(e.id.replace(/-[ab]$/, ""))
+        ));
+      },
+      [chart, applyChartChange, setNodes, setEdges]
     );
 
     const onDeletePort = useCallback(
@@ -1471,6 +1528,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               const newNote: NoteOnChart = {
                 id: uuidv4(),
                 content: "",
+                color: "green",
                 position,
                 size: { width: 220, height: 130 },
               };
@@ -1703,11 +1761,31 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             } as Chart));
             setNodes((nds) => nds.filter((n) => n.id !== payload.noteId));
             break;
+
+          case EditorMenuListKeys.EDIT_NOTE_COLOR: {
+            const note = (chart.notesOnChart ?? []).find((n) => n.id === payload.noteId);
+            const currentColor = note?.color ?? "green";
+            setColorPickerValue(currentColor.startsWith("#") ? currentColor : "#4ade80");
+            setColorPickerNoteId(payload.noteId);
+            break;
+          }
+
+          case EditorMenuListKeys.EDIT_BOND:
+            setEditBondTarget({ bondId: payload.bondId, bondName: payload.bondName });
+            break;
+
+          case EditorMenuListKeys.UNBOND_PORTS:
+            onUnbondPorts(payload.bondId);
+            break;
+
+          case EditorMenuListKeys.REMOVE_BOND_FROM_CHART:
+            onRemoveBondFromChart(payload.bondId);
+            break;
         }
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, applyChartChange, setNodes]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, applyChartChange, setNodes, setColorPickerNoteId, setColorPickerValue, onUnbondPorts, onRemoveBondFromChart]
     );
 
     const onSave = useCallback(
@@ -1810,6 +1888,52 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               </div>
             </>
           )}
+
+          {/* Custom note colour picker dialog */}
+          {colorPickerNoteId && (
+            <div className="fixed inset-0 z-[100000] flex items-center justify-center">
+              <div className="fixed inset-0 bg-black/40" onClick={() => setColorPickerNoteId(null)} />
+              <div
+                className={[
+                  "relative rounded-xl border shadow-2xl p-5 flex flex-col gap-4 min-w-[220px]",
+                  isDark
+                    ? "bg-slate-800 border-slate-600 text-slate-100"
+                    : "bg-white border-slate-200 text-slate-900",
+                ].join(" ")}
+              >
+                <p className="text-sm font-semibold">Pick note color</p>
+                <input
+                  type="color"
+                  value={colorPickerValue}
+                  onChange={(e) => setColorPickerValue(e.target.value)}
+                  className="w-full h-12 cursor-pointer rounded-md"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    className={[
+                      "px-3 py-1.5 text-sm rounded-md border",
+                      isDark
+                        ? "border-slate-600 hover:bg-slate-700"
+                        : "border-slate-300 hover:bg-slate-100",
+                    ].join(" ")}
+                    onClick={() => setColorPickerNoteId(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-3 py-1.5 text-sm rounded-md bg-indigo-500 hover:bg-indigo-600 text-white"
+                    onClick={() => {
+                      onNoteColorChange(colorPickerNoteId, colorPickerValue);
+                      setColorPickerNoteId(null);
+                    }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <ReactFlow
             nodeTypes={nodeTypes}
             nodes={nodes}
@@ -1839,6 +1963,23 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           line={selectedEditLine ?? edges[0]}
           onClose={onEditLineDialogClose}
           onSubmit={onEditLineDialgSubmit}
+        />
+        <EditBondDialog
+          open={editBondTarget !== null}
+          bondName={editBondTarget?.bondName ?? ""}
+          onClose={() => setEditBondTarget(null)}
+          onSubmit={(name) => {
+            if (!editBondTarget) return;
+            applyChartChange((prev) => ({
+              ...prev,
+              bondsOnChart: (prev.bondsOnChart ?? []).map((b) =>
+                b.bond.id === editBondTarget.bondId
+                  ? { ...b, bond: { ...b.bond, name } }
+                  : b
+              ),
+            } as Chart));
+            setEditBondTarget(null);
+          }}
         />
         <PortsEditorDialog
           open={portsEditorDevice !== null}
