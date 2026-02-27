@@ -8,6 +8,7 @@ import {
   type Handles,
   type Line,
   type LineOnChart,
+  type NoteOnChart,
   type Port,
   type Side
 } from "@easy-charts/easycharts-types";
@@ -56,8 +57,10 @@ import { ConfirmDialog } from "../DeleteAlertDialog";
 import DeviceNode from "../DeviceNode/DeviceNode";
 import type { DeviceNodeData } from "../DeviceNode/interfaces/deviceModes.interfaces";
 import { BondBridgeNode, type BondBridgeNodeData } from "./BondBadgeNode";
+import { EditBondDialog } from "./EditBondDialog";
 import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
+import NoteNode, { type NoteNodeData } from "./NoteNode";
 import { PortsEditorDialog } from "./PortsEditorDialog";
 import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
@@ -116,6 +119,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [confimDialogTitle, setConfirmDialogTitle] = useState<string>("");
     const [confimDialogDescription, setConfirmDialogDescription] =
       useState<string>("");
+    const [colorPickerNoteId, setColorPickerNoteId] = useState<string | null>(null);
+    const [colorPickerValue, setColorPickerValue] = useState<string>("#4ade80");
+    const [editBondTarget, setEditBondTarget] = useState<{ bondId: string; bondName: string } | null>(null);
 
     const actionsHistory = useRef<Chart[]>([chart]);
     const actionsHistoryIndex = useRef<number>(
@@ -163,6 +169,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       () => ({
         device: DeviceNode,
         bridge: BondBridgeNode,
+        note: NoteNode,
       }),
       []
     );
@@ -176,6 +183,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       ports: new Set(),
       lines: new Set(),
     });
+    const applyChartChangeRef = useRef(applyChartChange);
+    useEffect(() => { applyChartChangeRef.current = applyChartChange; }, [applyChartChange]);
 
     const dirtyRef = useRef(false);
     const setDirty = useCallback(
@@ -227,6 +236,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
       e.preventDefault();
+      if (node.type === "note") {
+        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "note", payload: { noteId: node.id } });
+        return;
+      }
+      if (node.type === "bridge") {
+        const bondId = node.id.replace("bridge-", "");
+        const bondOnChart = chart.bondsOnChart.find((b) => b.bond.id === bondId);
+        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "bond", payload: { bondId, bondName: bondOnChart?.bond.name ?? "" } });
+        return;
+      }
       const doc = chart.devicesOnChart.find((d) => d.device.id === node.id);
       const canConnectPaired = doc?.device.ports.some((p) => greenPortIdsRef.current.has(p.id)) ?? false;
       setCtx({
@@ -481,6 +500,53 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         setEditLineDialogOpen(true);
       },
       [setEditLineDialogOpen, setSelectedEditLine]
+    );
+
+    const onUnbondPorts = useCallback(
+      (bondId: string) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          bondsOnChart: (prev.bondsOnChart ?? []).filter((b) => b.bond.id !== bondId),
+        } as Chart));
+        setNodes((nds) => nds.filter((n) => n.id !== `bridge-${bondId}`));
+      },
+      [applyChartChange, setNodes]
+    );
+
+    const onRemoveBondFromChart = useCallback(
+      (bondId: string) => {
+        const bondOnChart = chart.bondsOnChart.find((b) => b.bond.id === bondId);
+        if (!bondOnChart) return;
+        const memberLineIds = new Set(bondOnChart.bond.membersLines);
+        const usedPortIds = new Set<string>();
+        for (const loc of chart.linesOnChart) {
+          if (memberLineIds.has(loc.line.id)) {
+            usedPortIds.add(loc.line.sourcePort.id);
+            usedPortIds.add(loc.line.targetPort.id);
+          }
+        }
+        applyChartChange((prev) => ({
+          ...prev,
+          bondsOnChart: (prev.bondsOnChart ?? []).filter((b) => b.bond.id !== bondId),
+          linesOnChart: prev.linesOnChart.filter((l) => !memberLineIds.has(l.line.id)),
+          devicesOnChart: prev.devicesOnChart.map((doc) => ({
+            ...doc,
+            device: {
+              ...doc.device,
+              ports: doc.device.ports.map((p) =>
+                usedPortIds.has(p.id) ? { ...p, inUse: false } : p
+              ),
+            },
+          })),
+        } as Chart));
+        setNodes((nds) => nds.filter((n) => n.id !== `bridge-${bondId}`));
+        setEdges((eds) => eds.filter((e) =>
+          !e.id.endsWith("-a") && !e.id.endsWith("-b")
+            ? true
+            : !memberLineIds.has(e.id.replace(/-[ab]$/, ""))
+        ));
+      },
+      [chart, applyChartChange, setNodes, setEdges]
     );
 
     const onDeletePort = useCallback(
@@ -999,6 +1065,59 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart, greenPortIds, onPortAdded]
     );
 
+    const updateNoteContent = useCallback(
+      (id: string, content: string) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+            n.id === id ? { ...n, content } : n
+          ),
+        } as Chart));
+      },
+      [applyChartChange]
+    );
+
+    const updateNoteSize = useCallback(
+      (id: string, width: number, height: number) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+            n.id === id ? { ...n, size: { width, height } } : n
+          ),
+        } as Chart));
+      },
+      [applyChartChange]
+    );
+
+    const onNoteColorChange = useCallback(
+      (noteId: string, colorKey: string) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+            n.id === noteId ? { ...n, color: colorKey } : n
+          ),
+        } as Chart));
+        closeCtx();
+      },
+      [applyChartChange, closeCtx]
+    );
+
+    const convertNoteToNode = useCallback(
+      (note: NoteOnChart): Node => ({
+        id: note.id,
+        type: "note",
+        position: note.position,
+        style: { width: note.size.width, height: note.size.height },
+        data: {
+          note,
+          editMode,
+          onContentChange: updateNoteContent,
+          onSizeChange: updateNoteSize,
+        } as NoteNodeData,
+      }),
+      [editMode, updateNoteContent, updateNoteSize]
+    );
+
     const { data: availableDevicesResponse } = useListAssets("devices", {
       page: 0,
       pageSize: 100000,
@@ -1080,8 +1199,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             bond: b.bond,
             orientation,
             onRename: (txt: string) => {
-              //setBridges(prev => prev.map(x => x.id === b.id ? { ...x, name: txt } : x));
-              setMadeChanges(true);
+              const bondId = b.bond.id;
+              applyChartChangeRef.current((prev) => ({
+                ...prev,
+                bondsOnChart: (prev.bondsOnChart ?? []).map((boc) =>
+                  boc.bond.id === bondId ? { ...boc, bond: { ...boc.bond, name: txt } } : boc
+                ),
+              } as Chart));
             },
           },
         } as Node);
@@ -1182,9 +1306,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             : base;
         });
         const { bridgeNodes } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
-        return [...devicesNodes, ...bridgeNodes];
+        const noteNodes: Node[] = (chart.notesOnChart ?? []).map(convertNoteToNode);
+        return [...devicesNodes, ...bridgeNodes, ...noteNodes];
       });
-    }, [buildBridgeView, chart.bondsOnChart, chart.devicesOnChart, chart.linesOnChart, convertDeviceToNode, setNodes]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, convertDeviceToNode, convertNoteToNode, setNodes]);
 
     useEffect(() => {
       const { displayEdges } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
@@ -1379,6 +1504,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 ),
               } as Chart)
           );
+        } else if (node.type === "note") {
+          applyChartChange((prev) => ({
+            ...prev,
+            notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+              n.id === node.id ? { ...n, position: node.position } : n
+            ),
+          } as Chart));
         }
       },
       [applyChartChange]
@@ -1388,6 +1520,37 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       async (e: React.DragEvent) => {
         if (!editMode || !reactFlowWrapper.current) return;
         e.preventDefault();
+
+        // ── Chart element drop (e.g. Note) ──
+        const elementRaw = e.dataTransfer.getData("application/reactflow-element");
+        if (elementRaw) {
+          try {
+            const { type } = JSON.parse(elementRaw) as { type: string };
+            if (type === "note") {
+              const bounds = reactFlowWrapper.current.getBoundingClientRect();
+              const position = project({
+                x: e.clientX - bounds.left,
+                y: e.clientY - bounds.top,
+              });
+              const newNote: NoteOnChart = {
+                id: uuidv4(),
+                content: "",
+                color: "green",
+                position,
+                size: { width: 220, height: 130 },
+              };
+              applyChartChange((prev) => ({
+                ...prev,
+                notesOnChart: [...(prev.notesOnChart ?? []), newNote],
+              } as Chart));
+            }
+          } catch {
+            // ignore malformed element data
+          }
+          return;
+        }
+
+        // ── Device drop ──
         const deviceId = e.dataTransfer.getData("application/reactflow");
         if (!deviceId) return;
 
@@ -1597,11 +1760,39 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           case EditorMenuListKeys.MOVE_HANDLE_TO_BOTTOM:
             onMoveHandle(payload.deviceId, payload.portId, payload.side, 'bottom');
             break;
+
+          case EditorMenuListKeys.DELETE_NOTE:
+            applyChartChange((prev) => ({
+              ...prev,
+              notesOnChart: (prev.notesOnChart ?? []).filter((n) => n.id !== payload.noteId),
+            } as Chart));
+            setNodes((nds) => nds.filter((n) => n.id !== payload.noteId));
+            break;
+
+          case EditorMenuListKeys.EDIT_NOTE_COLOR: {
+            const note = (chart.notesOnChart ?? []).find((n) => n.id === payload.noteId);
+            const currentColor = note?.color ?? "green";
+            setColorPickerValue(currentColor.startsWith("#") ? currentColor : "#4ade80");
+            setColorPickerNoteId(payload.noteId);
+            break;
+          }
+
+          case EditorMenuListKeys.EDIT_BOND:
+            setEditBondTarget({ bondId: payload.bondId, bondName: payload.bondName });
+            break;
+
+          case EditorMenuListKeys.UNBOND_PORTS:
+            onUnbondPorts(payload.bondId);
+            break;
+
+          case EditorMenuListKeys.REMOVE_BOND_FROM_CHART:
+            onRemoveBondFromChart(payload.bondId);
+            break;
         }
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, applyChartChange, setNodes, setColorPickerNoteId, setColorPickerValue, onUnbondPorts, onRemoveBondFromChart]
     );
 
     const onSave = useCallback(
@@ -1635,6 +1826,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         chart.id,
         chart.linesOnChart,
         chart.name,
+        chart.notesOnChart,
         setDirty,
         updateMut,
       ]
@@ -1693,6 +1885,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 <MenuList
                   kind={ctx.kind}
                   onAction={onCtxAction}
+                  onNoteColorChange={ctx.kind === "note"
+                    ? (colorKey) => onNoteColorChange(ctx.payload?.noteId, colorKey)
+                    : undefined}
                   isRedoEnabled={canRedo}
                   isUndoEnabled={canUndo}
                   canConnectPaired={ctx.canConnectPaired ?? false}
@@ -1700,6 +1895,52 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               </div>
             </>
           )}
+
+          {/* Custom note colour picker dialog */}
+          {colorPickerNoteId && (
+            <div className="fixed inset-0 z-[100000] flex items-center justify-center">
+              <div className="fixed inset-0 bg-black/40" onClick={() => setColorPickerNoteId(null)} />
+              <div
+                className={[
+                  "relative rounded-xl border shadow-2xl p-5 flex flex-col gap-4 min-w-[220px]",
+                  isDark
+                    ? "bg-slate-800 border-slate-600 text-slate-100"
+                    : "bg-white border-slate-200 text-slate-900",
+                ].join(" ")}
+              >
+                <p className="text-sm font-semibold">Pick note color</p>
+                <input
+                  type="color"
+                  value={colorPickerValue}
+                  onChange={(e) => setColorPickerValue(e.target.value)}
+                  className="w-full h-12 cursor-pointer rounded-md"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    className={[
+                      "px-3 py-1.5 text-sm rounded-md border",
+                      isDark
+                        ? "border-slate-600 hover:bg-slate-700"
+                        : "border-slate-300 hover:bg-slate-100",
+                    ].join(" ")}
+                    onClick={() => setColorPickerNoteId(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-3 py-1.5 text-sm rounded-md bg-indigo-500 hover:bg-indigo-600 text-white"
+                    onClick={() => {
+                      onNoteColorChange(colorPickerNoteId, colorPickerValue);
+                      setColorPickerNoteId(null);
+                    }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <ReactFlow
             nodeTypes={nodeTypes}
             nodes={nodes}
@@ -1729,6 +1970,23 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           line={selectedEditLine ?? edges[0]}
           onClose={onEditLineDialogClose}
           onSubmit={onEditLineDialgSubmit}
+        />
+        <EditBondDialog
+          open={editBondTarget !== null}
+          bondName={editBondTarget?.bondName ?? ""}
+          onClose={() => setEditBondTarget(null)}
+          onSubmit={(name) => {
+            if (!editBondTarget) return;
+            applyChartChange((prev) => ({
+              ...prev,
+              bondsOnChart: (prev.bondsOnChart ?? []).map((b) =>
+                b.bond.id === editBondTarget.bondId
+                  ? { ...b, bond: { ...b.bond, name } }
+                  : b
+              ),
+            } as Chart));
+            setEditBondTarget(null);
+          }}
         />
         <PortsEditorDialog
           open={portsEditorDevice !== null}

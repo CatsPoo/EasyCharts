@@ -64,30 +64,32 @@ export default function DeviceHandle({
 
   const labelStyle = (): CSSProperties => {
     // v is %: y for left/right, x for top/bottom
+    // Keep 14px gap from handle edge so the React Flow edge reconnect
+    // endpoint (rendered in the SVG layer below nodes) stays clickable.
     if (side === "left")
       return {
         top: `${offset}%`,
-        left: -6,
+        left: -14,
         transform: "translate(-100%, -50%)",
       };
     if (side === "right")
       return {
         top: `${offset}%`,
         left: "100%",
-        marginLeft: 6,
+        marginLeft: 14,
         transform: "translate(0, -50%)",
       };
     if (side === "top")
       return {
         left: `${offset}%`,
-        top: -6,
+        top: -14,
         transform: "translate(-50%, -100%)",
       };
     // bottom
     return {
       left: `${offset}%`,
       top: "100%",
-      marginTop: 6,
+      marginTop: 14,
       transform: "translate(-50%, 0)",
     };
   };

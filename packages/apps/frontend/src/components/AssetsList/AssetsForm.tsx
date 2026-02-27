@@ -145,12 +145,11 @@ export function AssetForm<K extends AssetKind>({
                 helperText={errors.ipAddress?.message as string}
                 error={!!errors.ipAddress}
               />
-                {(initial as any)?.id && (
-                  <DevicePortsTable
-                    deviceId={(initial as any).id}
-                    initialPorts={(initial as any).ports ?? []}
-                  />
-                )}
+                <DevicePortsTable
+                  deviceId={(initial as any)?.id ?? ""}
+                  initialPorts={(initial as any)?.ports ?? []}
+                  disabled={!(initial as any)?.id}
+                />
               </>
             )}
             {kind === "models" && (
