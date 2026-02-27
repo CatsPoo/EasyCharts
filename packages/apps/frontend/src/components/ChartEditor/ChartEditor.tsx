@@ -183,6 +183,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       ports: new Set(),
       lines: new Set(),
     });
+    const applyChartChangeRef = useRef(applyChartChange);
+    useEffect(() => { applyChartChangeRef.current = applyChartChange; }, [applyChartChange]);
 
     const dirtyRef = useRef(false);
     const setDirty = useCallback(
@@ -1197,8 +1199,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             bond: b.bond,
             orientation,
             onRename: (txt: string) => {
-              //setBridges(prev => prev.map(x => x.id === b.id ? { ...x, name: txt } : x));
-              setMadeChanges(true);
+              const bondId = b.bond.id;
+              applyChartChangeRef.current((prev) => ({
+                ...prev,
+                bondsOnChart: (prev.bondsOnChart ?? []).map((boc) =>
+                  boc.bond.id === bondId ? { ...boc, bond: { ...boc.bond, name: txt } } : boc
+                ),
+              } as Chart));
             },
           },
         } as Node);
