@@ -29,6 +29,9 @@ export class NoteOnChartEntity {
   @Column({ type: "double precision", default: 130 })
   height!: number;
 
+  @Column({ type: "varchar", default: "yellow" })
+  color!: string;
+
   @ManyToOne(() => ChartEntity, (chart) => chart.notesOnChart, {
     onDelete: "CASCADE",
     eager: false,

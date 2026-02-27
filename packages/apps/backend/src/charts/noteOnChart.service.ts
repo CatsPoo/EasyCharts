@@ -10,6 +10,7 @@ export class NotesOnChartService {
     return {
       id: entity.id,
       content: entity.content,
+      color: entity.color,
       position: { x: entity.position.x, y: entity.position.y },
       size: { width: entity.width, height: entity.height },
     } as NoteOnChart;
@@ -27,6 +28,7 @@ export class NotesOnChartService {
         id: n.id,
         chartId,
         content: n.content,
+        color: n.color,
         position: { x: n.position.x, y: n.position.y } as Position,
         width: n.size.width,
         height: n.size.height,

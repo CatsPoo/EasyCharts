@@ -34,17 +34,16 @@ export function DevicesSidebar({ devicesList }: DevicesSideListProps) {
       })
     : devicesList;
 
-  const tabBase = [
-    "flex-1 py-1 text-xs font-semibold rounded-md transition-colors",
-  ].join(" ");
+  const tabBase =
+    "flex-1 min-w-0 py-1 text-[10px] font-semibold rounded transition-colors truncate";
 
   const tabActive = isDark
-    ? "bg-slate-700 text-slate-100"
-    : "bg-white text-slate-800 shadow-sm";
+    ? "bg-indigo-600 text-white"
+    : "bg-indigo-500 text-white";
 
   const tabInactive = isDark
-    ? "text-slate-500 hover:text-slate-300"
-    : "text-slate-400 hover:text-slate-600";
+    ? "text-slate-400 hover:text-slate-200"
+    : "text-slate-500 hover:text-slate-700";
 
   return (
     <aside
@@ -56,7 +55,7 @@ export function DevicesSidebar({ devicesList }: DevicesSideListProps) {
       {/* Tabs */}
       <div
         className={[
-          "flex gap-1 p-0.5 rounded-lg mb-3",
+          "flex gap-1 p-0.5 rounded-lg mb-3 overflow-hidden",
           isDark ? "bg-slate-800" : "bg-slate-100",
         ].join(" ")}
       >

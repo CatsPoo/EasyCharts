@@ -19,5 +19,6 @@ export enum  EditorMenuListKeys{
     MOVE_HANDLE_TO_RIGHT = 'move_handle_to_right',
     MOVE_HANDLE_TO_TOP = 'move_handle_to_top',
     MOVE_HANDLE_TO_BOTTOM = 'move_handle_to_bottom',
-
+    DELETE_NOTE = 'delete_note',
+    EDIT_NOTE_COLOR = 'edit_note_color',
 }

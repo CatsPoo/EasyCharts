@@ -4,6 +4,7 @@ import { PositionSchema } from "./position.schema.js";
 export const NoteOnChartSchema = z.object({
   id: z.string().uuid(),
   content: z.string().default(""),
+  color: z.string().default("yellow"),
   position: PositionSchema,
   size: z
     .object({ width: z.number().positive(), height: z.number().positive() })

@@ -230,8 +230,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
       e.preventDefault();
-      // Notes don't have a context menu
-      if (node.type === "note") return;
+      if (node.type === "note") {
+        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "note", payload: { noteId: node.id } });
+        return;
+      }
       const doc = chart.devicesOnChart.find((d) => d.device.id === node.id);
       const canConnectPaired = doc?.device.ports.some((p) => greenPortIdsRef.current.has(p.id)) ?? false;
       setCtx({
@@ -1028,6 +1030,19 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [applyChartChange]
     );
 
+    const onNoteColorChange = useCallback(
+      (noteId: string, colorKey: string) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+            n.id === noteId ? { ...n, color: colorKey } : n
+          ),
+        } as Chart));
+        closeCtx();
+      },
+      [applyChartChange, closeCtx]
+    );
+
     const convertNoteToNode = useCallback(
       (note: NoteOnChart): Node => ({
         id: note.id,
@@ -1680,11 +1695,19 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           case EditorMenuListKeys.MOVE_HANDLE_TO_BOTTOM:
             onMoveHandle(payload.deviceId, payload.portId, payload.side, 'bottom');
             break;
+
+          case EditorMenuListKeys.DELETE_NOTE:
+            applyChartChange((prev) => ({
+              ...prev,
+              notesOnChart: (prev.notesOnChart ?? []).filter((n) => n.id !== payload.noteId),
+            } as Chart));
+            setNodes((nds) => nds.filter((n) => n.id !== payload.noteId));
+            break;
         }
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, applyChartChange, setNodes]
     );
 
     const onSave = useCallback(
@@ -1777,6 +1800,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 <MenuList
                   kind={ctx.kind}
                   onAction={onCtxAction}
+                  onNoteColorChange={ctx.kind === "note"
+                    ? (colorKey) => onNoteColorChange(ctx.payload?.noteId, colorKey)
+                    : undefined}
                   isRedoEnabled={canRedo}
                   isUndoEnabled={canUndo}
                   canConnectPaired={ctx.canConnectPaired ?? false}

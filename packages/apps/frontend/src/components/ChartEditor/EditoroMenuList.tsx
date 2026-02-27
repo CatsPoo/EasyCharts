@@ -3,36 +3,45 @@ import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import { useCallback, useState } from "react";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 
+export const NOTE_COLORS: { key: string; light: string; dark: string; label: string }[] = [
+  { key: "yellow", light: "#fef9c3", dark: "#3d3822", label: "Yellow" },
+  { key: "orange", light: "#fed7aa", dark: "#3d2010", label: "Orange" },
+  { key: "pink",   light: "#fce7f3", dark: "#3d1a2d", label: "Pink"   },
+  { key: "blue",   light: "#dbeafe", dark: "#1a2a3d", label: "Blue"   },
+  { key: "green",  light: "#dcfce7", dark: "#1a3d25", label: "Green"  },
+  { key: "purple", light: "#ede9fe", dark: "#2a1a3d", label: "Purple" },
+  { key: "gray",   light: "#f1f5f9", dark: "#1e293b", label: "Gray"   },
+];
 
-interface EditorMenuListProps  {
+interface EditorMenuListProps {
   kind: CtxKind;
   onAction: (a: EditorMenuListKeys) => void;
-  isUndoEnabled : boolean,
-  isRedoEnabled : boolean,
-  canConnectPaired?: boolean,
+  onNoteColorChange?: (colorKey: string) => void;
+  isUndoEnabled: boolean;
+  isRedoEnabled: boolean;
+  canConnectPaired?: boolean;
 }
 
 const MOVE_SUBMENU_ITEMS = [
-  { key: EditorMenuListKeys.MOVE_HANDLE_TO_TOP, label: "Top" },
-  { key: EditorMenuListKeys.MOVE_HANDLE_TO_RIGHT, label: "Right" },
+  { key: EditorMenuListKeys.MOVE_HANDLE_TO_TOP,    label: "Top"    },
+  { key: EditorMenuListKeys.MOVE_HANDLE_TO_RIGHT,  label: "Right"  },
   { key: EditorMenuListKeys.MOVE_HANDLE_TO_BOTTOM, label: "Bottom" },
-  { key: EditorMenuListKeys.MOVE_HANDLE_TO_LEFT, label: "Left" },
+  { key: EditorMenuListKeys.MOVE_HANDLE_TO_LEFT,   label: "Left"   },
 ];
 
 export default function EditorMenuList({
   kind,
   onAction,
+  onNoteColorChange,
   isRedoEnabled,
   isUndoEnabled,
   canConnectPaired = false,
 }: EditorMenuListProps) {
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
+  const [colorSubmenuOpen, setColorSubmenuOpen] = useState(false);
   const { isDark } = useThemeMode();
 
-  const itemsByKind: Record<
-    CtxKind,
-    Array<{ key: EditorMenuListKeys; label: string }>
-  > = {
+  const itemsByKind: Record<CtxKind, Array<{ key: EditorMenuListKeys; label: string }>> = {
     common: [
       { key: EditorMenuListKeys.UNDO, label: "Undo" },
       { key: EditorMenuListKeys.REDO, label: "Redo" },
@@ -59,6 +68,9 @@ export default function EditorMenuList({
       { key: EditorMenuListKeys.REMOVE_PORT, label: "Remove from Chart" },
       { key: EditorMenuListKeys.DELETE_PORT, label: "Delete Port" },
     ],
+    note: [
+      { key: EditorMenuListKeys.DELETE_NOTE, label: "Delete Note" },
+    ],
   };
 
   const rf = useReactFlow();
@@ -76,7 +88,7 @@ export default function EditorMenuList({
   ].join(" ");
 
   const submenuClass = [
-    "absolute left-full top-0 min-w-[100px] rounded-md border shadow-lg py-1 z-[10000]",
+    "absolute left-full top-0 rounded-md border shadow-lg py-1 z-[10000]",
     isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200",
   ].join(" ");
 
@@ -111,6 +123,7 @@ export default function EditorMenuList({
         </li>
       ))}
 
+      {/* Move-to submenu (handle) */}
       {kind === "handle" && (
         <li
           className="relative"
@@ -122,7 +135,7 @@ export default function EditorMenuList({
             <span className="ml-2 text-slate-400">›</span>
           </button>
           {moveSubmenuOpen && (
-            <ul className={submenuClass}>
+            <ul className={submenuClass + " min-w-[100px]"}>
               {MOVE_SUBMENU_ITEMS.map((sub) => (
                 <li key={sub.key}>
                   <button className={btnClass} onClick={() => onAction(sub.key)}>
@@ -131,6 +144,43 @@ export default function EditorMenuList({
                 </li>
               ))}
             </ul>
+          )}
+        </li>
+      )}
+
+      {/* Color submenu (note) */}
+      {kind === "note" && (
+        <li
+          className="relative"
+          onMouseEnter={() => setColorSubmenuOpen(true)}
+          onMouseLeave={() => setColorSubmenuOpen(false)}
+        >
+          <button className={`${btnClass} flex justify-between items-center`}>
+            Color...
+            <span className="ml-2 text-slate-400">›</span>
+          </button>
+          {colorSubmenuOpen && (
+            <div
+              className={[
+                "absolute left-full top-0 rounded-md border shadow-lg z-[10000] p-2",
+                isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200",
+              ].join(" ")}
+            >
+              <div className="grid grid-cols-4 gap-1.5">
+                {NOTE_COLORS.map((c) => (
+                  <button
+                    key={c.key}
+                    title={c.label}
+                    onClick={() => onNoteColorChange?.(c.key)}
+                    className={[
+                      "w-6 h-6 rounded border hover:scale-110 transition-transform",
+                      isDark ? "border-slate-600" : "border-slate-300",
+                    ].join(" ")}
+                    style={{ background: isDark ? c.dark : c.light }}
+                  />
+                ))}
+              </div>
+            </div>
           )}
         </li>
       )}
