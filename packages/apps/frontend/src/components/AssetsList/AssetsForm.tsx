@@ -17,10 +17,14 @@ import { AssetsSelectionList } from "./AsetsSelectionList.component";
 import { DevicePortsTable } from "./DevicePortsTable";
 
 const schemas = {
+  clouds: z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+  }),
   devices: z.object({
     name: z.string().min(1),
     typeId: z.string().min(1),
-    modelId: z.string().min(1), 
+    modelId: z.string().min(1),
     ipAddress: z.ipv4()
   }),
     types: z.object({
@@ -107,6 +111,16 @@ export function AssetForm<K extends AssetKind>({
               helperText={errors.name?.message as string}
               error={!!errors.name}
             />
+            {kind === "clouds" && (
+              <TextField
+                label="Description"
+                multiline
+                rows={3}
+                {...register("description")}
+                helperText={errors.description?.message as string}
+                error={!!errors.description}
+              />
+            )}
             {kind === "devices" && (
               <>
                 <AssetsSelectionList

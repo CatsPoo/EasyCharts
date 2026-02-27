@@ -150,6 +150,7 @@ export default function AssetTab() {
         <Tab label="Device Types" value="types"/>
         <Tab label="Vendors" value="vendors" />
         <Tab label="Models" value="models" />
+        <Tab label="Clouds" value="clouds" />
       </Tabs>
 
       <Toolbar sx={{ gap: 1 }}>
