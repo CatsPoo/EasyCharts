@@ -21,9 +21,10 @@ import { PortFormDialog, type PortFormValues } from "../PortFormDialog";
 type Props = {
   deviceId: string;
   initialPorts: Port[];
+  disabled?: boolean;
 };
 
-export function DevicePortsTable({ deviceId, initialPorts }: Props) {
+export function DevicePortsTable({ deviceId, initialPorts, disabled = false }: Props) {
   const [ports, setPorts] = useState<Port[]>(initialPorts);
   const [formOpen, setFormOpen] = useState(false);
   const [editingPort, setEditingPort] = useState<Port | null>(null);
@@ -82,10 +83,15 @@ export function DevicePortsTable({ deviceId, initialPorts }: Props) {
         }}
       >
         <Typography variant="subtitle2">Ports</Typography>
-        <Button size="small" startIcon={<AddIcon />} onClick={openCreate}>
+        <Button size="small" startIcon={<AddIcon />} onClick={openCreate} disabled={disabled}>
           Add Port
         </Button>
       </Box>
+      {disabled && (
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+          Save the device first to manage ports.
+        </Typography>
+      )}
 
       <Table
         size="small"

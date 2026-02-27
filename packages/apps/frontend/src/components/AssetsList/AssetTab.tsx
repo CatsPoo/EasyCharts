@@ -234,11 +234,16 @@ export default function AssetTab() {
         onSubmit={(values) => {
           if (kind === "devices") {
             const { vendorId, ...payload } = values;
-            createMut.mutate(payload);
+            createMut.mutate(payload, {
+              onSuccess: (newDevice) => {
+                setCreateOpen(false);
+                setEditing(newDevice);
+              },
+            });
           } else {
             createMut.mutate(values);
+            setCreateOpen(false);
           }
-          setCreateOpen(false);
         }}
       />
 
