@@ -14,10 +14,12 @@ import { LineOnChartEntity } from './entities/lineonChart.emtity';
 import { AuthModule } from '../auth/auth.module';
 import { BondOnChartEntity } from './entities/BondOnChart.emtity';
 import { NoteOnChartEntity } from './entities/noteOnChart.entity';
+import { CloudOnChartEntity, CloudConnectionOnChartEntity } from './entities/cloudOnChart.entity';
 import { LinesOnChartService } from './lineOnChart.service';
 import { DevicesOnChartService } from './deviceOnChart.service';
 import { BondsOnChartService } from './bondOnChart.service';
 import { NotesOnChartService } from './noteOnChart.service';
+import { CloudsOnChartService } from './cloudOnChart.service';
 import { PortsOnChartService } from './portsOnChart.service';
 import { ChartShareEntity } from './entities/chartShare.entity';
 import { ChartInDirectoryEntity } from '../chartsDirectories/entities/chartsInDirectory.entity';
@@ -36,6 +38,8 @@ import { DirectoryShareEntity } from '../chartsDirectories/entities/directorySha
            LineOnChartEntity,
            BondOnChartEntity,
            NoteOnChartEntity,
+           CloudOnChartEntity,
+           CloudConnectionOnChartEntity,
            ChartShareEntity,
            ChartInDirectoryEntity,
            DirectoryShareEntity,
@@ -45,7 +49,7 @@ import { DirectoryShareEntity } from '../chartsDirectories/entities/directorySha
         AuthModule
     ],
     controllers: [ChartsController],
-    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,PortsOnChartService],
+    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,CloudsOnChartService,PortsOnChartService],
     exports:[ChartsService]
 })
 export class ChartsModule {}
