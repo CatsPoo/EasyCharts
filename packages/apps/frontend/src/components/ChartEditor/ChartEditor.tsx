@@ -1194,19 +1194,32 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [applyChartChange, setEdges]
     );
 
+    const updateCloudSize = useCallback(
+      (cloudId: string, width: number, height: number) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          cloudsOnChart: (prev.cloudsOnChart ?? []).map((c) =>
+            c.cloudId === cloudId ? { ...c, size: { width, height } } : c
+          ),
+        } as Chart));
+      },
+      [applyChartChange]
+    );
+
     const convertCloudToNode = useCallback(
       (cloudOnChart: CloudOnChart): Node => ({
         id: cloudOnChart.cloudId,
         type: "cloud",
         position: cloudOnChart.position,
-        style: { width: 180, height: 90 },
+        style: { width: cloudOnChart.size?.width ?? 180, height: cloudOnChart.size?.height ?? 90 },
         data: {
           cloudOnChart,
           editMode,
           onRemove: onRemoveCloud,
+          onSizeChange: updateCloudSize,
         } as CloudNodeData,
       }),
-      [editMode, onRemoveCloud]
+      [editMode, onRemoveCloud, updateCloudSize]
     );
 
     const { data: availableDevicesResponse } = useListAssets("devices", {
@@ -2025,6 +2038,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         chart.linesOnChart,
         chart.name,
         chart.notesOnChart,
+        chart.cloudsOnChart,
+        chart.bondsOnChart,
         setDirty,
         updateMut,
       ]

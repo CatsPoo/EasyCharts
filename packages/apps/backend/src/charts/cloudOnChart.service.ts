@@ -11,6 +11,7 @@ export class CloudsOnChartService {
       cloudId: entity.cloudId,
       cloud: entity.cloud as any,
       position: { x: entity.position.x, y: entity.position.y },
+      size: { width: entity.width ?? 180, height: entity.height ?? 90 },
       connections: (entity.connections ?? []).map((c) => ({
         id: c.id,
         deviceId: c.deviceId,
@@ -38,6 +39,8 @@ export class CloudsOnChartService {
       chartId,
       cloudId: c.cloudId,
       position: { x: c.position.x, y: c.position.y } as Position,
+      width: c.size?.width ?? 180,
+      height: c.size?.height ?? 90,
     }));
     await cocRepo.upsert(desiredClouds, {
       conflictPaths: ["chartId", "cloudId"],

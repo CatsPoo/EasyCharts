@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { Handle, Position, NodeResizer } from "reactflow";
 import type { NodeProps } from "reactflow";
 import type { CloudOnChart } from "@easy-charts/easycharts-types";
@@ -8,6 +8,7 @@ export interface CloudNodeData {
   cloudOnChart: CloudOnChart;
   editMode: boolean;
   onRemove: (cloudId: string) => void;
+  onSizeChange: (cloudId: string, width: number, height: number) => void;
 }
 
 const handleStyle = { width: 10, height: 10, borderRadius: 5 };
@@ -20,8 +21,15 @@ const CLOUD_PATH =
   "M19.35 6.04A7.49 7.49 0 0 0 12 0C9.11 0 6.6 1.64 5.35 4.04A5.994 5.994 0 0 0 0 10c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z";
 
 function CloudNode({ data, selected }: NodeProps<CloudNodeData>) {
-  const { cloudOnChart, editMode, onRemove } = data;
+  const { cloudOnChart, editMode, onRemove, onSizeChange } = data;
   const { isDark } = useThemeMode();
+
+  const handleResizeEnd = useCallback(
+    (_e: unknown, params: { width: number; height: number }) => {
+      onSizeChange(cloudOnChart.cloudId, params.width, params.height);
+    },
+    [cloudOnChart.cloudId, onSizeChange]
+  );
 
   const fill   = isDark ? "#0c2340" : "#e0f2fe";
   const stroke = selected ? "#6366f1" : isDark ? "#38bdf8" : "#0ea5e9";
@@ -34,6 +42,7 @@ function CloudNode({ data, selected }: NodeProps<CloudNodeData>) {
         <NodeResizer
           minWidth={140}
           minHeight={80}
+          onResizeEnd={handleResizeEnd}
           lineStyle={{ borderColor: stroke }}
           handleStyle={{
             background: stroke,

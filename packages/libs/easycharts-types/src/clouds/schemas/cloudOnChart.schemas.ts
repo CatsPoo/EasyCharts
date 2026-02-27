@@ -13,5 +13,8 @@ export const CloudOnChartSchema = z.object({
   cloudId: z.string().uuid(),
   cloud: CloudSchema,
   position: PositionSchema,
+  size: z
+    .object({ width: z.number().positive(), height: z.number().positive() })
+    .default({ width: 180, height: 90 }),
   connections: z.array(CloudConnectionOnChartSchema).default([]),
 });

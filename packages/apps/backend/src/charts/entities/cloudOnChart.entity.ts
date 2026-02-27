@@ -54,6 +54,12 @@ export class CloudOnChartEntity {
   @Column(() => Position)
   position!: Position;
 
+  @Column({ type: "double precision", default: 180 })
+  width!: number;
+
+  @Column({ type: "double precision", default: 90 })
+  height!: number;
+
   @ManyToOne(() => ChartEntity, { onDelete: "CASCADE", eager: false })
   @JoinColumn({ name: "chart_id" })
   chart!: Relation<ChartEntity>;
