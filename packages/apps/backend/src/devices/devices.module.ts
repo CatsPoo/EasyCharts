@@ -16,6 +16,9 @@ import { AuthModule } from '../auth/auth.module';
 import { DeviceTypeEntity } from './entities/deviceType.entity';
 import { DeviceTypeController } from './deviceType.controller';
 import { DeviceTypeService } from './deviceType.service';
+import { CloudEntity } from './entities/cloud.entity';
+import { CloudsController } from './clouds.controller';
+import { CloudsService } from './clouds.service';
 
 @Module({
   imports: [
@@ -25,6 +28,7 @@ import { DeviceTypeService } from './deviceType.service';
       ModelEntity,
       PortEntity,
       DeviceTypeEntity,
+      CloudEntity,
     ]),
     AuthModule,
   ],
@@ -34,8 +38,9 @@ import { DeviceTypeService } from './deviceType.service';
     ModelsController,
     PortsController,
     DeviceTypeController,
+    CloudsController,
   ],
-  providers: [DevicesService, VendorsService, ModelsService, PortsService, DeviceTypeService],
-  exports: [DevicesService, VendorsService, ModelsService, PortsService, DeviceTypeService],
+  providers: [DevicesService, VendorsService, ModelsService, PortsService, DeviceTypeService, CloudsService],
+  exports: [DevicesService, VendorsService, ModelsService, PortsService, DeviceTypeService, CloudsService],
 })
 export class DevicesModule {}

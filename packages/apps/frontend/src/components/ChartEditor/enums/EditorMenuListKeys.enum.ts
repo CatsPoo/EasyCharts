@@ -24,4 +24,7 @@ export enum  EditorMenuListKeys{
     EDIT_BOND = 'edit_bond',
     UNBOND_PORTS = 'unbond_ports',
     REMOVE_BOND_FROM_CHART = 'remove_bond_from_chart',
+    EDIT_CLOUD = 'edit_cloud',
+    REMOVE_CLOUD_FROM_CHART = 'remove_cloud_from_chart',
+    DELETE_CLOUD = 'delete_cloud',
 }

@@ -2,6 +2,10 @@ import type { AssetKind, Device, Model } from "@easy-charts/easycharts-types";
 import type { GridColDef } from "@mui/x-data-grid";
 
 export const columns: Record<AssetKind, GridColDef[]> = {
+  clouds: [
+    { field: "name", headerName: "Name", flex: 1 },
+    { field: "description", headerName: "Description", flex: 2 },
+  ],
   devices: [
     { field: "name", headerName: "Name", flex: 1 },
     {

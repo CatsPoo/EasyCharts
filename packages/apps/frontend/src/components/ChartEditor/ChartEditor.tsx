@@ -3,6 +3,9 @@ import {
   type BondOnChart,
   type Chart,
   type ChartUpdate,
+  type Cloud,
+  type CloudConnectionOnChart,
+  type CloudOnChart,
   type Device,
   type DeviceOnChart,
   type Handles,
@@ -42,7 +45,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
-import { useListAssets, useUpdateAsset } from "../../hooks/assetsHooks";
+import { useListAssets, useUpdateAsset, useDeleteAsset } from "../../hooks/assetsHooks";
 import { updatePort } from "../../hooks/portsHooks";
 import { AssetForm } from "../AssetsList/AssetsForm";
 import { PortFormDialog } from "../PortFormDialog";
@@ -61,6 +64,7 @@ import { EditBondDialog } from "./EditBondDialog";
 import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
 import NoteNode, { type NoteNodeData } from "./NoteNode";
+import CloudNode, { type CloudNodeData } from "./CloudNode";
 import { PortsEditorDialog } from "./PortsEditorDialog";
 import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
@@ -90,6 +94,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     } | null>(null);
     const [editDeviceTarget, setEditDeviceTarget] =
       useState<DeviceOnChart | null>(null);
+    const [editCloudTarget, setEditCloudTarget] = useState<Cloud | null>(null);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
     const [portTypeMismatch, setPortTypeMismatch] = useState(false);
@@ -157,6 +162,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const updateMut = useUpdateChartMutation();
     const updateDeviceMut = useUpdateAsset("devices");
+    const updateCloudMut = useUpdateAsset("clouds");
+    const deleteCloudMut = useDeleteAsset("clouds");
     const { project,getEdge } = useReactFlow();
     const {devicePos} = useDevices({chart})
     const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,applyChartChange})
@@ -170,7 +177,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         device: DeviceNode,
         bridge: BondBridgeNode,
         note: NoteNode,
-      }),
+        cloud: CloudNode,
+      } as any),
       []
     );
 
@@ -182,6 +190,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       devices: new Set(),
       ports: new Set(),
       lines: new Set(),
+      clouds: new Set(),
     });
     const applyChartChangeRef = useRef(applyChartChange);
     useEffect(() => { applyChartChangeRef.current = applyChartChange; }, [applyChartChange]);
@@ -240,6 +249,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "note", payload: { noteId: node.id } });
         return;
       }
+      if (node.type === "cloud") {
+        const coc = (chart.cloudsOnChart ?? []).find((c) => c.cloudId === node.id);
+        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "cloud", payload: { cloudId: node.id, cloudName: coc?.cloud.name ?? "" } });
+        return;
+      }
       if (node.type === "bridge") {
         const bondId = node.id.replace("bridge-", "");
         const bondOnChart = chart.bondsOnChart.find((b) => b.bond.id === bondId);
@@ -256,7 +270,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         payload: { node },
         canConnectPaired,
       });
-    }, [chart.devicesOnChart]);
+    }, [chart.devicesOnChart, chart.cloudsOnChart]);
 
     const onEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
       e.preventDefault();
@@ -368,28 +382,41 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     //Remove line from chart but keep it on dayabase
     const onRemoveEdge = useCallback(
       (edgeToRemove: Edge) => {
-        const used = new Set<string>();
-        if (edgeToRemove.sourceHandle) used.add(edgeToRemove.sourceHandle);
-        if (edgeToRemove.targetHandle) used.add(edgeToRemove.targetHandle);
-
         setEdges((es) => es.filter((e) => e.id !== edgeToRemove.id));
         applyChartChange((prev) => {
+          // Check if this edge is a cloud connection
+          const isCloudEdge = (prev.cloudsOnChart ?? []).some((coc) =>
+            coc.connections.some((conn) => conn.id === edgeToRemove.id)
+          );
+          if (isCloudEdge) {
+            return {
+              ...prev,
+              cloudsOnChart: (prev.cloudsOnChart ?? []).map((coc) => ({
+                ...coc,
+                connections: coc.connections.filter(
+                  (conn) => conn.id !== edgeToRemove.id
+                ),
+              })),
+            } as Chart;
+          }
+
+          const used = new Set<string>();
+          if (edgeToRemove.sourceHandle) used.add(edgeToRemove.sourceHandle);
+          if (edgeToRemove.targetHandle) used.add(edgeToRemove.targetHandle);
           return {
             ...prev,
             linesOnChart: prev.linesOnChart.filter(
               (l) => l.line.id !== edgeToRemove.id
             ),
-            devicesOnChart: prev.devicesOnChart.map((doc) => {
-              return {
-                ...doc,
-                device: {
-                  ...doc.device,
-                  ports: doc.device.ports.map((p) => {
-                    return used.has(p.id) ? { ...p, inUse: false } : p;
-                  }),
-                },
-              } as DeviceOnChart;
-            }),
+            devicesOnChart: prev.devicesOnChart.map((doc) => ({
+              ...doc,
+              device: {
+                ...doc.device,
+                ports: doc.device.ports.map((p) =>
+                  used.has(p.id) ? { ...p, inUse: false } : p
+                ),
+              },
+            } as DeviceOnChart)),
           } as Chart;
         });
       },
@@ -605,12 +632,21 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           const { portId, deviceId } = pandingDelete.value as unknown as { portId: string; deviceId: string };
           onDeletePort(portId, deviceId);
         }
+        if (pandingDelete.kind === "clouds") {
+          const { cloudId } = pandingDelete.value as unknown as { cloudId: string };
+          setEdges((eds) => eds.filter((e) => e.source !== cloudId && e.target !== cloudId));
+          applyChartChange((prev) => ({
+            ...prev,
+            cloudsOnChart: (prev.cloudsOnChart ?? []).filter((c) => c.cloudId !== cloudId),
+          } as Chart));
+          deleteCloudMut.mutate(cloudId);
+        }
       } catch (e) {
         console.log("Delete failed: ", e);
       }
       setPandingDelete({ value: null });
       setConfirmDeleteOpen(false);
-    }, [onDeleteDevice, onDeleteLine, onDeletePort, pandingDelete.kind, pandingDelete.value]);
+    }, [onDeleteDevice, onDeleteLine, onDeletePort, pandingDelete.kind, pandingDelete.value, setEdges, applyChartChange, deleteCloudMut]);
 
     const onconfigDialofClose = useCallback(() => {
       setPandingDelete({ value: null });
@@ -684,6 +720,30 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         setEditDeviceTarget(null);
       },
       [editDeviceTarget, updateDeviceMut, updateDeviceOnChart]
+    );
+
+    const onEditCloudSubmit = useCallback(
+      async (formData: any) => {
+        if (!editCloudTarget) return;
+        try {
+          const updated: Cloud = await updateCloudMut.mutateAsync({
+            ...formData,
+            id: editCloudTarget.id,
+          } as Cloud);
+          applyChartChange((prev) => ({
+            ...prev,
+            cloudsOnChart: (prev.cloudsOnChart ?? []).map((coc) =>
+              coc.cloudId === editCloudTarget.id
+                ? { ...coc, cloud: { ...coc.cloud, name: updated.name, description: updated.description } }
+                : coc
+            ),
+          } as Chart));
+        } catch (e) {
+          console.error("Failed to update cloud:", e);
+        }
+        setEditCloudTarget(null);
+      },
+      [editCloudTarget, updateCloudMut, applyChartChange]
     );
 
     const greenPortIds = useMemo(() => {
@@ -1118,10 +1178,67 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [editMode, updateNoteContent, updateNoteSize]
     );
 
+    const onRemoveCloud = useCallback(
+      (cloudId: string) => {
+        // Remove all edges connected to this cloud node
+        setEdges((eds) =>
+          eds.filter((e) => e.source !== cloudId && e.target !== cloudId)
+        );
+        applyChartChange((prev) => ({
+          ...prev,
+          cloudsOnChart: (prev.cloudsOnChart ?? []).filter(
+            (c) => c.cloudId !== cloudId
+          ),
+        } as Chart));
+      },
+      [applyChartChange, setEdges]
+    );
+
+    const updateCloudSize = useCallback(
+      (cloudId: string, width: number, height: number) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          cloudsOnChart: (prev.cloudsOnChart ?? []).map((c) =>
+            c.cloudId === cloudId ? { ...c, size: { width, height } } : c
+          ),
+        } as Chart));
+      },
+      [applyChartChange]
+    );
+
+    const convertCloudToNode = useCallback(
+      (cloudOnChart: CloudOnChart): Node => ({
+        id: cloudOnChart.cloudId,
+        type: "cloud",
+        position: cloudOnChart.position,
+        style: { width: cloudOnChart.size?.width ?? 180, height: cloudOnChart.size?.height ?? 90 },
+        data: {
+          cloudOnChart,
+          editMode,
+          onRemove: onRemoveCloud,
+          onSizeChange: updateCloudSize,
+        } as CloudNodeData,
+      }),
+      [editMode, onRemoveCloud, updateCloudSize]
+    );
+
     const { data: availableDevicesResponse } = useListAssets("devices", {
       page: 0,
       pageSize: 100000,
     });
+
+    const { data: availableCloudsResponse } = useListAssets("clouds", {
+      page: 0,
+      pageSize: 100000,
+    });
+    const allClouds = useMemo<Cloud[]>(
+      () => (availableCloudsResponse?.rows ?? []) as Cloud[],
+      [availableCloudsResponse]
+    );
+    const cloudsById = useMemo<Map<string, Cloud>>(
+      () => new Map(allClouds.map((c) => [c.id, c])),
+      [allClouds]
+    );
 
     const usedIds = useMemo(
       () => new Set(chart.devicesOnChart.map((d) => d.device.id)),
@@ -1307,14 +1424,27 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         });
         const { bridgeNodes } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
         const noteNodes: Node[] = (chart.notesOnChart ?? []).map(convertNoteToNode);
-        return [...devicesNodes, ...bridgeNodes, ...noteNodes];
+        const cloudNodes: Node[] = (chart.cloudsOnChart ?? []).map(convertCloudToNode);
+        return [...devicesNodes, ...bridgeNodes, ...noteNodes, ...cloudNodes];
       });
-    }, [buildBridgeView, chart.bondsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, convertDeviceToNode, convertNoteToNode, setNodes]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.cloudsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, convertCloudToNode, convertDeviceToNode, convertNoteToNode, setNodes]);
 
     useEffect(() => {
-      const { displayEdges } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
-      setEdges(displayEdges);
-    }, [buildBridgeView, chart.bondsOnChart, chart.linesOnChart, setEdges]);
+      const { displayEdges } = buildBridgeView(chart.bondsOnChart, chart.linesOnChart);
+
+      const cloudEdges: Edge[] = (chart.cloudsOnChart ?? []).flatMap((coc) =>
+        coc.connections.map((conn) => ({
+          id: conn.id,
+          source: conn.deviceId,
+          sourceHandle: conn.portId,
+          target: coc.cloudId,
+          targetHandle: conn.cloudHandle,
+          type: "step",
+        } as Edge))
+      );
+
+      setEdges([...displayEdges, ...cloudEdges]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.cloudsOnChart, chart.linesOnChart, setEdges]);
 
     const onNodesChange = useCallback(
       (changes: NodeChange[]) => {
@@ -1331,6 +1461,40 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onConnect = useCallback(
       (c: Connection) => {
+        // ── Cloud connection: device port → cloud handle ──
+        const cloudTarget = (chart.cloudsOnChart ?? []).find(
+          (coc) => coc.cloudId === c.target
+        );
+        if (cloudTarget) {
+          if (!c.source || !c.sourceHandle || !c.targetHandle) return;
+          const newConnection: CloudConnectionOnChart = {
+            id: uuidv4(),
+            deviceId: c.source,
+            portId: c.sourceHandle,
+            cloudHandle: c.targetHandle,
+          };
+          const cloudEdge: Edge = {
+            id: newConnection.id,
+            source: newConnection.deviceId,
+            sourceHandle: newConnection.portId,
+            target: cloudTarget.cloudId,
+            targetHandle: newConnection.cloudHandle,
+            type: "step",
+          };
+          setEdges((eds) => [...eds, cloudEdge]);
+          applyChartChange((prev) => ({
+            ...prev,
+            cloudsOnChart: (prev.cloudsOnChart ?? []).map((coc) =>
+              coc.cloudId === cloudTarget.cloudId
+                ? { ...coc, connections: [...coc.connections, newConnection] }
+                : coc
+            ),
+          } as Chart));
+          setMadeChanges(true);
+          return;
+        }
+
+        // ── Device-to-device line ──
         const newId: string = uuidv4();
         const sourcePort: Port = chart.devicesOnChart
           .find((d) => d.device.id === c.source)!
@@ -1385,6 +1549,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         });
       },
       [
+        chart.cloudsOnChart,
         chart.devicesOnChart,
         chart.id,
         setEdges,
@@ -1511,6 +1676,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               n.id === node.id ? { ...n, position: node.position } : n
             ),
           } as Chart));
+        } else if (node.type === "cloud") {
+          applyChartChange((prev) => ({
+            ...prev,
+            cloudsOnChart: (prev.cloudsOnChart ?? []).map((c) =>
+              c.cloudId === node.id ? { ...c, position: node.position } : c
+            ),
+          } as Chart));
         }
       },
       [applyChartChange]
@@ -1546,6 +1718,27 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             }
           } catch {
             // ignore malformed element data
+          }
+          return;
+        }
+
+        // ── Cloud drop ──
+        const cloudRaw = e.dataTransfer.getData("application/reactflow-cloud");
+        if (cloudRaw) {
+          try {
+            const { cloudId } = JSON.parse(cloudRaw) as { cloudId: string };
+            const cloud = cloudsById.get(cloudId);
+            if (!cloud) return;
+            if ((chart.cloudsOnChart ?? []).some((c) => c.cloudId === cloudId)) return;
+            const bounds = reactFlowWrapper.current.getBoundingClientRect();
+            const position = project({ x: e.clientX - bounds.left, y: e.clientY - bounds.top });
+            const newCloudOnChart: CloudOnChart = { cloudId, cloud: cloud as any, position, connections: [], size: { width: 180, height: 90 } };
+            applyChartChange((prev) => ({
+              ...prev,
+              cloudsOnChart: [...(prev.cloudsOnChart ?? []), newCloudOnChart],
+            } as Chart));
+          } catch {
+            // ignore malformed cloud data
           }
           return;
         }
@@ -1629,6 +1822,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [
         editMode,
         devicesById,
+        cloudsById,
         project,
         convertDeviceToNode,
         setNodes,
@@ -1788,11 +1982,28 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           case EditorMenuListKeys.REMOVE_BOND_FROM_CHART:
             onRemoveBondFromChart(payload.bondId);
             break;
+
+          case EditorMenuListKeys.EDIT_CLOUD: {
+            const coc = (chart.cloudsOnChart ?? []).find((c) => c.cloudId === payload.cloudId);
+            if (coc) setEditCloudTarget(coc.cloud as Cloud);
+            break;
+          }
+
+          case EditorMenuListKeys.REMOVE_CLOUD_FROM_CHART:
+            onRemoveCloud(payload.cloudId);
+            break;
+
+          case EditorMenuListKeys.DELETE_CLOUD:
+            setPandingDelete({ value: { cloudId: payload.cloudId } as unknown as Node, kind: "clouds" });
+            setConfirmDialogTitle("Delete Cloud?");
+            setConfirmDialogDescription(`Permanently delete cloud "${payload.cloudName}"?`);
+            setConfirmDeleteOpen(true);
+            break;
         }
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, applyChartChange, setNodes, setColorPickerNoteId, setColorPickerValue, onUnbondPorts, onRemoveBondFromChart]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.cloudsOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setColorPickerNoteId, setColorPickerValue, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud]
     );
 
     const onSave = useCallback(
@@ -1827,6 +2038,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         chart.linesOnChart,
         chart.name,
         chart.notesOnChart,
+        chart.cloudsOnChart,
+        chart.bondsOnChart,
         setDirty,
         updateMut,
       ]
@@ -1854,7 +2067,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               className="flex-none overflow-hidden border-r
              border-slate-200"
             >
-              <DevicesSidebar devicesList={unusedDevices} />
+              <DevicesSidebar devicesList={unusedDevices} cloudsList={allClouds} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -2010,6 +2223,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           initial={editDeviceTarget?.device}
           onClose={() => setEditDeviceTarget(null)}
           onSubmit={onEditDeviceSubmit}
+        />
+        <AssetForm
+          kind="clouds"
+          open={editCloudTarget !== null}
+          initial={editCloudTarget ?? undefined}
+          onClose={() => setEditCloudTarget(null)}
+          onSubmit={onEditCloudSubmit}
         />
         <ConfirmDialog
           open={confirmDeleteOpen}
