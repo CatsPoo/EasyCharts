@@ -12,6 +12,7 @@ import {
   type Line,
   type LineOnChart,
   type NoteOnChart,
+  type ZoneOnChart,
   type Port,
   type Side
 } from "@easy-charts/easycharts-types";
@@ -64,6 +65,8 @@ import { EditBondDialog } from "./EditBondDialog";
 import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
 import NoteNode, { type NoteNodeData } from "./NoteNode";
+import ZoneNode, { type ZoneNodeData } from "./ZoneNode";
+import { EditZoneStyleDialog, type ZoneStyleValues } from "./EditZoneStyleDialog";
 import CloudNode, { type CloudNodeData } from "./CloudNode";
 import { PortsEditorDialog } from "./PortsEditorDialog";
 import { Orientation } from "./enums/BondBridgeNode.enum";
@@ -127,6 +130,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [colorPickerNoteId, setColorPickerNoteId] = useState<string | null>(null);
     const [colorPickerValue, setColorPickerValue] = useState<string>("#4ade80");
     const [editBondTarget, setEditBondTarget] = useState<{ bondId: string; bondName: string } | null>(null);
+    const [zoneStyleDialogZoneId, setZoneStyleDialogZoneId] = useState<string | null>(null);
 
     const actionsHistory = useRef<Chart[]>([chart]);
     const actionsHistoryIndex = useRef<number>(
@@ -177,6 +181,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         device: DeviceNode,
         bridge: BondBridgeNode,
         note: NoteNode,
+        zone: ZoneNode,
         cloud: CloudNode,
       } as any),
       []
@@ -247,6 +252,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       e.preventDefault();
       if (node.type === "note") {
         setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "note", payload: { noteId: node.id } });
+        return;
+      }
+      if (node.type === "zone") {
+        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "zone", payload: { zoneId: node.id } });
         return;
       }
       if (node.type === "cloud") {
@@ -1178,6 +1187,71 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [editMode, updateNoteContent, updateNoteSize]
     );
 
+    const updateZoneLabel = useCallback(
+      (id: string, label: string) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          zonesOnChart: (prev.zonesOnChart ?? []).map((z) =>
+            z.id === id ? { ...z, label } : z
+          ),
+        }));
+      },
+      [applyChartChange]
+    );
+
+    const updateZoneSize = useCallback(
+      (id: string, width: number, height: number) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          zonesOnChart: (prev.zonesOnChart ?? []).map((z) =>
+            z.id === id ? { ...z, size: { width, height } } : z
+          ),
+        }));
+      },
+      [applyChartChange]
+    );
+
+    const updateZoneStyle = useCallback(
+      (zoneId: string, values: ZoneStyleValues) => {
+        applyChartChange((prev) => ({
+          ...prev,
+          zonesOnChart: (prev.zonesOnChart ?? []).map((z) =>
+            z.id === zoneId
+              ? {
+                  ...z,
+                  label: values.label,
+                  shape: values.shape,
+                  color: values.color,
+                  fillColor: values.fillColor,
+                  fillOpacity: values.fillOpacity,
+                  borderStyle: values.borderStyle,
+                  borderWidth: values.borderWidth,
+                }
+              : z
+          ),
+        }));
+        setZoneStyleDialogZoneId(null);
+      },
+      [applyChartChange]
+    );
+
+    const convertZoneToNode = useCallback(
+      (zone: ZoneOnChart): Node => ({
+        id: zone.id,
+        type: "zone",
+        position: zone.position,
+        zIndex: -1,
+        style: { width: zone.size.width, height: zone.size.height },
+        data: {
+          zone,
+          editMode,
+          onLabelChange: updateZoneLabel,
+          onSizeChange: updateZoneSize,
+        } as ZoneNodeData,
+      }),
+      [editMode, updateZoneLabel, updateZoneSize]
+    );
+
     const onRemoveCloud = useCallback(
       (cloudId: string) => {
         // Remove all edges connected to this cloud node
@@ -1424,10 +1498,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         });
         const { bridgeNodes } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
         const noteNodes: Node[] = (chart.notesOnChart ?? []).map(convertNoteToNode);
+        const zoneNodes: Node[] = (chart.zonesOnChart ?? []).map(convertZoneToNode);
         const cloudNodes: Node[] = (chart.cloudsOnChart ?? []).map(convertCloudToNode);
-        return [...devicesNodes, ...bridgeNodes, ...noteNodes, ...cloudNodes];
+        return [...zoneNodes, ...devicesNodes, ...bridgeNodes, ...noteNodes, ...cloudNodes];
       });
-    }, [buildBridgeView, chart.bondsOnChart, chart.cloudsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, convertCloudToNode, convertDeviceToNode, convertNoteToNode, setNodes]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.cloudsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, chart.zonesOnChart, convertCloudToNode, convertDeviceToNode, convertNoteToNode, convertZoneToNode, setNodes]);
 
     useEffect(() => {
       const { displayEdges } = buildBridgeView(chart.bondsOnChart, chart.linesOnChart);
@@ -1676,6 +1751,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               n.id === node.id ? { ...n, position: node.position } : n
             ),
           } as Chart));
+        } else if (node.type === "zone") {
+          applyChartChange((prev) => ({
+            ...prev,
+            zonesOnChart: (prev.zonesOnChart ?? []).map((z) =>
+              z.id === node.id ? { ...z, position: node.position } : z
+            ),
+          } as Chart));
         } else if (node.type === "cloud") {
           applyChartChange((prev) => ({
             ...prev,
@@ -1714,6 +1796,28 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               applyChartChange((prev) => ({
                 ...prev,
                 notesOnChart: [...(prev.notesOnChart ?? []), newNote],
+              } as Chart));
+            } else if (type === "zone") {
+              const bounds = reactFlowWrapper.current.getBoundingClientRect();
+              const position = project({
+                x: e.clientX - bounds.left,
+                y: e.clientY - bounds.top,
+              });
+              const newZone: ZoneOnChart = {
+                id: uuidv4(),
+                label: "",
+                shape: "rectangle",
+                color: "blue",
+                fillColor: "",
+                fillOpacity: 0,
+                borderStyle: "solid",
+                borderWidth: 2,
+                position,
+                size: { width: 300, height: 200 },
+              };
+              applyChartChange((prev) => ({
+                ...prev,
+                zonesOnChart: [...(prev.zonesOnChart ?? []), newZone],
               } as Chart));
             }
           } catch {
@@ -1983,6 +2087,18 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             onRemoveBondFromChart(payload.bondId);
             break;
 
+          case EditorMenuListKeys.DELETE_ZONE:
+            applyChartChange((prev) => ({
+              ...prev,
+              zonesOnChart: (prev.zonesOnChart ?? []).filter((z) => z.id !== payload.zoneId),
+            } as Chart));
+            setNodes((nds) => nds.filter((n) => n.id !== payload.zoneId));
+            break;
+
+          case EditorMenuListKeys.EDIT_ZONE_STYLE:
+            setZoneStyleDialogZoneId(payload.zoneId);
+            break;
+
           case EditorMenuListKeys.EDIT_CLOUD: {
             const coc = (chart.cloudsOnChart ?? []).find((c) => c.cloudId === payload.cloudId);
             if (coc) setEditCloudTarget(coc.cloud as Cloud);
@@ -2003,11 +2119,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.cloudsOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setColorPickerNoteId, setColorPickerValue, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.zonesOnChart, chart.cloudsOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setColorPickerNoteId, setColorPickerValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud]
     );
 
     const onSave = useCallback(
-      async (e?: React.MouseEvent<HTMLButtonElement>) => {
+      async (e?: React.MouseEvent<HTMLButtonElement>, versionLabel?: string) => {
         // prevent form submit refresh if inside a <form>
         e?.preventDefault();
 
@@ -2018,6 +2134,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             lines: [...deleteSetsRef.current[ChartEntitiesEnum.LINES]],
             ports: [...deleteSetsRef.current[ChartEntitiesEnum.PORTS]],
           },
+          versionLabel,
         };
         try {
           const newChart: Chart = await updateMut.mutateAsync({
@@ -2038,6 +2155,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         chart.linesOnChart,
         chart.name,
         chart.notesOnChart,
+        chart.zonesOnChart,
         chart.cloudsOnChart,
         chart.bondsOnChart,
         setDirty,
@@ -2108,6 +2226,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               </div>
             </>
           )}
+
+          {/* Zone style dialog */}
+          <EditZoneStyleDialog
+            open={zoneStyleDialogZoneId !== null}
+            zone={(chart.zonesOnChart ?? []).find((z) => z.id === zoneStyleDialogZoneId) ?? null}
+            onClose={() => setZoneStyleDialogZoneId(null)}
+            onSubmit={(values) => updateZoneStyle(zoneStyleDialogZoneId!, values)}
+          />
 
           {/* Custom note colour picker dialog */}
           {colorPickerNoteId && (

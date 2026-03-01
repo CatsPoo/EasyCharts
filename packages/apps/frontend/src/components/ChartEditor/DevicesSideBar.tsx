@@ -220,6 +220,30 @@ export function DevicesSidebar({ devicesList, cloudsList }: DevicesSideListProps
                 <p className={["text-[10px]", isDark ? "text-slate-500" : "text-slate-400"].join(" ")}>Free text area</p>
               </div>
             </li>
+
+            <li
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.setData("application/reactflow-element", JSON.stringify({ type: "zone" }));
+                event.dataTransfer.effectAllowed = "move";
+              }}
+              className={[
+                "flex items-center gap-2 px-2 py-2 rounded-lg border border-transparent cursor-grab active:cursor-grabbing transition-colors select-none",
+                isDark ? "hover:border-blue-800 hover:bg-blue-950" : "hover:border-blue-300 hover:bg-blue-50",
+              ].join(" ")}
+              title="Zone — drag onto canvas"
+            >
+              <div className="h-8 w-8 flex-none rounded-md flex items-center justify-center"
+                style={{ background: isDark ? "#1a2a3d" : "#dbeafe", border: isDark ? "2px dashed #1a3a7a" : "2px dashed #93c5fd" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: isDark ? "#60a5fa" : "#1e40af" }}>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={["text-xs font-semibold leading-4", isDark ? "text-slate-200" : "text-slate-800"].join(" ")}>Zone</p>
+                <p className={["text-[10px]", isDark ? "text-slate-500" : "text-slate-400"].join(" ")}>Background area marker</p>
+              </div>
+            </li>
           </ul>
 
           <p className={["mt-3 text-[10px] text-center", isDark ? "text-slate-600" : "text-slate-400"].join(" ")}>Drag an element onto the canvas</p>

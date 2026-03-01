@@ -9,6 +9,7 @@ import type {
   ModelUpdate,
 } from "@easy-charts/easycharts-types";
 import { ListModelsQueryDto } from "../query/dto/query.dto";
+import { AssetVersionsService } from "./assetVersions.service";
 
 @Injectable()
 export class ModelsService {
@@ -16,7 +17,8 @@ export class ModelsService {
     @InjectRepository(ModelEntity)
     private readonly modelsRepo: Repository<ModelEntity>,
     @InjectRepository(VendorEntity)
-    private readonly vendorRepo: Repository<VendorEntity>
+    private readonly vendorRepo: Repository<VendorEntity>,
+    private readonly assetVersionsService: AssetVersionsService,
   ) {}
 
   async createModel(dto: ModelCreate,createdByUserId:string): Promise<Model> {
@@ -33,7 +35,9 @@ export class ModelsService {
       model.vendor = vendor;
     }
 
-    return this.modelsRepo.save(model);
+    const result = await this.modelsRepo.save(model);
+    await this.assetVersionsService.saveVersion("models", result.id, result as unknown as object, createdByUserId);
+    return result;
   }
 
   async updateModel(id: string, dto: ModelUpdate,updatedByUserId:string): Promise<Model> {
@@ -53,7 +57,9 @@ export class ModelsService {
       model.vendor = vendor;
     }
 
-    return this.modelsRepo.save({...model,updatedByUserId});
+    const result = await this.modelsRepo.save({...model,updatedByUserId});
+    await this.assetVersionsService.saveVersion("models", result.id, result as unknown as object, updatedByUserId);
+    return result;
   }
 
   async listModels(q: ListModelsQueryDto):Promise<{rows:Model[],total:number}>{

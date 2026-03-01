@@ -10,6 +10,7 @@ import { QueryDto } from "../query/dto/query.dto";
 import { DeviceEntity } from "./entities/device.entity";
 import { ModelEntity } from "./entities/model.entity";
 import { DeviceTypeEntity } from "./entities/deviceType.entity";
+import { AssetVersionsService } from "./assetVersions.service";
 
 @Injectable()
 export class DevicesService {
@@ -19,7 +20,8 @@ export class DevicesService {
     @InjectRepository(ModelEntity)
     private readonly modelsRepo: Repository<ModelEntity>,
     @InjectRepository(DeviceTypeEntity)
-    private readonly deviceTypesRepo: Repository<DeviceTypeEntity>
+    private readonly deviceTypesRepo: Repository<DeviceTypeEntity>,
+    private readonly assetVersionsService: AssetVersionsService,
   ) {}
 
   convertDeviceEntity(deviceEntity: DeviceEntity): Device {
@@ -57,7 +59,9 @@ export class DevicesService {
       model,
       createdByUserId,
     });
-    return this.convertDeviceEntity(await this.devicesRepo.save(device));
+    const result = this.convertDeviceEntity(await this.devicesRepo.save(device));
+    await this.assetVersionsService.saveVersion("devices", result.id, result as unknown as object, createdByUserId);
+    return result;
   }
 
   async listDevices(q: QueryDto): Promise<{ rows: Device[]; total: number }> {
@@ -159,7 +163,9 @@ export class DevicesService {
       device.model = model;
     }
     device.updatedByUserId=updatedByUserId
-    return await this.convertDeviceEntity(await this.devicesRepo.save(device));
+    const result = await this.convertDeviceEntity(await this.devicesRepo.save(device));
+    await this.assetVersionsService.saveVersion("devices", result.id, result as unknown as object, updatedByUserId);
+    return result;
   }
 
   async removeDevice(id: string): Promise<void> {
