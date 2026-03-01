@@ -5,6 +5,7 @@ import { ChartLockSchema } from "./chartsLocks.schema.js";
 import { DeviceOnChartSchema } from "./deviceOnChart.schemas.js";
 import { LineOnChartSchema } from "./lineOnChart.schemas.js";
 import { NoteOnChartSchema } from "./noteOnChart.schemas.js";
+import { ZoneOnChartSchema } from "./zoneOnChart.schemas.js";
 import { CloudOnChartSchema } from "../../clouds/schemas/cloudOnChart.schemas.js";
 
 
@@ -23,6 +24,7 @@ const ChartBaseSchema = z.object({
   linesOnChart: z.array(LineOnChartSchema),
   bondsOnChart: z.array(BondOnChartSchema),
   notesOnChart: z.array(NoteOnChartSchema).optional().default([]),
+  zonesOnChart: z.array(ZoneOnChartSchema).optional().default([]),
   cloudsOnChart: z.array(CloudOnChartSchema).optional().default([]),
   lock: ChartLockSchema.optional().nullable().default(null),
 });
@@ -31,9 +33,10 @@ export const ChartSchema = ChartBaseSchema.extend(IdentifiableSchema.shape).exte
 export const ChartCreateSchema = ChartBaseSchema.omit({
   lock:true,
 })
-// update = partial(create) + deletes
+// update = partial(create) + deletes + optional version label
 export const ChartUpdateSchema = ChartCreateSchema.partial().extend({
   deletes: DeletesSchema.optional(),
+  versionLabel: z.string().max(255).optional(),
 });
 
 export const ChartMetadataSchema = ChartSchema.omit({

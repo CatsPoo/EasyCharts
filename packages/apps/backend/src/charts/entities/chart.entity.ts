@@ -12,6 +12,7 @@ import { BondOnChartEntity } from "./BondOnChart.emtity";
 import { DeviceOnChartEntity } from "./deviceOnChart.entity";
 import { LineOnChartEntity } from "./lineonChart.emtity";
 import { NoteOnChartEntity } from "./noteOnChart.entity";
+import { ZoneOnChartEntity } from "./zoneOnChart.entity";
 import { CloudOnChartEntity } from "./cloudOnChart.entity";
 import { AuditableEntity } from "../../auth/entities/auditableEntity.culumns";
 
@@ -68,6 +69,12 @@ export class ChartEntity extends AuditableEntity {
     orphanedRowAction: "delete",
   })
   notesOnChart!: Relation<NoteOnChartEntity[]>;
+
+  @OneToMany(() => ZoneOnChartEntity, (zoc) => zoc.chart, {
+    cascade: ["insert", "update"],
+    orphanedRowAction: "delete",
+  })
+  zonesOnChart!: Relation<ZoneOnChartEntity[]>;
 
   @OneToMany(() => CloudOnChartEntity, (coc) => coc.chart, {
     cascade: ["insert", "update"],

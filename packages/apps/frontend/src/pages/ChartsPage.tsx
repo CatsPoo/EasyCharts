@@ -1,5 +1,7 @@
 import { LockState, Permission, type Chart } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
+import HistoryIcon from "@mui/icons-material/History";
+import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import {
   Alert,
   AppBar,
@@ -8,12 +10,17 @@ import {
   CircularProgress,
   Collapse,
   Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControlLabel,
   IconButton,
   Switch,
   Tab,
   Tabs,
+  TextField,
   Toolbar,
+  Tooltip,
 } from "@mui/material";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -25,6 +32,7 @@ import type { ChartEditorHandle } from "../components/ChartEditor/interfaces/cha
 import { DirectoryBrowserSidebar } from "../components/ChartEditor/DirectoryBrowserSidebar";
 import { NavBar } from "../components/NavBar";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
+import { ChartHistoryPanel } from "../components/VersionHistory/ChartHistoryPanel";
 import { useChartById } from "../hooks/chartsHooks";
 import { useChartLock } from "../hooks/chartsLockHooks";
 import { LockStatusChip } from "../components/ChartEditor/LockStatusClip";
@@ -43,6 +51,9 @@ export function ChartsPage() {
   const [previewKey, setPreviewKey] = useState(0);
 
   const chartEditorRef = useRef<ChartEditorHandle>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [saveNoteOpen, setSaveNoteOpen] = useState(false);
+  const [saveNoteLabel, setSaveNoteLabel] = useState("");
 
   const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,refetch,isLoading} = useChartLock(user!.id,selectedId || undefined)
   const readonly = false;
@@ -109,11 +120,11 @@ export function ChartsPage() {
     setEditChart(undefined);
   };
 
-  async function handleSaveClick() {
+  async function handleSaveClick(versionLabel?: string) {
     if (!chartEditorRef.current) return;
     try {
       setSaving(true);
-      const saved: Chart | null = await chartEditorRef.current.onSave();
+      const saved: Chart | null = await chartEditorRef.current.onSave(undefined, versionLabel);
       if( ! saved)
         throw new Error('Unable to save the chart')
       // do any parent-side updates you want
@@ -129,6 +140,13 @@ export function ChartsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleSaveWithNote() {
+    const label = saveNoteLabel.trim() || undefined;
+    setSaveNoteOpen(false);
+    setSaveNoteLabel("");
+    await handleSaveClick(label);
   }
   
   return (
@@ -267,15 +285,35 @@ export function ChartsPage() {
               </RequirePermissions>
               <ThemeToggleButton />
             </div>
+            {selectedId && (
+              <Tooltip title="Version history">
+                <IconButton color="inherit" onClick={() => setHistoryOpen(true)}>
+                  <HistoryIcon />
+                </IconButton>
+              </Tooltip>
+            )}
             {editMode && (
-              <Button
-                color="success"
-                variant="contained"
-                onClick={handleSaveClick}
-                disabled={saving || !editorMadeChanges}
-              >
-                {saving ? "Saving…" : "Save"}
-              </Button>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Tooltip title="Save with a note">
+                  <span>
+                    <IconButton
+                      color="inherit"
+                      onClick={() => setSaveNoteOpen(true)}
+                      disabled={saving || !editorMadeChanges}
+                    >
+                      <NoteAddIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Button
+                  color="success"
+                  variant="contained"
+                  onClick={() => handleSaveClick()}
+                  disabled={saving || !editorMadeChanges}
+                >
+                  {saving ? "Saving…" : "Save"}
+                </Button>
+              </Box>
             )}
           </Toolbar>
         </AppBar>
@@ -303,7 +341,41 @@ export function ChartsPage() {
             ref={chartEditorRef}
           />
         )}
+
+        {/* Save with note dialog */}
+        <Dialog open={saveNoteOpen} onClose={() => setSaveNoteOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>Save with note</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              fullWidth
+              size="small"
+              label="Version note (optional)"
+              placeholder="e.g. Before major restructure"
+              value={saveNoteLabel}
+              onChange={(e) => setSaveNoteLabel(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveWithNote()}
+              sx={{ mt: 1 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSaveNoteOpen(false)}>Cancel</Button>
+            <Button variant="contained" color="success" onClick={handleSaveWithNote}>
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Dialog>
+
+      {/* Chart history panel */}
+      {selectedId && (
+        <ChartHistoryPanel
+          chartId={selectedId}
+          open={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          onRollbackSuccess={() => setPreviewKey((k) => k + 1)}
+        />
+      )}
     </Box>
   );
 }
