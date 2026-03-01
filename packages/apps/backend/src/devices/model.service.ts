@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import { ModelEntity } from "./entities/model.entity";
 import { VendorEntity } from "./entities/vendor.entity";
 import type {
@@ -9,6 +9,7 @@ import type {
   ModelUpdate,
 } from "@easy-charts/easycharts-types";
 import { ListModelsQueryDto } from "../query/dto/query.dto";
+import { AssetVersionsService } from "./assetVersions.service";
 
 @Injectable()
 export class ModelsService {
@@ -16,7 +17,9 @@ export class ModelsService {
     @InjectRepository(ModelEntity)
     private readonly modelsRepo: Repository<ModelEntity>,
     @InjectRepository(VendorEntity)
-    private readonly vendorRepo: Repository<VendorEntity>
+    private readonly vendorRepo: Repository<VendorEntity>,
+    private readonly assetVersionsService: AssetVersionsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createModel(dto: ModelCreate,createdByUserId:string): Promise<Model> {
@@ -33,7 +36,9 @@ export class ModelsService {
       model.vendor = vendor;
     }
 
-    return this.modelsRepo.save(model);
+    const result = await this.modelsRepo.save(model);
+    await this.assetVersionsService.saveVersion("models", result.id, result as unknown as object, createdByUserId);
+    return result;
   }
 
   async updateModel(id: string, dto: ModelUpdate,updatedByUserId:string): Promise<Model> {
@@ -53,7 +58,9 @@ export class ModelsService {
       model.vendor = vendor;
     }
 
-    return this.modelsRepo.save({...model,updatedByUserId});
+    const result = await this.modelsRepo.save({...model,updatedByUserId});
+    await this.assetVersionsService.saveVersion("models", result.id, result as unknown as object, updatedByUserId);
+    return result;
   }
 
   async listModels(q: ListModelsQueryDto):Promise<{rows:Model[],total:number}>{
@@ -90,6 +97,15 @@ export class ModelsService {
   }
 
   async removeModel(id: string):Promise<void> {
+    const usedDevices = await this.dataSource.query<Array<{ id: string; name: string }>>(
+      `SELECT id, name FROM devices WHERE model_id = $1`, [id]
+    );
+    if (usedDevices.length) {
+      throw new HttpException(
+        { message: 'Model is in use and cannot be deleted', usedIn: usedDevices.map(r => ({ ...r, kind: 'device' })) },
+        HttpStatus.CONFLICT,
+      );
+    }
     await this.modelsRepo.delete(id);
   }
 }

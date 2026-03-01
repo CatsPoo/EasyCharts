@@ -285,7 +285,7 @@ export function ChartsPage() {
               </RequirePermissions>
               <ThemeToggleButton />
             </div>
-            {selectedId && (
+            {selectedId && editMode && (
               <Tooltip title="Version history">
                 <IconButton color="inherit" onClick={() => setHistoryOpen(true)}>
                   <HistoryIcon />
@@ -365,17 +365,24 @@ export function ChartsPage() {
             </Button>
           </DialogActions>
         </Dialog>
-      </Dialog>
 
-      {/* Chart history panel */}
-      {selectedId && (
-        <ChartHistoryPanel
-          chartId={selectedId}
-          open={historyOpen}
-          onClose={() => setHistoryOpen(false)}
-          onRollbackSuccess={() => setPreviewKey((k) => k + 1)}
-        />
-      )}
+        {/* Chart history panel — must live inside the fullscreen Dialog so the Drawer stacks above it */}
+        {selectedId && (
+          <ChartHistoryPanel
+            chartId={selectedId}
+            open={historyOpen}
+            onClose={() => setHistoryOpen(false)}
+            onRollbackSuccess={() => {
+              setHistoryOpen(false);
+              setDialogOpen(false);
+              setEditMode(false);
+              setEditorMadeChanges(false);
+              setEditChart(undefined);
+              setPreviewKey((k) => k + 1);
+            }}
+          />
+        )}
+      </Dialog>
     </Box>
   );
 }

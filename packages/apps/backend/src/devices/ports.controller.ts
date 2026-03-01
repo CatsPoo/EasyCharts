@@ -20,20 +20,29 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { ZodValidationPipe } from '../common/zodValidation.pipe';
 import { QueryDto } from '../query/dto/query.dto';
 import { PortsService } from './ports.service';
+import { DevicesService } from './devices.service';
+import { AssetVersionsService } from './assetVersions.service';
 
 @UseGuards(JwdAuthGuard, PermissionsGuard)
 @Controller("ports")
 export class PortsController {
-  constructor(private readonly portsService: PortsService) {}
+  constructor(
+    private readonly portsService: PortsService,
+    private readonly devicesService: DevicesService,
+    private readonly assetVersionsService: AssetVersionsService,
+  ) {}
 
   @RequirePermissions(Permission.ASSET_CREATE)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(
+  async create(
     @Body(new ZodValidationPipe(PortCreateSchema)) payload: PortCreate,
     @Req() req: { user: string }
   ) {
-    return this.portsService.createPort(payload, req.user);
+    const port = await this.portsService.createPort(payload, req.user);
+    const device = await this.devicesService.getDeviceById(port.deviceId);
+    await this.assetVersionsService.saveVersion("devices", device.id, device, req.user);
+    return port;
   }
 
   @RequirePermissions(Permission.ASSET_READ)
@@ -50,18 +59,27 @@ export class PortsController {
 
   @RequirePermissions(Permission.ASSET_EDIT)
   @Put(":id")
-  update(
+  async update(
     @Param("id", new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(PortUpdateSchema)) payload: PortUpdate,
     @Req() req: { user: string }
   ) {
-    return this.portsService.updatePort(id, payload, req.user);
+    const port = await this.portsService.updatePort(id, payload, req.user);
+    const device = await this.devicesService.getDeviceById(port.deviceId);
+    await this.assetVersionsService.saveVersion("devices", device.id, device, req.user);
+    return port;
   }
 
   @RequirePermissions(Permission.ASSET_DELETE)
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param("id", new ParseUUIDPipe()) id: string) {
-    return this.portsService.removePort(id);
+  async remove(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Req() req: { user: string }
+  ) {
+    const port = await this.portsService.getPortrById(id);
+    await this.portsService.removePort(id);
+    const device = await this.devicesService.getDeviceById(port.deviceId);
+    await this.assetVersionsService.saveVersion("devices", device.id, device, req.user);
   }
 }

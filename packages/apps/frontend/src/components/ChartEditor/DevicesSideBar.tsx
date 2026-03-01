@@ -13,11 +13,13 @@ function initials(text?: string) {
 interface DevicesSideListProps {
   devicesList: Device[];
   cloudsList: Cloud[];
+  onCreateDevice?: () => void;
+  onCreateCloud?: () => void;
 }
 
 type ActiveTab = "devices" | "elements" | "clouds";
 
-export function DevicesSidebar({ devicesList, cloudsList }: DevicesSideListProps) {
+export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCreateCloud }: DevicesSideListProps) {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<ActiveTab>("devices");
   const { isDark } = useThemeMode();
@@ -75,9 +77,19 @@ export function DevicesSidebar({ devicesList, cloudsList }: DevicesSideListProps
         <>
           <div className="flex items-center justify-between mb-3">
             <h2 className={["text-sm font-semibold", isDark ? "text-slate-200" : "text-slate-700"].join(" ")}>Devices</h2>
-            <span className={["text-xs rounded-full px-2 py-0.5", isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-400"].join(" ")}>
-              {filteredDevices.length}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className={["text-xs rounded-full px-2 py-0.5", isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-400"].join(" ")}>
+                {filteredDevices.length}
+              </span>
+              {onCreateDevice && (
+                <button
+                  onClick={onCreateDevice}
+                  title="Create new device"
+                  className={["flex items-center justify-center w-5 h-5 rounded text-xs font-bold transition-colors",
+                    isDark ? "bg-indigo-700 hover:bg-indigo-600 text-white" : "bg-indigo-100 hover:bg-indigo-200 text-indigo-700"].join(" ")}
+                >+</button>
+              )}
+            </div>
           </div>
 
           <input
@@ -135,9 +147,19 @@ export function DevicesSidebar({ devicesList, cloudsList }: DevicesSideListProps
         <>
           <div className="flex items-center justify-between mb-3">
             <h2 className={["text-sm font-semibold", isDark ? "text-slate-200" : "text-slate-700"].join(" ")}>Clouds</h2>
-            <span className={["text-xs rounded-full px-2 py-0.5", isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-400"].join(" ")}>
-              {filteredClouds.length}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className={["text-xs rounded-full px-2 py-0.5", isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-400"].join(" ")}>
+                {filteredClouds.length}
+              </span>
+              {onCreateCloud && (
+                <button
+                  onClick={onCreateCloud}
+                  title="Create new cloud"
+                  className={["flex items-center justify-center w-5 h-5 rounded text-xs font-bold transition-colors",
+                    isDark ? "bg-sky-700 hover:bg-sky-600 text-white" : "bg-sky-100 hover:bg-sky-200 text-sky-700"].join(" ")}
+                >+</button>
+              )}
+            </div>
           </div>
 
           <input
@@ -218,6 +240,30 @@ export function DevicesSidebar({ devicesList, cloudsList }: DevicesSideListProps
               <div className="min-w-0 flex-1">
                 <p className={["text-xs font-semibold leading-4", isDark ? "text-slate-200" : "text-slate-800"].join(" ")}>Note</p>
                 <p className={["text-[10px]", isDark ? "text-slate-500" : "text-slate-400"].join(" ")}>Free text area</p>
+              </div>
+            </li>
+
+            <li
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.setData("application/reactflow-element", JSON.stringify({ type: "zone" }));
+                event.dataTransfer.effectAllowed = "move";
+              }}
+              className={[
+                "flex items-center gap-2 px-2 py-2 rounded-lg border border-transparent cursor-grab active:cursor-grabbing transition-colors select-none",
+                isDark ? "hover:border-blue-800 hover:bg-blue-950" : "hover:border-blue-300 hover:bg-blue-50",
+              ].join(" ")}
+              title="Zone — drag onto canvas"
+            >
+              <div className="h-8 w-8 flex-none rounded-md flex items-center justify-center"
+                style={{ background: isDark ? "#1a2a3d" : "#dbeafe", border: isDark ? "2px dashed #1a3a7a" : "2px dashed #93c5fd" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: isDark ? "#60a5fa" : "#1e40af" }}>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={["text-xs font-semibold leading-4", isDark ? "text-slate-200" : "text-slate-800"].join(" ")}>Zone</p>
+                <p className={["text-[10px]", isDark ? "text-slate-500" : "text-slate-400"].join(" ")}>Background area marker</p>
               </div>
             </li>
           </ul>

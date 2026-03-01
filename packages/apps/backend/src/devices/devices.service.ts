@@ -3,13 +3,15 @@ import type {
   DeviceCreate,
   DeviceUpdate,
 } from "@easy-charts/easycharts-types";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
+import { DeviceOnChartEntity } from "../charts/entities/deviceOnChart.entity";
 import { QueryDto } from "../query/dto/query.dto";
 import { DeviceEntity } from "./entities/device.entity";
 import { ModelEntity } from "./entities/model.entity";
 import { DeviceTypeEntity } from "./entities/deviceType.entity";
+import { AssetVersionsService } from "./assetVersions.service";
 
 @Injectable()
 export class DevicesService {
@@ -19,7 +21,9 @@ export class DevicesService {
     @InjectRepository(ModelEntity)
     private readonly modelsRepo: Repository<ModelEntity>,
     @InjectRepository(DeviceTypeEntity)
-    private readonly deviceTypesRepo: Repository<DeviceTypeEntity>
+    private readonly deviceTypesRepo: Repository<DeviceTypeEntity>,
+    private readonly assetVersionsService: AssetVersionsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   convertDeviceEntity(deviceEntity: DeviceEntity): Device {
@@ -57,7 +61,9 @@ export class DevicesService {
       model,
       createdByUserId,
     });
-    return this.convertDeviceEntity(await this.devicesRepo.save(device));
+    const result = this.convertDeviceEntity(await this.devicesRepo.save(device));
+    await this.assetVersionsService.saveVersion("devices", result.id, result as unknown as object, createdByUserId);
+    return result;
   }
 
   async listDevices(q: QueryDto): Promise<{ rows: Device[]; total: number }> {
@@ -159,10 +165,27 @@ export class DevicesService {
       device.model = model;
     }
     device.updatedByUserId=updatedByUserId
-    return await this.convertDeviceEntity(await this.devicesRepo.save(device));
+    const result = await this.convertDeviceEntity(await this.devicesRepo.save(device));
+    await this.assetVersionsService.saveVersion("devices", result.id, result as unknown as object, updatedByUserId);
+    return result;
   }
 
   async removeDevice(id: string): Promise<void> {
+    const usedCharts = await this.dataSource
+      .getRepository(DeviceOnChartEntity)
+      .createQueryBuilder("doc")
+      .innerJoin("doc.chart", "c")
+      .select("c.id", "id")
+      .addSelect("c.name", "name")
+      .where("doc.deviceId = :id", { id })
+      .getRawMany<{ id: string; name: string }>();
+
+    if (usedCharts.length) {
+      throw new HttpException(
+        { message: 'Device is in use and cannot be deleted', usedIn: usedCharts.map(r => ({ ...r, kind: 'chart' })) },
+        HttpStatus.CONFLICT,
+      );
+    }
     const result = await this.devicesRepo.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Device ${id} not found`);

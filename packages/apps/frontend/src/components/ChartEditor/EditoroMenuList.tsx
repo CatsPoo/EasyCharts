@@ -14,7 +14,7 @@ export const NOTE_COLORS: { key: string; light: string; dark: string; label: str
 ];
 
 // Vibrant swatch dots shown next to each label in the color list
-const NOTE_SWATCH: Record<string, string> = {
+export const NOTE_SWATCH: Record<string, string> = {
   yellow: "#fde047",
   orange: "#fb923c",
   pink:   "#f472b6",
@@ -104,6 +104,10 @@ export default function EditorMenuList({
       { key: EditorMenuListKeys.EDIT_CLOUD, label: "Edit Cloud" },
       { key: EditorMenuListKeys.REMOVE_CLOUD_FROM_CHART, label: "Remove Cloud From Chart" },
       { key: EditorMenuListKeys.DELETE_CLOUD, label: "Delete Cloud" },
+    ],
+    zone: [
+      { key: EditorMenuListKeys.EDIT_ZONE_STYLE, label: "Edit Style..." },
+      { key: EditorMenuListKeys.DELETE_ZONE, label: "Delete Zone" },
     ],
   };
 

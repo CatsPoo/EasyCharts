@@ -1,13 +1,24 @@
 // AssetPage.tsx
 import {
+  Alert,
   Box,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  List,
+  ListItem,
+  ListItemText,
   Tabs,
   Tab,
   Toolbar,
   Button,
+  IconButton,
   TextField,
+  Tooltip,
+  Typography,
   alpha,
 } from "@mui/material";
+import HistoryIcon from "@mui/icons-material/History";
 import {
   DataGrid,
   type GridPaginationModel,
@@ -20,6 +31,7 @@ import {
   useCreateAsset,
   useUpdateAsset,
   useDeleteAsset,
+  type AssetInUseError,
 } from "../../hooks/assetsHooks";
 import {
   type AssetKind,
@@ -30,9 +42,12 @@ import { AssetForm } from "./AssetsForm";
 import { DevicePortsViewDialog } from "./DevicePortsViewDialog";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import { RequirePermissions } from "../../auth/RequirePermissions";
+import { AssetHistoryDialog } from "../VersionHistory/AssetHistoryDialog";
 import type { Device } from "@easy-charts/easycharts-types";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function AssetTab() {
+  const qc = useQueryClient();
   const [kind, setKind] = useState<AssetKind>("devices");
   const [pagination, setPagination] = useState<GridPaginationModel>({
     page: 0,
@@ -45,7 +60,9 @@ export default function AssetTab() {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AnyAsset | null>(null);
+  const [inUseError, setInUseError] = useState<(AssetInUseError & { assetName: string }) | null>(null);
   const [viewingPorts, setViewingPorts] = useState<Device | null>(null);
+  const [historyAsset, setHistoryAsset] = useState<AnyAsset | null>(null);
 
   const sort = sortModel[0];
   const sortBy = sort?.field;
@@ -68,10 +85,18 @@ export default function AssetTab() {
 
   const onDeleteDialogConfirm = useCallback(() => {
     if (!pendingDelete) return;
+    const assetName = pendingDelete.name;
     deleteMut.mutate(pendingDelete.id, {
-      onSettled: () => {
+      onSuccess: () => {
         setConfirmOpen(false);
         setPendingDelete(null);
+      },
+      onError: (err: any) => {
+        setConfirmOpen(false);
+        setPendingDelete(null);
+        if (err.usedIn) {
+          setInUseError({ message: err.message, usedIn: err.usedIn, assetName });
+        }
       },
     });
   }, [deleteMut, pendingDelete]);
@@ -93,10 +118,10 @@ export default function AssetTab() {
       {
         field: "__actions",
         headerName: "",
-        width: kind === "devices" ? 220 : 160,
+        width: kind === "devices" ? 270 : 210,
         sortable: false,
         renderCell: (params: any) => (
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             {kind === "devices" && (
               <Button
                 size="small"
@@ -106,6 +131,11 @@ export default function AssetTab() {
                 Ports
               </Button>
             )}
+            <Tooltip title="Version history">
+              <IconButton size="small" onClick={() => setHistoryAsset(params.row)}>
+                <HistoryIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <RequirePermissions required={[Permission.ASSET_EDIT]}>
               <Button size="small" onClick={() => setEditing(params.row)}>
                 Edit
@@ -236,9 +266,8 @@ export default function AssetTab() {
           if (kind === "devices") {
             const { vendorId, ...payload } = values;
             createMut.mutate(payload, {
-              onSuccess: (newDevice) => {
+              onSuccess: () => {
                 setCreateOpen(false);
-                setEditing(newDevice);
               },
             });
           } else {
@@ -286,6 +315,38 @@ export default function AssetTab() {
         onCancel={onDeleteDialogCancel}
         onConfirm={onDeleteDialogConfirm}
       />
+
+      <AssetHistoryDialog
+        kind={kind}
+        asset={historyAsset}
+        open={!!historyAsset}
+        onClose={() => setHistoryAsset(null)}
+        onRollbackSuccess={() => qc.invalidateQueries({ queryKey: ["assets", kind] })}
+      />
+
+      <Dialog open={!!inUseError} onClose={() => setInUseError(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Cannot delete "{inUseError?.assetName}"</DialogTitle>
+        <DialogContent>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {inUseError?.message}
+          </Alert>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            This item is used in the following locations:
+          </Typography>
+          <List dense disablePadding>
+            {inUseError?.usedIn.map((item) => (
+              <ListItem key={item.id} sx={{ py: 0.25 }}>
+                <ListItemText
+                  primary={item.name}
+                  secondary={item.kind}
+                  primaryTypographyProps={{ variant: "body2" }}
+                  secondaryTypographyProps={{ variant: "caption" }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

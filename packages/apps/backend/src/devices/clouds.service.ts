@@ -1,10 +1,11 @@
 import type { Cloud, CloudCreate, CloudUpdate } from '@easy-charts/easycharts-types';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CloudEntity } from './entities/cloud.entity';
 import { QueryDto } from '../query/dto/query.dto';
 import { AssetVersionsService } from './assetVersions.service';
+import { CloudOnChartEntity } from '../charts/entities/cloudOnChart.entity';
 
 @Injectable()
 export class CloudsService {
@@ -12,6 +13,7 @@ export class CloudsService {
     @InjectRepository(CloudEntity)
     private readonly cloudsRepo: Repository<CloudEntity>,
     private readonly assetVersionsService: AssetVersionsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createCloud(dto: CloudCreate, createdByUserId: string): Promise<Cloud> {
@@ -55,6 +57,21 @@ export class CloudsService {
   }
 
   async removeCloud(id: string): Promise<void> {
+    const usedCharts = await this.dataSource
+      .getRepository(CloudOnChartEntity)
+      .createQueryBuilder("coc")
+      .innerJoin("coc.chart", "c")
+      .select("c.id", "id")
+      .addSelect("c.name", "name")
+      .where("coc.cloudId = :id", { id })
+      .getRawMany<{ id: string; name: string }>();
+
+    if (usedCharts.length) {
+      throw new HttpException(
+        { message: 'Cloud is in use and cannot be deleted', usedIn: usedCharts.map(r => ({ ...r, kind: 'chart' })) },
+        HttpStatus.CONFLICT,
+      );
+    }
     await this.cloudsRepo.delete(id);
   }
 }
