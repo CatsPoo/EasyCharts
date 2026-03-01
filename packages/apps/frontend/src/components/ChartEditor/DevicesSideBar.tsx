@@ -13,11 +13,13 @@ function initials(text?: string) {
 interface DevicesSideListProps {
   devicesList: Device[];
   cloudsList: Cloud[];
+  onCreateDevice?: () => void;
+  onCreateCloud?: () => void;
 }
 
 type ActiveTab = "devices" | "elements" | "clouds";
 
-export function DevicesSidebar({ devicesList, cloudsList }: DevicesSideListProps) {
+export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCreateCloud }: DevicesSideListProps) {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<ActiveTab>("devices");
   const { isDark } = useThemeMode();
@@ -75,9 +77,19 @@ export function DevicesSidebar({ devicesList, cloudsList }: DevicesSideListProps
         <>
           <div className="flex items-center justify-between mb-3">
             <h2 className={["text-sm font-semibold", isDark ? "text-slate-200" : "text-slate-700"].join(" ")}>Devices</h2>
-            <span className={["text-xs rounded-full px-2 py-0.5", isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-400"].join(" ")}>
-              {filteredDevices.length}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className={["text-xs rounded-full px-2 py-0.5", isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-400"].join(" ")}>
+                {filteredDevices.length}
+              </span>
+              {onCreateDevice && (
+                <button
+                  onClick={onCreateDevice}
+                  title="Create new device"
+                  className={["flex items-center justify-center w-5 h-5 rounded text-xs font-bold transition-colors",
+                    isDark ? "bg-indigo-700 hover:bg-indigo-600 text-white" : "bg-indigo-100 hover:bg-indigo-200 text-indigo-700"].join(" ")}
+                >+</button>
+              )}
+            </div>
           </div>
 
           <input
@@ -135,9 +147,19 @@ export function DevicesSidebar({ devicesList, cloudsList }: DevicesSideListProps
         <>
           <div className="flex items-center justify-between mb-3">
             <h2 className={["text-sm font-semibold", isDark ? "text-slate-200" : "text-slate-700"].join(" ")}>Clouds</h2>
-            <span className={["text-xs rounded-full px-2 py-0.5", isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-400"].join(" ")}>
-              {filteredClouds.length}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className={["text-xs rounded-full px-2 py-0.5", isDark ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-400"].join(" ")}>
+                {filteredClouds.length}
+              </span>
+              {onCreateCloud && (
+                <button
+                  onClick={onCreateCloud}
+                  title="Create new cloud"
+                  className={["flex items-center justify-center w-5 h-5 rounded text-xs font-bold transition-colors",
+                    isDark ? "bg-sky-700 hover:bg-sky-600 text-white" : "bg-sky-100 hover:bg-sky-200 text-sky-700"].join(" ")}
+                >+</button>
+              )}
+            </div>
           </div>
 
           <input

@@ -46,7 +46,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
-import { useListAssets, useUpdateAsset, useDeleteAsset } from "../../hooks/assetsHooks";
+import { useListAssets, useCreateAsset, useUpdateAsset, useDeleteAsset } from "../../hooks/assetsHooks";
 import { updatePort } from "../../hooks/portsHooks";
 import { AssetForm } from "../AssetsList/AssetsForm";
 import { PortFormDialog } from "../PortFormDialog";
@@ -98,6 +98,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [editDeviceTarget, setEditDeviceTarget] =
       useState<DeviceOnChart | null>(null);
     const [editCloudTarget, setEditCloudTarget] = useState<Cloud | null>(null);
+    const [createDeviceOpen, setCreateDeviceOpen] = useState(false);
+    const [createCloudOpen, setCreateCloudOpen] = useState(false);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
     const [portTypeMismatch, setPortTypeMismatch] = useState(false);
@@ -167,6 +169,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const updateMut = useUpdateChartMutation();
     const updateDeviceMut = useUpdateAsset("devices");
     const updateCloudMut = useUpdateAsset("clouds");
+    const createDeviceMut = useCreateAsset("devices");
+    const createCloudMut = useCreateAsset("clouds");
     const deleteCloudMut = useDeleteAsset("clouds");
     const { project,getEdge } = useReactFlow();
     const {devicePos} = useDevices({chart})
@@ -753,6 +757,30 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         setEditCloudTarget(null);
       },
       [editCloudTarget, updateCloudMut, applyChartChange]
+    );
+
+    const onCreateDeviceSubmit = useCallback(
+      async (formData: any) => {
+        try {
+          await createDeviceMut.mutateAsync(formData);
+        } catch (e) {
+          console.error("Failed to create device:", e);
+        }
+        setCreateDeviceOpen(false);
+      },
+      [createDeviceMut]
+    );
+
+    const onCreateCloudSubmit = useCallback(
+      async (formData: any) => {
+        try {
+          await createCloudMut.mutateAsync(formData);
+        } catch (e) {
+          console.error("Failed to create cloud:", e);
+        }
+        setCreateCloudOpen(false);
+      },
+      [createCloudMut]
     );
 
     const greenPortIds = useMemo(() => {
@@ -2185,7 +2213,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               className="flex-none overflow-hidden border-r
              border-slate-200"
             >
-              <DevicesSidebar devicesList={unusedDevices} cloudsList={allClouds} />
+              <DevicesSidebar
+                devicesList={unusedDevices}
+                cloudsList={allClouds}
+                onCreateDevice={() => setCreateDeviceOpen(true)}
+                onCreateCloud={() => setCreateCloudOpen(true)}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -2356,6 +2389,18 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           initial={editCloudTarget ?? undefined}
           onClose={() => setEditCloudTarget(null)}
           onSubmit={onEditCloudSubmit}
+        />
+        <AssetForm
+          kind="devices"
+          open={createDeviceOpen}
+          onClose={() => setCreateDeviceOpen(false)}
+          onSubmit={onCreateDeviceSubmit}
+        />
+        <AssetForm
+          kind="clouds"
+          open={createCloudOpen}
+          onClose={() => setCreateCloudOpen(false)}
+          onSubmit={onCreateCloudSubmit}
         />
         <ConfirmDialog
           open={confirmDeleteOpen}

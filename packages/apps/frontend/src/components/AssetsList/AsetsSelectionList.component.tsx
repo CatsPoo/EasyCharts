@@ -1,5 +1,6 @@
 // AsetsSelectionList.component.tsx
-import { FormControl, FormHelperText, InputLabel, MenuItem, Select } from '@mui/material';
+import { Box, FormControl, FormHelperText, IconButton, InputLabel, MenuItem, Select, Stack, Tooltip } from '@mui/material';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { Controller, type Control, type FieldErrors } from 'react-hook-form';
 import { useListAssets } from '../../hooks/assetsHooks';
 import type { AssetKind } from '@easy-charts/easycharts-types';
@@ -17,6 +18,7 @@ interface AssetsSelectionListProps<TForm = any, TRow extends AnyRow = AnyRow> {
   getOptionLabel?: (row: TRow) => string; // default: row.name
   allowNone?: boolean;
   vendorIdFilter?: string | null | undefined; // default: true
+  onQuickCreate?: () => void;
 }
 
 export function AssetsSelectionList<TForm = any, TRow extends AnyRow = AnyRow>({
@@ -28,8 +30,8 @@ export function AssetsSelectionList<TForm = any, TRow extends AnyRow = AnyRow>({
   getOptionValue = (r) => (r as any).id,
   getOptionLabel = (r) => (r as any).name,
   allowNone = true,
-  vendorIdFilter
-
+  vendorIdFilter,
+  onQuickCreate,
 }: AssetsSelectionListProps<TForm, TRow>) {
 
   const params = useMemo(() => {
@@ -48,7 +50,7 @@ export function AssetsSelectionList<TForm = any, TRow extends AnyRow = AnyRow>({
   const labelId = `${name}-label`;
   const fieldError = (errors as any)?.[name]?.message as string | undefined;
 
-  return (
+  const select = (
     <FormControl error={!!fieldError} fullWidth>
       <InputLabel id={labelId}>{label}</InputLabel>
       <Controller
@@ -81,5 +83,18 @@ export function AssetsSelectionList<TForm = any, TRow extends AnyRow = AnyRow>({
       />
       <FormHelperText>{fieldError}</FormHelperText>
     </FormControl>
+  );
+
+  if (!onQuickCreate) return select;
+
+  return (
+    <Stack direction="row" alignItems="center" spacing={1}>
+      <Box sx={{ flex: 1 }}>{select}</Box>
+      <Tooltip title={`Create new ${fetchKind.slice(0, -1)}`}>
+        <IconButton onClick={onQuickCreate} size="small">
+          <AddCircleOutlineIcon />
+        </IconButton>
+      </Tooltip>
+    </Stack>
   );
 }
