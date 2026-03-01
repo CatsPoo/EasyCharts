@@ -3,9 +3,10 @@ import type {
   DeviceCreate,
   DeviceUpdate,
 } from "@easy-charts/easycharts-types";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
+import { DeviceOnChartEntity } from "../charts/entities/deviceOnChart.entity";
 import { QueryDto } from "../query/dto/query.dto";
 import { DeviceEntity } from "./entities/device.entity";
 import { ModelEntity } from "./entities/model.entity";
@@ -22,6 +23,7 @@ export class DevicesService {
     @InjectRepository(DeviceTypeEntity)
     private readonly deviceTypesRepo: Repository<DeviceTypeEntity>,
     private readonly assetVersionsService: AssetVersionsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   convertDeviceEntity(deviceEntity: DeviceEntity): Device {
@@ -169,6 +171,21 @@ export class DevicesService {
   }
 
   async removeDevice(id: string): Promise<void> {
+    const usedCharts = await this.dataSource
+      .getRepository(DeviceOnChartEntity)
+      .createQueryBuilder("doc")
+      .innerJoin("doc.chart", "c")
+      .select("c.id", "id")
+      .addSelect("c.name", "name")
+      .where("doc.deviceId = :id", { id })
+      .getRawMany<{ id: string; name: string }>();
+
+    if (usedCharts.length) {
+      throw new HttpException(
+        { message: 'Device is in use and cannot be deleted', usedIn: usedCharts.map(r => ({ ...r, kind: 'chart' })) },
+        HttpStatus.CONFLICT,
+      );
+    }
     const result = await this.devicesRepo.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Device ${id} not found`);

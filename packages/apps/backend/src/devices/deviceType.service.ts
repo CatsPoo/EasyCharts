@@ -1,7 +1,7 @@
 import type { DeviceType, DeviceTypeCreate, DeviceTypeUpdate } from '@easy-charts/easycharts-types';
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import { DeviceTypeEntity } from "./entities/deviceType.entity";
 import { QueryDto } from "../query/dto/query.dto";
 import { AssetVersionsService } from "./assetVersions.service";
@@ -12,6 +12,7 @@ export class DeviceTypeService {
     @InjectRepository(DeviceTypeEntity)
     private readonly deviceTypeRepo: Repository<DeviceTypeEntity>,
     private readonly assetVersionsService: AssetVersionsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createDeviceType(dto: DeviceTypeCreate,createdByUserId:string) : Promise<DeviceType> {
@@ -55,6 +56,15 @@ export class DeviceTypeService {
    }
 
    async removeDeviceType(id: string) : Promise<void> {
+     const usedDevices = await this.dataSource.query<Array<{ id: string; name: string }>>(
+       `SELECT id, name FROM devices WHERE type_id = $1`, [id]
+     );
+     if (usedDevices.length) {
+       throw new HttpException(
+         { message: 'Device type is in use and cannot be deleted', usedIn: usedDevices.map(r => ({ ...r, kind: 'device' })) },
+         HttpStatus.CONFLICT,
+       );
+     }
      await this.deviceTypeRepo.delete(id);
    }
  }

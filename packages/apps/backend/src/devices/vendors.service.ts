@@ -1,7 +1,7 @@
 import type { Vendor, VendorCreate, VendorUpdate } from '@easy-charts/easycharts-types';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { VendorEntity } from '../devices/entities/vendor.entity';
 import { QueryDto } from "../query/dto/query.dto";
 import { AssetVersionsService } from './assetVersions.service';
@@ -12,6 +12,7 @@ export class VendorsService {
     @InjectRepository(VendorEntity)
     private readonly vendorsRepo: Repository<VendorEntity>,
     private readonly assetVersionsService: AssetVersionsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createVendor(dto: VendorCreate,createdByUserId:string) : Promise<Vendor> {
@@ -55,6 +56,15 @@ export class VendorsService {
   }
 
   async removeVendor(id: string) : Promise<void> {
+    const usedModels = await this.dataSource.query<Array<{ id: string; name: string }>>(
+      `SELECT id, name FROM models WHERE vendor_id = $1`, [id]
+    );
+    if (usedModels.length) {
+      throw new HttpException(
+        { message: 'Vendor is in use and cannot be deleted', usedIn: usedModels.map(r => ({ ...r, kind: 'model' })) },
+        HttpStatus.CONFLICT,
+      );
+    }
     await this.vendorsRepo.delete(id);
   }
 }

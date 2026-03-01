@@ -1,6 +1,13 @@
 // AssetPage.tsx
 import {
+  Alert,
   Box,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  List,
+  ListItem,
+  ListItemText,
   Tabs,
   Tab,
   Toolbar,
@@ -8,6 +15,7 @@ import {
   IconButton,
   TextField,
   Tooltip,
+  Typography,
   alpha,
 } from "@mui/material";
 import HistoryIcon from "@mui/icons-material/History";
@@ -23,6 +31,7 @@ import {
   useCreateAsset,
   useUpdateAsset,
   useDeleteAsset,
+  type AssetInUseError,
 } from "../../hooks/assetsHooks";
 import {
   type AssetKind,
@@ -51,6 +60,7 @@ export default function AssetTab() {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AnyAsset | null>(null);
+  const [inUseError, setInUseError] = useState<(AssetInUseError & { assetName: string }) | null>(null);
   const [viewingPorts, setViewingPorts] = useState<Device | null>(null);
   const [historyAsset, setHistoryAsset] = useState<AnyAsset | null>(null);
 
@@ -75,10 +85,18 @@ export default function AssetTab() {
 
   const onDeleteDialogConfirm = useCallback(() => {
     if (!pendingDelete) return;
+    const assetName = pendingDelete.name;
     deleteMut.mutate(pendingDelete.id, {
-      onSettled: () => {
+      onSuccess: () => {
         setConfirmOpen(false);
         setPendingDelete(null);
+      },
+      onError: (err: any) => {
+        setConfirmOpen(false);
+        setPendingDelete(null);
+        if (err.usedIn) {
+          setInUseError({ message: err.message, usedIn: err.usedIn, assetName });
+        }
       },
     });
   }, [deleteMut, pendingDelete]);
@@ -305,6 +323,30 @@ export default function AssetTab() {
         onClose={() => setHistoryAsset(null)}
         onRollbackSuccess={() => qc.invalidateQueries({ queryKey: ["assets", kind] })}
       />
+
+      <Dialog open={!!inUseError} onClose={() => setInUseError(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Cannot delete "{inUseError?.assetName}"</DialogTitle>
+        <DialogContent>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {inUseError?.message}
+          </Alert>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            This item is used in the following locations:
+          </Typography>
+          <List dense disablePadding>
+            {inUseError?.usedIn.map((item) => (
+              <ListItem key={item.id} sx={{ py: 0.25 }}>
+                <ListItemText
+                  primary={item.name}
+                  secondary={item.kind}
+                  primaryTypographyProps={{ variant: "body2" }}
+                  secondaryTypographyProps={{ variant: "caption" }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
