@@ -1732,7 +1732,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             if ((chart.cloudsOnChart ?? []).some((c) => c.cloudId === cloudId)) return;
             const bounds = reactFlowWrapper.current.getBoundingClientRect();
             const position = project({ x: e.clientX - bounds.left, y: e.clientY - bounds.top });
-            const newCloudOnChart: CloudOnChart = { cloudId, cloud: cloud as any, position, connections: [] };
+            const newCloudOnChart: CloudOnChart = { cloudId, cloud: cloud as any, position, connections: [], size: { width: 180, height: 90 } };
             applyChartChange((prev) => ({
               ...prev,
               cloudsOnChart: [...(prev.cloudsOnChart ?? []), newCloudOnChart],

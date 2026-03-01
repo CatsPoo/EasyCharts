@@ -44,7 +44,6 @@ export class CloudsOnChartService {
     }));
     await cocRepo.upsert(desiredClouds, {
       conflictPaths: ["chartId", "cloudId"],
-      skipUpdateIfNoValuesChanged: true,
     });
 
     // Delete removed clouds (cascade also removes their connections)
