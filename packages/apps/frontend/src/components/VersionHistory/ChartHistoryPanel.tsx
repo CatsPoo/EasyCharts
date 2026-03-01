@@ -67,6 +67,7 @@ export function ChartHistoryPanel({ chartId, open, onClose, onRollbackSuccess }:
         anchor="right"
         open={open}
         onClose={onClose}
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
         PaperProps={{ sx: { width: 360, display: "flex", flexDirection: "column" } }}
       >
         <Box sx={{ display: "flex", alignItems: "center", px: 2, py: 1.5, gap: 1 }}>
@@ -99,7 +100,7 @@ export function ChartHistoryPanel({ chartId, open, onClose, onRollbackSuccess }:
                         <IconButton
                           edge="end"
                           size="small"
-                          onClick={() => setPending(v)}
+                          onClick={() => { onClose(); setPending(v); }}
                           disabled={rollbackMut.isPending}
                         >
                           <RestoreIcon fontSize="small" />

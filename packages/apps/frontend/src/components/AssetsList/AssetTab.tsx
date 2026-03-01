@@ -5,9 +5,12 @@ import {
   Tab,
   Toolbar,
   Button,
+  IconButton,
   TextField,
+  Tooltip,
   alpha,
 } from "@mui/material";
+import HistoryIcon from "@mui/icons-material/History";
 import {
   DataGrid,
   type GridPaginationModel,
@@ -30,9 +33,12 @@ import { AssetForm } from "./AssetsForm";
 import { DevicePortsViewDialog } from "./DevicePortsViewDialog";
 import { ConfirmDialog } from "../DeleteAlertDialog";
 import { RequirePermissions } from "../../auth/RequirePermissions";
+import { AssetHistoryDialog } from "../VersionHistory/AssetHistoryDialog";
 import type { Device } from "@easy-charts/easycharts-types";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function AssetTab() {
+  const qc = useQueryClient();
   const [kind, setKind] = useState<AssetKind>("devices");
   const [pagination, setPagination] = useState<GridPaginationModel>({
     page: 0,
@@ -46,6 +52,7 @@ export default function AssetTab() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AnyAsset | null>(null);
   const [viewingPorts, setViewingPorts] = useState<Device | null>(null);
+  const [historyAsset, setHistoryAsset] = useState<AnyAsset | null>(null);
 
   const sort = sortModel[0];
   const sortBy = sort?.field;
@@ -93,10 +100,10 @@ export default function AssetTab() {
       {
         field: "__actions",
         headerName: "",
-        width: kind === "devices" ? 220 : 160,
+        width: kind === "devices" ? 270 : 210,
         sortable: false,
         renderCell: (params: any) => (
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             {kind === "devices" && (
               <Button
                 size="small"
@@ -106,6 +113,11 @@ export default function AssetTab() {
                 Ports
               </Button>
             )}
+            <Tooltip title="Version history">
+              <IconButton size="small" onClick={() => setHistoryAsset(params.row)}>
+                <HistoryIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <RequirePermissions required={[Permission.ASSET_EDIT]}>
               <Button size="small" onClick={() => setEditing(params.row)}>
                 Edit
@@ -236,9 +248,8 @@ export default function AssetTab() {
           if (kind === "devices") {
             const { vendorId, ...payload } = values;
             createMut.mutate(payload, {
-              onSuccess: (newDevice) => {
+              onSuccess: () => {
                 setCreateOpen(false);
-                setEditing(newDevice);
               },
             });
           } else {
@@ -285,6 +296,14 @@ export default function AssetTab() {
         loading={deleteMut.isPending}
         onCancel={onDeleteDialogCancel}
         onConfirm={onDeleteDialogConfirm}
+      />
+
+      <AssetHistoryDialog
+        kind={kind}
+        asset={historyAsset}
+        open={!!historyAsset}
+        onClose={() => setHistoryAsset(null)}
+        onRollbackSuccess={() => qc.invalidateQueries({ queryKey: ["assets", kind] })}
       />
     </Box>
   );
