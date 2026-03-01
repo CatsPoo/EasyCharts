@@ -148,8 +148,8 @@ export class PortsService {
       | null,
     updatedBuUserid:string,
     manager?: EntityManager
-  ): Promise<void> {
-    if (!ports?.length) return;
+  ): Promise<boolean> {
+    if (!ports?.length) return false;
 
     const portRepo = manager
       ? manager.getRepository(PortEntity)
@@ -173,6 +173,8 @@ export class PortsService {
       );
     }
 
+    const hasNewPorts = ports.some((p) => !byId.has(p.id));
+
     // Upsert and force-bind to device
     await portRepo.upsert(
       ports.map((p) => ({
@@ -185,5 +187,7 @@ export class PortsService {
       })),
       { conflictPaths: ["id"], skipUpdateIfNoValuesChanged: true }
     );
+
+    return hasNewPorts;
   }
 }
