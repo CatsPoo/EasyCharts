@@ -1,20 +1,25 @@
 import type { Vendor, VendorCreate, VendorUpdate } from '@easy-charts/easycharts-types';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { VendorEntity } from '../devices/entities/vendor.entity';
 import { QueryDto } from "../query/dto/query.dto";
+import { AssetVersionsService } from './assetVersions.service';
 
 @Injectable()
 export class VendorsService {
   constructor(
     @InjectRepository(VendorEntity)
     private readonly vendorsRepo: Repository<VendorEntity>,
+    private readonly assetVersionsService: AssetVersionsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createVendor(dto: VendorCreate,createdByUserId:string) : Promise<Vendor> {
     const entity = this.vendorsRepo.create({...dto,createdByUserId});
-    return this.vendorsRepo.save(entity);
+    const result = await this.vendorsRepo.save(entity);
+    await this.assetVersionsService.saveVersion("vendors", result.id, result as unknown as object, createdByUserId);
+    return result;
   }
 
   async listVendors(q: QueryDto) : Promise<{rows:Vendor[],total:number}> {
@@ -45,10 +50,21 @@ export class VendorsService {
 
   async updateVendor(id: string, dto: VendorUpdate,updatedByUserId:string) : Promise<Vendor> {
     await this.vendorsRepo.update(id, {...dto,updatedByUserId});
-    return this.getVendorById(id);
+    const result = await this.getVendorById(id);
+    await this.assetVersionsService.saveVersion("vendors", result.id, result as unknown as object, updatedByUserId);
+    return result;
   }
 
   async removeVendor(id: string) : Promise<void> {
+    const usedModels = await this.dataSource.query<Array<{ id: string; name: string }>>(
+      `SELECT id, name FROM models WHERE vendor_id = $1`, [id]
+    );
+    if (usedModels.length) {
+      throw new HttpException(
+        { message: 'Vendor is in use and cannot be deleted', usedIn: usedModels.map(r => ({ ...r, kind: 'model' })) },
+        HttpStatus.CONFLICT,
+      );
+    }
     await this.vendorsRepo.delete(id);
   }
 }

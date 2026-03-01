@@ -11,7 +11,7 @@ export class ModelEntity extends AuditableEntity{
   @Column({ unique: true })
   name!: string;
 
-  @ManyToOne(() => VendorEntity, { onDelete: "CASCADE" })
+  @ManyToOne(() => VendorEntity, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "vendor_id" })
   vendor: VendorEntity;
 

@@ -8,7 +8,8 @@ import {
   type ChartMetadata,
   type ChartUpdate,
   type CloudOnChart,
-  type DeviceOnChart
+  type DeviceOnChart,
+  type ZoneOnChart
 } from "@Easy-charts/easycharts-types";
 import {
   ForbiddenException,
@@ -24,6 +25,7 @@ import { LineEntity } from "../lines/entities/line.entity";
 import { LinessService } from "../lines/lines.service";
 import { BondsOnChartService } from "./bondOnChart.service";
 import { NotesOnChartService } from "./noteOnChart.service";
+import { ZonesOnChartService } from "./zoneOnChart.service";
 import { CloudsOnChartService } from "./cloudOnChart.service";
 import { ChartLockFeilds } from "./chartLockes.types";
 import { DevicesOnChartService } from "./deviceOnChart.service";
@@ -35,6 +37,7 @@ import { ChartIsLockedExeption } from "./exeptions/chartIsLocked.exeption";
 import { ChartNotFoundExeption } from "./exeptions/chartNotFound.exeption";
 import { LinesOnChartService } from "./lineOnChart.service";
 import { PortsOnChartService } from "./portsOnChart.service";
+import { ChartVersionsService } from "./chartVersions.service";
 
 @Injectable()
 export class ChartsService {
@@ -62,8 +65,10 @@ export class ChartsService {
     private readonly linesOnChartService: LinesOnChartService,
     private readonly bondsOnChartService: BondsOnChartService,
     private readonly notesOnChartService: NotesOnChartService,
+    private readonly zonesOnChartService: ZonesOnChartService,
     private readonly cloudsOnChartService: CloudsOnChartService,
     private readonly portsOnChartService: PortsOnChartService,
+    private readonly chartVersionsService: ChartVersionsService,
   ) {}
 
   getLockFromChartEntity = (chartEntiy: ChartLockFeilds): ChartLock => {
@@ -100,7 +105,7 @@ export class ChartsService {
   convertChartEntityToChart = async (
     chartEnrity: ChartEntity
   ): Promise<Chart> => {
-    const { devicesOnChart, linesOnChart, bondOnChart, notesOnChart, cloudsOnChart, createdAt, createdByUserId, updatedAt, updatedByUserId, ...chartData } = chartEnrity;
+    const { devicesOnChart, linesOnChart, bondOnChart, notesOnChart, zonesOnChart, cloudsOnChart, createdAt, createdByUserId, updatedAt, updatedByUserId, ...chartData } = chartEnrity;
     const convertedDeviceOnCharts: DeviceOnChart[] = [];
     for (const dl of devicesOnChart) convertedDeviceOnCharts.push(await this.devicesOnChartService.convertDeviceOnChartEntity(dl));
 
@@ -114,6 +119,10 @@ export class ChartsService {
       this.notesOnChartService.convertNoteOnChartEntity(n)
     );
 
+    const convertedZonesOnChart: ZoneOnChart[] = (zonesOnChart ?? []).map((z) =>
+      this.zonesOnChartService.convertZoneOnChartEntity(z)
+    );
+
     const convertedCloudsOnChart: CloudOnChart[] = (cloudsOnChart ?? []).map((c) =>
       this.cloudsOnChartService.convertCloudOnChartEntity(c)
     );
@@ -123,6 +132,7 @@ export class ChartsService {
       linesOnChart: convertedLinesOnChart,
       bondsOnChart: convertedBondOnChart,
       notesOnChart: convertedNotesOnChart,
+      zonesOnChart: convertedZonesOnChart,
       cloudsOnChart: convertedCloudsOnChart,
       lock: this.getLockFromChartEntity(chartEnrity),
       createdAt,
@@ -153,6 +163,7 @@ export class ChartsService {
         linesOnChart: { line: { sourcePort: true, targetPort: true } },
         bondOnChart: { bond: { members: true } },
         notesOnChart: true,
+        zonesOnChart: true,
         cloudsOnChart: { cloud: true, connections: true },
       },
     });
@@ -173,7 +184,9 @@ export class ChartsService {
       bondOnChart: [],
     });
     const newChart: ChartEntity = await this.chartRepo.save(chart);
-    return this.convertChartEntityToChart(newChart);
+    const result = await this.convertChartEntityToChart(newChart);
+    await this.chartVersionsService.saveVersion(result.id, result, createdByUserId);
+    return result;
   }
 
   convertChartToChartMetadata(chartEntity: ChartEntity): ChartMetadata {
@@ -312,7 +325,12 @@ export class ChartsService {
         await this.notesOnChartService.syncNotes(manager, chartId, dto.notesOnChart);
       }
 
-      // 5b) Clouds on chart (instance only — references global clouds)
+      // 5b) Zones on chart (instance only — no global entity)
+      if (dto.zonesOnChart !== undefined) {
+        await this.zonesOnChartService.syncZones(manager, chartId, dto.zonesOnChart);
+      }
+
+      // 5c) Clouds on chart (instance only — references global clouds)
       if (dto.cloudsOnChart !== undefined) {
         await this.cloudsOnChartService.syncCloudsOnChart(manager, chartId, dto.cloudsOnChart);
       }
@@ -346,7 +364,9 @@ export class ChartsService {
     await this.portsService.recomputePortsInUse();
 
     const converted = await this.convertChartEntityToChart(updated);
-    return this.enrichPortsWithConnectedPortIds(converted);
+    const result = await this.enrichPortsWithConnectedPortIds(converted);
+    await this.chartVersionsService.saveVersion(chartId, result, userId, dto.versionLabel);
+    return result;
   }
 
   // ---------- lock/remove ----------

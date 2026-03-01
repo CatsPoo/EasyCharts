@@ -14,16 +14,21 @@ import { LineOnChartEntity } from './entities/lineonChart.emtity';
 import { AuthModule } from '../auth/auth.module';
 import { BondOnChartEntity } from './entities/BondOnChart.emtity';
 import { NoteOnChartEntity } from './entities/noteOnChart.entity';
+import { ZoneOnChartEntity } from './entities/zoneOnChart.entity';
 import { CloudOnChartEntity, CloudConnectionOnChartEntity } from './entities/cloudOnChart.entity';
 import { LinesOnChartService } from './lineOnChart.service';
 import { DevicesOnChartService } from './deviceOnChart.service';
 import { BondsOnChartService } from './bondOnChart.service';
 import { NotesOnChartService } from './noteOnChart.service';
+import { ZonesOnChartService } from './zoneOnChart.service';
 import { CloudsOnChartService } from './cloudOnChart.service';
 import { PortsOnChartService } from './portsOnChart.service';
 import { ChartShareEntity } from './entities/chartShare.entity';
 import { ChartInDirectoryEntity } from '../chartsDirectories/entities/chartsInDirectory.entity';
 import { DirectoryShareEntity } from '../chartsDirectories/entities/directoryShare.entity';
+import { ChartVersionEntity } from './entities/chartVersion.entity';
+import { ChartVersionsService } from './chartVersions.service';
+import { ChartVersionsController } from './chartVersions.controller';
 
 @Module({
     imports: [
@@ -38,18 +43,20 @@ import { DirectoryShareEntity } from '../chartsDirectories/entities/directorySha
            LineOnChartEntity,
            BondOnChartEntity,
            NoteOnChartEntity,
+           ZoneOnChartEntity,
            CloudOnChartEntity,
            CloudConnectionOnChartEntity,
            ChartShareEntity,
            ChartInDirectoryEntity,
            DirectoryShareEntity,
+           ChartVersionEntity,
         ]),
         DevicesModule,
         LinesModule,
         AuthModule
     ],
-    controllers: [ChartsController],
-    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,CloudsOnChartService,PortsOnChartService],
+    controllers: [ChartsController, ChartVersionsController],
+    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,ZonesOnChartService,CloudsOnChartService,PortsOnChartService,ChartVersionsService],
     exports:[ChartsService]
 })
 export class ChartsModule {}

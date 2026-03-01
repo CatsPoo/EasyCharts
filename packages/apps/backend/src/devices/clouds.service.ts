@@ -1,20 +1,26 @@
 import type { Cloud, CloudCreate, CloudUpdate } from '@easy-charts/easycharts-types';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CloudEntity } from './entities/cloud.entity';
 import { QueryDto } from '../query/dto/query.dto';
+import { AssetVersionsService } from './assetVersions.service';
+import { CloudOnChartEntity } from '../charts/entities/cloudOnChart.entity';
 
 @Injectable()
 export class CloudsService {
   constructor(
     @InjectRepository(CloudEntity)
     private readonly cloudsRepo: Repository<CloudEntity>,
+    private readonly assetVersionsService: AssetVersionsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createCloud(dto: CloudCreate, createdByUserId: string): Promise<Cloud> {
     const entity = this.cloudsRepo.create({ ...dto, createdByUserId });
-    return this.cloudsRepo.save(entity);
+    const result = await this.cloudsRepo.save(entity);
+    await this.assetVersionsService.saveVersion("clouds", result.id, result as unknown as object, createdByUserId);
+    return result;
   }
 
   async listClouds(q: QueryDto): Promise<{ rows: Cloud[]; total: number }> {
@@ -45,10 +51,27 @@ export class CloudsService {
 
   async updateCloud(id: string, dto: CloudUpdate, updatedByUserId: string): Promise<Cloud> {
     await this.cloudsRepo.update(id, { ...dto, updatedByUserId });
-    return this.getCloudById(id);
+    const result = await this.getCloudById(id);
+    await this.assetVersionsService.saveVersion("clouds", result.id, result as unknown as object, updatedByUserId);
+    return result;
   }
 
   async removeCloud(id: string): Promise<void> {
+    const usedCharts = await this.dataSource
+      .getRepository(CloudOnChartEntity)
+      .createQueryBuilder("coc")
+      .innerJoin("coc.chart", "c")
+      .select("c.id", "id")
+      .addSelect("c.name", "name")
+      .where("coc.cloudId = :id", { id })
+      .getRawMany<{ id: string; name: string }>();
+
+    if (usedCharts.length) {
+      throw new HttpException(
+        { message: 'Cloud is in use and cannot be deleted', usedIn: usedCharts.map(r => ({ ...r, kind: 'chart' })) },
+        HttpStatus.CONFLICT,
+      );
+    }
     await this.cloudsRepo.delete(id);
   }
 }

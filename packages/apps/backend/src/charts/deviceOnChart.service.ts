@@ -9,13 +9,15 @@ import { PortEntity } from "../devices/entities/port.entity";
 import { DevicesService } from "../devices/devices.service";
 import { PortsOnChartService } from "./portsOnChart.service";
 import { PortsService } from "../devices/ports.service";
+import { AssetVersionsService } from "../devices/assetVersions.service";
 
 @Injectable()
 export class DevicesOnChartService {
   constructor(
     private readonly devicesService: DevicesService,
     private readonly portsOnChartService: PortsOnChartService,
-    private readonly portsService:PortsService
+    private readonly portsService:PortsService,
+    private readonly assetVersionsService: AssetVersionsService,
   ) {}
 
   convertDeviceOnChartEntity = async (
@@ -79,7 +81,10 @@ export class DevicesOnChartService {
     // Replace handles per device
     for (const d of placements) {
 
-    await this.portsService.upsertPortsForDevice(d.device.id, d.device.ports,updatedByUserId,manager);
+    const portsChanged = await this.portsService.upsertPortsForDevice(d.device.id, d.device.ports, updatedByUserId, manager);
+      if (portsChanged) {
+        await this.assetVersionsService.saveVersion("devices", d.device.id, d.device, updatedByUserId);
+      }
       const desiredRows = this.portsOnChartService.handlesToRows(
         chartId,
         d.device.id,

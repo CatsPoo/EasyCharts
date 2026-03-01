@@ -27,4 +27,6 @@ export enum  EditorMenuListKeys{
     EDIT_CLOUD = 'edit_cloud',
     REMOVE_CLOUD_FROM_CHART = 'remove_cloud_from_chart',
     DELETE_CLOUD = 'delete_cloud',
+    DELETE_ZONE = 'delete_zone',
+    EDIT_ZONE_STYLE = 'edit_zone_style',
 }

@@ -98,14 +98,25 @@ export function useUpdateAsset<K extends keyof AssetMap>(kind: K) {
   });
 }
 
+export type AssetInUseError = {
+  message: string;
+  usedIn: Array<{ id: string; name: string; kind: string }>;
+};
+
 export function useDeleteAsset<K extends keyof AssetMap>(kind: K) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
       try {
         await http.delete(`/${kind}/${id}`);
-      } catch {
-        throw new Error("Delete failed");
+      } catch (err: any) {
+        const data = err?.response?.data;
+        if (data?.usedIn) {
+          const rich = new Error(data.message ?? 'Delete failed') as Error & AssetInUseError;
+          rich.usedIn = data.usedIn;
+          throw rich;
+        }
+        throw new Error('Delete failed');
       }
       return true;
     },

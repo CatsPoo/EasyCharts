@@ -15,11 +15,11 @@ export class DeviceEntity extends AuditableEntity{
   // @Column({ type: 'enum', enum: DeviceType })
   // @Column()
   // type!: string;
-  @ManyToOne(() => DeviceTypeEntity, { onDelete: "CASCADE" })
+  @ManyToOne(() => DeviceTypeEntity, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "type_id" })
   type: DeviceTypeEntity;
 
-  @ManyToOne(() => ModelEntity, { onDelete: "CASCADE" })
+  @ManyToOne(() => ModelEntity, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "model_id" })
   model: ModelEntity;
 

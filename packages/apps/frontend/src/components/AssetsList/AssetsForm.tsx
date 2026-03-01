@@ -10,8 +10,9 @@ import {
   Stack,
   TextField,
 } from "@mui/material";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
+import { useCreateAsset } from "../../hooks/assetsHooks";
 import z from "zod";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
 import { DevicePortsTable } from "./DevicePortsTable";
@@ -46,6 +47,39 @@ type Props<K extends AssetKind> = {
   onSubmit: (data: any) => void;
 };
 
+function QuickCreateDialog({
+  kind,
+  open,
+  initial,
+  onClose,
+  onSuccess,
+}: {
+  kind: AssetKind;
+  open: boolean;
+  initial?: Record<string, any>;
+  onClose: () => void;
+  onSuccess: (id: string) => void;
+}) {
+  const { mutateAsync } = useCreateAsset(kind);
+  return (
+    <AssetForm
+      kind={kind}
+      open={open}
+      initial={initial as any}
+      onClose={onClose}
+      onSubmit={async (data) => {
+        try {
+          const result = await mutateAsync(data);
+          onSuccess(result.id);
+          onClose();
+        } catch {
+          // keep sub-dialog open on error
+        }
+      }}
+    />
+  );
+}
+
 export function AssetForm<K extends AssetKind>({
   kind,
   open,
@@ -71,10 +105,13 @@ export function AssetForm<K extends AssetKind>({
     return d;
   }
 
+  const [quickKind, setQuickKind] = useState<AssetKind | null>(null);
+
   const {
     control,
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<any>({
@@ -131,6 +168,7 @@ export function AssetForm<K extends AssetKind>({
                   errors={errors}
                   getOptionValue={(t: any) => t.id}
                   getOptionLabel={(t: any) => t.name}
+                  onQuickCreate={() => setQuickKind("types")}
                 />
 
                 <AssetsSelectionList
@@ -141,6 +179,7 @@ export function AssetForm<K extends AssetKind>({
                   errors={errors}
                   getOptionValue={(v: any) => v.id}
                   getOptionLabel={(v: any) => v.name}
+                  onQuickCreate={() => setQuickKind("vendors")}
                 />
 
                 <AssetsSelectionList
@@ -152,6 +191,7 @@ export function AssetForm<K extends AssetKind>({
                   getOptionValue={(m: any) => m.id}
                   getOptionLabel={(m: any) => m.name}
                   vendorIdFilter={selectedVendorId}
+                  onQuickCreate={() => setQuickKind("models")}
                 />
 
                 <TextField label="IP Address"
@@ -173,6 +213,7 @@ export function AssetForm<K extends AssetKind>({
                 label="Vendor"
                 control={control}
                 errors={errors}
+                onQuickCreate={() => setQuickKind("vendors")}
               />
             )}
           </Stack>
@@ -186,6 +227,24 @@ export function AssetForm<K extends AssetKind>({
           </Button>
         </DialogActions>
       </form>
+      {quickKind && (
+        <QuickCreateDialog
+          kind={quickKind}
+          open={true}
+          initial={quickKind === "models" && selectedVendorId ? { vendorId: selectedVendorId } : undefined}
+          onClose={() => setQuickKind(null)}
+          onSuccess={(id) => {
+            const fieldMap: Partial<Record<AssetKind, string>> = {
+              types: "typeId",
+              vendors: "vendorId",
+              models: "modelId",
+            };
+            const field = fieldMap[quickKind];
+            if (field) setValue(field, id);
+            setQuickKind(null);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
