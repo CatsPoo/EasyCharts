@@ -197,6 +197,11 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
     setDeleteDirDialogOpen(false);
   }, [deleteDirMutation, pendingDirToDelete, navStack]);
 
+  // ── Derived (must be before callbacks that reference chartsToShow) ──────────
+  const chartsToShow: ChartMetadata[] = isInsideDir
+    ? (dirCharts ?? [])
+    : (unassignedCharts ?? []);
+
   // ── Chart context menu handlers ────────────────────────────────────────────
   const handleChartContextMenu = useCallback((e: React.MouseEvent, chartId: string) => {
     e.preventDefault();
@@ -303,9 +308,6 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
     (isInsideDir && (childDirsLoading || dirChartsLoading));
 
   const dirsToShow = isInsideDir ? (childDirs ?? []) : (rootDirs ?? []);
-  const chartsToShow: ChartMetadata[] = isInsideDir
-    ? (dirCharts ?? [])
-    : (unassignedCharts ?? []);
   // Chart move dialog: children of currently-navigated dir, or root dirs
   const dirsForMoveDialog = moveCurrentDir ? (moveDirChildren ?? []) : (rootDirs ?? []);
   // Directory move dialog: same but exclude the directory being moved (can't move into itself)
@@ -417,11 +419,9 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
                     </IconButton>
                   </RequirePermissions>
                 )}
-                {chart.myPrivileges?.canEdit !== false && (
-                  <IconButton edge="end" size="small" onClick={() => onEdit(chart.id, chart)}>
-                    <ArrowForwardIosIcon fontSize="small" />
-                  </IconButton>
-                )}
+                <IconButton edge="end" size="small" onClick={() => onEdit(chart.id, chart)}>
+                  <ArrowForwardIosIcon fontSize="small" />
+                </IconButton>
               </Box>
             }
           >
@@ -549,12 +549,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
         anchorReference="anchorPosition"
         anchorPosition={contextMenu ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined}
       >
-        {chartsToShow.find(c => c.id === contextMenu?.chartId)?.myPrivileges?.canEdit !== false && (
-          <MenuItem onClick={handleContextMenuEdit}>
-            <ListItemIcon><ArrowForwardIosIcon fontSize="small" /></ListItemIcon>
-            Edit chart
-          </MenuItem>
-        )}
+        <MenuItem onClick={handleContextMenuEdit}>
+          <ListItemIcon><ArrowForwardIosIcon fontSize="small" /></ListItemIcon>
+          Edit chart
+        </MenuItem>
         <MenuItem onClick={handleContextMenuMove}>
           <ListItemIcon><DriveFileMoveIcon fontSize="small" /></ListItemIcon>
           Move to directory
