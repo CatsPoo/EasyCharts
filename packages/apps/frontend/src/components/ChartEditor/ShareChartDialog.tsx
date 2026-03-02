@@ -1,4 +1,4 @@
-import type { ChartShare } from "@easy-charts/easycharts-types";
+import type { ChartShare, User } from "@easy-charts/easycharts-types";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import SearchIcon from "@mui/icons-material/Search";
@@ -6,6 +6,7 @@ import {
   Avatar,
   Box,
   Button,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -14,10 +15,6 @@ import {
   Divider,
   IconButton,
   InputAdornment,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
   TextField,
   Typography,
 } from "@mui/material";
@@ -33,45 +30,158 @@ interface Props {
   open: boolean;
   onClose: () => void;
   chartId: string;
+  /** The caller's own privileges — chips they don't hold are non-interactive */
+  myPrivileges?: { canEdit: boolean; canDelete: boolean; canShare: boolean };
+  /** Creator of the chart — excluded from search results */
+  creatorId?: string;
 }
 
+type Perms = { canEdit: boolean; canDelete: boolean; canShare: boolean };
+
+// ── Privilege chips ───────────────────────────────────────────────────────────
+
+function PrivilegeChips({
+  canEdit, canDelete, canShare, onChange, disabled, ceiling,
+}: Perms & {
+  onChange: (k: keyof Perms, v: boolean) => void;
+  disabled?: boolean;
+  /** Caller's own privileges — chips they don't hold are always disabled */
+  ceiling?: Perms;
+}) {
+  return (
+    <Box sx={{ display: "flex", gap: 0.5 }}>
+      <Chip
+        size="small" label="Edit"
+        variant={canEdit ? "filled" : "outlined"}
+        color={canEdit ? "primary" : "default"}
+        onClick={() => onChange("canEdit", !canEdit)}
+        disabled={disabled || ceiling?.canEdit === false}
+        sx={{ fontSize: 11 }}
+      />
+      <Chip
+        size="small" label="Delete"
+        variant={canDelete ? "filled" : "outlined"}
+        color={canDelete ? "error" : "default"}
+        onClick={() => onChange("canDelete", !canDelete)}
+        disabled={disabled || ceiling?.canDelete === false}
+        sx={{ fontSize: 11 }}
+      />
+      <Chip
+        size="small" label="Share"
+        variant={canShare ? "filled" : "outlined"}
+        color={canShare ? "success" : "default"}
+        onClick={() => onChange("canShare", !canShare)}
+        disabled={disabled || ceiling?.canShare === false}
+        sx={{ fontSize: 11 }}
+      />
+    </Box>
+  );
+}
+
+// ── Shared layout for a user row ──────────────────────────────────────────────
+
+function UserInfo({ label, sub }: { label: string; sub?: string }) {
+  return (
+    <>
+      <Avatar sx={{ width: 30, height: 30, fontSize: 13, flexShrink: 0 }}>
+        {label[0].toUpperCase()}
+      </Avatar>
+      <Box sx={{ flex: 1, minWidth: 0, mx: 1 }}>
+        <Typography variant="body2" noWrap sx={{ fontSize: 13 }}>{label}</Typography>
+        {sub && (
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: 11 }}>
+            {sub}
+          </Typography>
+        )}
+      </Box>
+    </>
+  );
+}
+
+// ── Already-shared user row (editable privileges) ─────────────────────────────
+
 function ShareRow({
-  share,
-  onRemove,
-  removing,
+  share, chartId, onRemove, removing, ceiling,
 }: {
   share: ChartShare;
+  chartId: string;
   onRemove: () => void;
   removing: boolean;
+  ceiling?: Perms;
 }) {
   const { data: user } = useUserByIdQuery(share.sharedWithUserId);
   const label = user?.displayName || user?.username || share.sharedWithUserId;
   const sub = user?.displayName ? user.username : undefined;
 
+  const [perms, setPerms] = useState<Perms>({
+    canEdit: share.canEdit,
+    canDelete: share.canDelete,
+    canShare: share.canShare,
+  });
+
+  // Keep local state in sync when the query refetches after an update
+  useEffect(() => {
+    setPerms({ canEdit: share.canEdit, canDelete: share.canDelete, canShare: share.canShare });
+  }, [share.canEdit, share.canDelete, share.canShare]);
+
+  const shareMutation = useShareChartMutation();
+
+  const handleToggle = (k: keyof Perms, v: boolean) => {
+    const updated = { ...perms, [k]: v };
+    setPerms(updated);
+    shareMutation.mutate({ chartId, sharedWithUserId: share.sharedWithUserId, permissions: updated });
+  };
+
+  const busy = shareMutation.isPending || removing;
+
   return (
-    <ListItem
-      secondaryAction={
-        <IconButton edge="end" size="small" onClick={onRemove} disabled={removing}>
+    <Box sx={{ display: "flex", alignItems: "center", py: 0.75, px: 0.5 }}>
+      <UserInfo label={label} sub={sub} />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+        <PrivilegeChips {...perms} onChange={handleToggle} disabled={busy} ceiling={ceiling} />
+        <IconButton size="small" onClick={onRemove} disabled={busy}>
           <PersonRemoveIcon fontSize="small" color="error" />
         </IconButton>
-      }
-    >
-      <ListItemAvatar>
-        <Avatar sx={{ width: 30, height: 30, fontSize: 13 }}>
-          {label[0].toUpperCase()}
-        </Avatar>
-      </ListItemAvatar>
-      <ListItemText
-        primary={label}
-        secondary={sub}
-        primaryTypographyProps={{ fontSize: 13 }}
-        secondaryTypographyProps={{ fontSize: 11 }}
-      />
-    </ListItem>
+      </Box>
+    </Box>
   );
 }
 
-export function ShareChartDialog({ open, onClose, chartId }: Props) {
+// ── Search result row (choose privileges before adding) ───────────────────────
+
+function SearchResultRow({
+  user, onAdd, adding, ceiling,
+}: {
+  user: User;
+  onAdd: (userId: string, perms: Perms) => void;
+  adding: boolean;
+  ceiling?: Perms;
+}) {
+  const label = user.displayName || user.username;
+  const sub = user.displayName ? user.username : undefined;
+  const [perms, setPerms] = useState<Perms>({ canEdit: false, canDelete: false, canShare: false });
+
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", py: 0.75, px: 0.5 }}>
+      <UserInfo label={label} sub={sub} />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+        <PrivilegeChips
+          {...perms}
+          onChange={(k, v) => setPerms(p => ({ ...p, [k]: v }))}
+          disabled={adding}
+          ceiling={ceiling}
+        />
+        <IconButton size="small" onClick={() => onAdd(user.id, perms)} disabled={adding}>
+          <PersonAddIcon fontSize="small" color="primary" />
+        </IconButton>
+      </Box>
+    </Box>
+  );
+}
+
+// ── Main dialog ───────────────────────────────────────────────────────────────
+
+export function ShareChartDialog({ open, onClose, chartId, myPrivileges, creatorId }: Props) {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
 
@@ -80,42 +190,39 @@ export function ShareChartDialog({ open, onClose, chartId }: Props) {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // Reset search when dialog closes
   useEffect(() => {
-    if (!open) {
-      setSearchInput("");
-      setDebouncedQ("");
-    }
+    if (!open) { setSearchInput(""); setDebouncedQ(""); }
   }, [open]);
 
   const { data: shares = [], isLoading: sharesLoading } = useChartSharesQuery(open ? chartId : null);
   const { data: searchResults = [], isFetching: searching } = useUsersSearchQuery(debouncedQ);
-
   const shareMutation = useShareChartMutation();
   const unshareMutation = useUnshareChartMutation();
 
-  const sharedIds = new Set(shares.map((s) => s.sharedWithUserId));
-  const filteredResults = searchResults.filter((u) => !sharedIds.has(u.id));
+  const sharedIds = new Set(shares.map(s => s.sharedWithUserId));
+  const filteredResults = searchResults.filter(u => !sharedIds.has(u.id) && u.id !== creatorId);
+
+  const handleAdd = (userId: string, perms: Perms) => {
+    shareMutation.mutate({ chartId, sharedWithUserId: userId, permissions: perms });
+  };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Share chart</DialogTitle>
       <DialogContent sx={{ px: 2, pt: 1, pb: 0 }}>
 
         {/* Search bar */}
         <TextField
-          fullWidth
-          size="small"
+          fullWidth size="small"
           placeholder="Search users…"
           value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
+          onChange={e => setSearchInput(e.target.value)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
                 {searching
                   ? <CircularProgress size={16} />
-                  : <SearchIcon fontSize="small" />
-                }
+                  : <SearchIcon fontSize="small" />}
               </InputAdornment>
             ),
           }}
@@ -126,37 +233,17 @@ export function ShareChartDialog({ open, onClose, chartId }: Props) {
         {filteredResults.length > 0 && (
           <>
             <Typography variant="caption" color="text.secondary" sx={{ pl: 0.5 }}>
-              Add user
+              Add user — select privileges then click +
             </Typography>
-            <List dense disablePadding sx={{ mb: 1 }}>
-              {filteredResults.map((user) => (
-                <ListItem
-                  key={user.id}
-                  secondaryAction={
-                    <IconButton
-                      edge="end"
-                      size="small"
-                      onClick={() => shareMutation.mutate({ chartId, sharedWithUserId: user.id })}
-                      disabled={shareMutation.isPending}
-                    >
-                      <PersonAddIcon fontSize="small" color="primary" />
-                    </IconButton>
-                  }
-                >
-                  <ListItemAvatar>
-                    <Avatar sx={{ width: 30, height: 30, fontSize: 13 }}>
-                      {(user.displayName || user.username)[0].toUpperCase()}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={user.displayName || user.username}
-                    secondary={user.displayName ? user.username : undefined}
-                    primaryTypographyProps={{ fontSize: 13 }}
-                    secondaryTypographyProps={{ fontSize: 11 }}
-                  />
-                </ListItem>
-              ))}
-            </List>
+            {filteredResults.map(user => (
+              <SearchResultRow
+                key={user.id}
+                user={user}
+                onAdd={handleAdd}
+                adding={shareMutation.isPending}
+                ceiling={myPrivileges}
+              />
+            ))}
           </>
         )}
 
@@ -167,22 +254,20 @@ export function ShareChartDialog({ open, onClose, chartId }: Props) {
           </Box>
         ) : shares.length > 0 ? (
           <>
-            {filteredResults.length > 0 && <Divider sx={{ mb: 1 }} />}
+            {filteredResults.length > 0 && <Divider sx={{ my: 1 }} />}
             <Typography variant="caption" color="text.secondary" sx={{ pl: 0.5 }}>
               Shared with
             </Typography>
-            <List dense disablePadding>
-              {shares.map((share) => (
-                <ShareRow
-                  key={share.sharedWithUserId}
-                  share={share}
-                  onRemove={() =>
-                    unshareMutation.mutate({ chartId, sharedWithUserId: share.sharedWithUserId })
-                  }
-                  removing={unshareMutation.isPending}
-                />
-              ))}
-            </List>
+            {shares.map(share => (
+              <ShareRow
+                key={share.sharedWithUserId}
+                share={share}
+                chartId={chartId}
+                onRemove={() => unshareMutation.mutate({ chartId, sharedWithUserId: share.sharedWithUserId })}
+                removing={unshareMutation.isPending}
+                ceiling={myPrivileges}
+              />
+            ))}
           </>
         ) : (
           debouncedQ.length === 0 && (
@@ -191,6 +276,7 @@ export function ShareChartDialog({ open, onClose, chartId }: Props) {
             </Typography>
           )
         )}
+
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>

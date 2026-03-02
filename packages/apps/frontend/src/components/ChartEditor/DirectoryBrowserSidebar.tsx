@@ -97,6 +97,8 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [pendingChartToShare, setPendingChartToShare] = useState("");
+  const [pendingChartPrivileges, setPendingChartPrivileges] = useState<{ canEdit: boolean; canDelete: boolean; canShare: boolean } | undefined>(undefined);
+  const [pendingChartCreatorId, setPendingChartCreatorId] = useState<string | undefined>(undefined);
 
   const [dirContextMenu, setDirContextMenu] = useState<{ mouseX: number; mouseY: number; dirId: string } | null>(null);
 
@@ -240,10 +242,13 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
 
   const handleContextMenuShare = useCallback(() => {
     if (!contextMenu) return;
+    const chart = chartsToShow.find(c => c.id === contextMenu.chartId);
     setPendingChartToShare(contextMenu.chartId);
+    setPendingChartPrivileges(chart?.myPrivileges);
+    setPendingChartCreatorId(chart?.createdByUserId);
     setShareDialogOpen(true);
     setContextMenu(null);
-  }, [contextMenu]);
+  }, [contextMenu, chartsToShow]);
 
   const handleMoveToDirectory = useCallback(async (targetDirId: string) => {
     if (pendingChartSourceDirId) {
@@ -851,8 +856,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
       {/* ── Share chart dialog ───────────────────────────────────────────────── */}
       <ShareChartDialog
         open={shareDialogOpen}
-        onClose={() => { setShareDialogOpen(false); setPendingChartToShare(""); }}
+        onClose={() => { setShareDialogOpen(false); setPendingChartToShare(""); setPendingChartPrivileges(undefined); setPendingChartCreatorId(undefined); }}
         chartId={pendingChartToShare}
+        myPrivileges={pendingChartPrivileges}
+        creatorId={pendingChartCreatorId}
       />
 
       {/* ── Share directory dialog ───────────────────────────────────────────── */}
