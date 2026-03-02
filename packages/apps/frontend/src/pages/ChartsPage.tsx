@@ -12,15 +12,18 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   FormControlLabel,
   IconButton,
+  Snackbar,
   Switch,
   Tab,
   Tabs,
   TextField,
   Toolbar,
   Tooltip,
+  Typography,
 } from "@mui/material";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -54,11 +57,28 @@ export function ChartsPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [saveNoteOpen, setSaveNoteOpen] = useState(false);
   const [saveNoteLabel, setSaveNoteLabel] = useState("");
+  const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
+  const [saveErrorOpen, setSaveErrorOpen] = useState(false);
 
   const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,refetch,isLoading} = useChartLock(user!.id,selectedId || undefined)
   const readonly = false;
 
   const nope = useCallback(()=>{return} ,[])
+
+  // Ctrl+S saves the chart while the editor dialog is open and in edit mode
+  useEffect(() => {
+    if (!dialogOpen || !editMode) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        if (editorMadeChanges && !saving) handleSaveClick();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogOpen, editMode, editorMadeChanges, saving]);
+
   useEffect(() => {
     setSelectedId("");
   }, [tab]);
@@ -103,16 +123,16 @@ export function ChartsPage() {
     }
   }, [dialogOpen, selectedChart]);
 
-  const handleDialogClose = async  () => {
+  const handleDialogClose = async () => {
     if (editorMadeChanges) {
-      const leave = window.confirm(
-        "You have unsaved changes. Are you sure you want to close without saving?"
-      );
-      if (!leave) {
-        return;
-      }
+      setUnsavedDialogOpen(true);
+      return;
     }
-    if(lockState === LockState.MINE) await unlockChart()
+    await doCloseDialog();
+  };
+
+  const doCloseDialog = async () => {
+    if (lockState === LockState.MINE) await unlockChart();
     setDialogOpen(false);
     setSelectedId("");
     setEditMode(false);
@@ -137,6 +157,7 @@ export function ChartsPage() {
       setPreviewKey(k => k + 1);
     } catch (err) {
       console.error("updateChart failed:", err);
+      setSaveErrorOpen(true);
     } finally {
       setSaving(false);
     }
@@ -206,7 +227,7 @@ export function ChartsPage() {
               <Box
                 sx={{ height: "100%", display: "grid", placeItems: "center" }}
               >
-                <CircularProgress size={300} />
+                <CircularProgress size={64} />
               </Box>
             ) : selectedChart ? (
               <ChartEditor
@@ -232,7 +253,8 @@ export function ChartsPage() {
       </Box>
       <Dialog fullScreen open={dialogOpen}>
         <AppBar position="relative">
-          <Toolbar>
+          <Toolbar sx={{ gap: 1 }}>
+            {/* Left: close + chart name */}
             <IconButton
               edge="start"
               color="inherit"
@@ -241,17 +263,43 @@ export function ChartsPage() {
             >
               <CloseIcon />
             </IconButton>
-            <div
-              style={{
-                position: "absolute",
-                top: 14,
-                right: 16,
-                zIndex: 10,
-                padding: 6,
-                borderRadius: 4,
-                height: 41,
-              }}
-            >
+            <Typography variant="h6" sx={{ ml: 1, flex: 1, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
+              {editChart?.name ?? ""}
+            </Typography>
+
+            {/* Right: save actions, history, lock status, edit toggle, theme */}
+            {editMode && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+                {selectedId && (
+                  <Tooltip title="Version history">
+                    <IconButton color="inherit" onClick={() => setHistoryOpen(true)}>
+                      <HistoryIcon />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                <Tooltip title="Save with a note">
+                  <span>
+                    <IconButton
+                      color="inherit"
+                      onClick={() => setSaveNoteOpen(true)}
+                      disabled={saving || !editorMadeChanges}
+                    >
+                      <NoteAddIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Button
+                  color="success"
+                  variant="contained"
+                  onClick={() => handleSaveClick()}
+                  disabled={saving || !editorMadeChanges}
+                >
+                  {saving ? "Saving…" : "Save"}
+                </Button>
+              </Box>
+            )}
+
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
               <LockStatusChip
                 lock={lock}
                 lockState={lockState}
@@ -260,8 +308,7 @@ export function ChartsPage() {
                 unlocking={unlocking}
               />
               <RequirePermissions required={[Permission.CHART_UPDATE]}>
-                {!readonly &&
-                lockState !== LockState.OTHERs /* or OTHERs */ ? (
+                {!readonly && lockState !== LockState.OTHERs ? (
                   <FormControlLabel
                     sx={{
                       ml: 1,
@@ -284,37 +331,7 @@ export function ChartsPage() {
                 ) : null}
               </RequirePermissions>
               <ThemeToggleButton />
-            </div>
-            {selectedId && editMode && (
-              <Tooltip title="Version history">
-                <IconButton color="inherit" onClick={() => setHistoryOpen(true)}>
-                  <HistoryIcon />
-                </IconButton>
-              </Tooltip>
-            )}
-            {editMode && (
-              <Box sx={{ display: "flex", gap: 1 }}>
-                <Tooltip title="Save with a note">
-                  <span>
-                    <IconButton
-                      color="inherit"
-                      onClick={() => setSaveNoteOpen(true)}
-                      disabled={saving || !editorMadeChanges}
-                    >
-                      <NoteAddIcon />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Button
-                  color="success"
-                  variant="contained"
-                  onClick={() => handleSaveClick()}
-                  disabled={saving || !editorMadeChanges}
-                >
-                  {saving ? "Saving…" : "Save"}
-                </Button>
-              </Box>
-            )}
+            </Box>
           </Toolbar>
         </AppBar>
         <Collapse in={!!lock && lockState !== LockState.UNLOCKED}>
@@ -366,6 +383,22 @@ export function ChartsPage() {
           </DialogActions>
         </Dialog>
 
+        {/* Unsaved changes confirmation dialog */}
+        <Dialog open={unsavedDialogOpen} onClose={() => setUnsavedDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>Unsaved changes</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              You have unsaved changes. Are you sure you want to close without saving?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setUnsavedDialogOpen(false)}>Keep editing</Button>
+            <Button variant="contained" color="error" onClick={async () => { setUnsavedDialogOpen(false); await doCloseDialog(); }}>
+              Discard & close
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {/* Chart history panel — must live inside the fullscreen Dialog so the Drawer stacks above it */}
         {selectedId && (
           <ChartHistoryPanel
@@ -383,6 +416,18 @@ export function ChartsPage() {
           />
         )}
       </Dialog>
+
+      {/* Save error feedback */}
+      <Snackbar
+        open={saveErrorOpen}
+        autoHideDuration={5000}
+        onClose={() => setSaveErrorOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="error" onClose={() => setSaveErrorOpen(false)} sx={{ width: "100%" }}>
+          Failed to save the chart. Please try again.
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -39,6 +39,7 @@ import ReactFlow, {
   Background,
   ConnectionLineType,
   Controls,
+  MiniMap,
   reconnectEdge,
   useEdgesState,
   useNodesState,
@@ -172,7 +173,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const createDeviceMut = useCreateAsset("devices");
     const createCloudMut = useCreateAsset("clouds");
     const deleteCloudMut = useDeleteAsset("clouds");
-    const { project,getEdge } = useReactFlow();
+    const { project, getEdge, fitView } = useReactFlow();
     const {devicePos} = useDevices({chart})
     const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,applyChartChange})
     
@@ -2191,6 +2192,28 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       ]
     );
 
+    // Keyboard shortcuts: Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo
+    useEffect(() => {
+      if (!editMode) return;
+      const handler = (e: KeyboardEvent) => {
+        const tag = (e.target as HTMLElement)?.tagName;
+        // Don't intercept shortcuts while the user is typing in an input/textarea
+        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+        if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          onUndoClick();
+        } else if (
+          (e.ctrlKey || e.metaKey) &&
+          (e.key === "y" || (e.key === "z" && e.shiftKey))
+        ) {
+          e.preventDefault();
+          onRedoClick();
+        }
+      };
+      window.addEventListener("keydown", handler);
+      return () => window.removeEventListener("keydown", handler);
+    }, [editMode, onUndoClick, onRedoClick]);
+
     useImperativeHandle(
       ref,
       () => ({
@@ -2226,7 +2249,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           ref={reactFlowWrapper}
           onDragOver={onDragOver}
           onDrop={onDrop}
-          className="flex-1"
+          className="flex-1 relative"
         >
           {ctx.open && (
             <>
@@ -2313,6 +2336,61 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             </div>
           )}
 
+          {/* Floating editor toolbar — undo / redo / fit view */}
+          {editMode && (() => {
+            const iconActive  = isDark ? "#a5b4fc" : "#4f46e5"; // indigo-300 / indigo-600
+            const iconDisabled = isDark ? "#475569" : "#94a3b8"; // slate-600 / slate-400
+            const btnHover    = isDark ? "hover:bg-slate-700" : "hover:bg-indigo-100";
+            const btnBase     = "flex items-center justify-center w-7 h-7 rounded transition-colors";
+            return (
+              <div
+                className={[
+                  "absolute top-3 left-3 z-10 flex items-center gap-1 px-1.5 py-1 rounded-lg border shadow-lg select-none",
+                  isDark
+                    ? "bg-slate-900 border-slate-600"
+                    : "bg-white border-slate-200",
+                ].join(" ")}
+              >
+                <button
+                  title="Undo (Ctrl+Z)"
+                  disabled={!canUndo}
+                  onClick={onUndoClick}
+                  className={[btnBase, canUndo ? btnHover : "cursor-not-allowed"].join(" ")}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke={canUndo ? iconActive : iconDisabled}
+                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7v6h6"/><path d="M3 13A9 9 0 1 0 6 6.7"/>
+                  </svg>
+                </button>
+                <button
+                  title="Redo (Ctrl+Y)"
+                  disabled={!canRedo}
+                  onClick={onRedoClick}
+                  className={[btnBase, canRedo ? btnHover : "cursor-not-allowed"].join(" ")}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke={canRedo ? iconActive : iconDisabled}
+                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 7v6h-6"/><path d="M21 13A9 9 0 1 1 18 6.7"/>
+                  </svg>
+                </button>
+                <div style={{ width: 1, height: 20, margin: "0 2px", background: isDark ? "#334155" : "#e2e8f0" }} />
+                <button
+                  title="Fit view"
+                  onClick={() => fitView({ padding: 0.1 })}
+                  className={[btnBase, btnHover].join(" ")}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke={iconActive}
+                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                  </svg>
+                </button>
+              </div>
+            );
+          })()}
+
           <ReactFlow
             nodeTypes={nodeTypes}
             nodes={nodes}
@@ -2335,6 +2413,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           >
             <Background color={isDark ? "#1f2937" : "#e5e7eb"} gap={16} />
             <Controls className={isDark ? "invert" : ""} />
+            <MiniMap
+              style={{
+                background: isDark ? "#1e293b" : "#f8fafc",
+                border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`,
+              }}
+              nodeColor={isDark ? "#6366f1" : "#818cf8"}
+              maskColor={isDark ? "rgba(0,0,0,0.5)" : "rgba(100,116,139,0.15)"}
+            />
           </ReactFlow>
         </div>
         <EditLineDialog
