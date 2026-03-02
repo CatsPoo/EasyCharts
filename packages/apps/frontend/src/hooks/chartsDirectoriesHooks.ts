@@ -224,6 +224,17 @@ export function useUnshareDirectoryMutation() {
   });
 }
 
+async function unshareDirectoryContent(directoryId: string, sharedWithUserId: string): Promise<void> {
+  await http.delete(`/chartsDirectories/${directoryId}/share/${sharedWithUserId}/content`);
+}
+
+export function useUnshareDirectoryContentMutation() {
+  return useMutation({
+    mutationFn: ({ directoryId, sharedWithUserId }: { directoryId: string; sharedWithUserId: string }) =>
+      unshareDirectoryContent(directoryId, sharedWithUserId),
+  });
+}
+
 // ─── Chart sharing ───────────────────────────────────────────────────────────
 
 async function getChartShares(chartId: string): Promise<ChartShare[]> {
