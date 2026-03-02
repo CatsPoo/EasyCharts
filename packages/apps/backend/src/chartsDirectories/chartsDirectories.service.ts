@@ -1,7 +1,7 @@
 import type { ChartMetadata, CreateChartDirectory, UpadateChartDirectory } from "@easy-charts/easycharts-types";
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ILike, Repository } from "typeorm";
+import { ILike, In, Repository } from "typeorm";
 import { ChartsService } from "../charts/charts.service";
 import { ChartEntity } from "../charts/entities/chart.entity";
 import { ChartShareEntity } from "../charts/entities/chartShare.entity";
@@ -224,6 +224,14 @@ export class ChartsDirectoriesService {
 
   async unshareDirectory(directoryId: string, sharedWithUserId: string): Promise<void> {
     await this.shareDirRepo.delete({ directoryId, sharedWithUserId });
+  }
+
+  async unshareDirectoryContent(directoryId: string, sharedWithUserId: string): Promise<void> {
+    const charts = await this.cidRepo.find({ where: { directoryId }, select: ["chartId"] });
+    const chartIds = charts.map(c => c.chartId);
+    if (chartIds.length > 0) {
+      await this.chartShareRepo.delete({ chartId: In(chartIds), sharedWithUserId });
+    }
   }
 
   async getDirectoryShares(directoryId: string): Promise<DirectoryShareEntity[]> {

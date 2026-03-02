@@ -120,4 +120,14 @@ export class ChartsDirectoriesController {
   ) {
     return this.chartsDirectoriesService.unshareDirectory(id, userId);
   }
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @Delete(":id/share/:userId/content")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  unshareContent(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("userId", new ParseUUIDPipe()) userId: string,
+  ) {
+    return this.chartsDirectoriesService.unshareDirectoryContent(id, userId);
+  }
 }
