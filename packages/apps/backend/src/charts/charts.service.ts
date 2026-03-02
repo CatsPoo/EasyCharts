@@ -12,7 +12,6 @@ import {
   type ZoneOnChart
 } from "@Easy-charts/easycharts-types";
 import {
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -221,25 +220,12 @@ export class ChartsService {
     return charts.map(c => this.convertChartToChartMetadata(c));
   }
 
-  private async assertChartPermission(
-    chartId: string,
-    userId: string,
-    permission: "canEdit" | "canDelete" | "canShare",
-  ): Promise<void> {
-    const chart = await this.chartRepo.findOne({ where: { id: chartId }, select: { id: true, createdByUserId: true } });
-    if (!chart) throw new ChartNotFoundExeption(chartId);
-    if (chart.createdByUserId === userId) return; // owner has full access
-    const share = await this.chartShareRepo.findOne({ where: { chartId, sharedWithUserId: userId } });
-    if (!share?.[permission]) throw new ForbiddenException(`No ${permission} permission on this chart`);
-  }
-
   async shareChart(
     chartId: string,
     sharedWithUserId: string,
     sharedByUserId: string,
     permissions: { canEdit: boolean; canDelete: boolean; canShare: boolean },
   ): Promise<void> {
-    await this.assertChartPermission(chartId, sharedByUserId, "canShare");
     await this.chartShareRepo.upsert(
       { chartId, sharedWithUserId, sharedByUserId, ...permissions },
       { conflictPaths: ["chartId", "sharedWithUserId"], skipUpdateIfNoValuesChanged: false },
@@ -273,6 +259,7 @@ export class ChartsService {
   }
 
   async updateChart(chartId: string, dto: ChartUpdate, userId: string): Promise<Chart> {
+    console.log('2323232')
     const updated = await this.dataSource.transaction(async (manager: EntityManager) => {
       const chartsRepo = manager.getRepository(ChartEntity);
 
@@ -282,10 +269,6 @@ export class ChartsService {
         relations: { devicesOnChart: true, bondOnChart: true },
       });
       if (!chart) throw new ChartNotFoundExeption(chartId);
-      if (chart.createdByUserId !== userId) {
-        const share = await this.chartShareRepo.findOne({ where: { chartId, sharedWithUserId: userId } });
-        if (!share?.canEdit) throw new ForbiddenException("No edit permission on this chart");
-      }
       if (chart.lockedById && chart.lockedById !== userId)
         throw new ChartIsLockedExeption(chartId, chart.lockedById);
 
@@ -373,10 +356,6 @@ export class ChartsService {
   async removeChart(id: string, userId: string): Promise<void> {
     const chart = await this.chartRepo.findOne({ where: { id } });
     if (!chart) throw new ChartNotFoundExeption(id);
-    if (chart.createdByUserId !== userId) {
-      const share = await this.chartShareRepo.findOne({ where: { chartId: id, sharedWithUserId: userId } });
-      if (!share?.canDelete) throw new ForbiddenException("No delete permission on this chart");
-    }
     if (chart.lockedById && chart.lockedById !== userId)
       throw new ChartIsLockedExeption(id, chart.lockedById);
     await this.chartRepo.remove(chart);

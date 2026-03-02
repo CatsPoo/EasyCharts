@@ -602,33 +602,40 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       async ({ name, type }: PortFormValues) => {
         if (!editPortTarget) return;
         const { port, deviceId } = editPortTarget;
+        // Always update local state first so the visual reflects the change
+        // immediately. For ports not yet in the DB (newly created via inline
+        // editor), the updatePort call below will fail — that is expected and
+        // the correct name/type will be persisted the next time the chart is
+        // saved (via upsertPortsForDevice in syncPlacementsAndHandles).
+        applyChartChange((prev) => ({
+          ...prev,
+          devicesOnChart: prev.devicesOnChart.map((doc) => {
+            if (doc.device.id !== deviceId) return doc;
+            const updatedPort = (p: Port) =>
+              p.id === port.id ? { ...p, name, type } : p;
+            const updatedHandle = (h: { port: Port }) =>
+              h.port.id === port.id ? { ...h, port: { ...h.port, name, type } } : h;
+            return {
+              ...doc,
+              device: { ...doc.device, ports: doc.device.ports.map(updatedPort) },
+              handles: {
+                left: (doc.handles.left ?? []).map(updatedHandle),
+                right: (doc.handles.right ?? []).map(updatedHandle),
+                top: (doc.handles.top ?? []).map(updatedHandle),
+                bottom: (doc.handles.bottom ?? []).map(updatedHandle),
+              },
+            };
+          }),
+        } as Chart));
+        setDirty(true);
+        setEditPortTarget(null);
+        // Try to persist immediately for ports that already exist in the DB.
+        // Silently ignore failures — the chart save will persist the change.
         try {
           await updatePort(port.id, { name, type });
-          applyChartChange((prev) => ({
-            ...prev,
-            devicesOnChart: prev.devicesOnChart.map((doc) => {
-              if (doc.device.id !== deviceId) return doc;
-              const updatedPort = (p: Port) =>
-                p.id === port.id ? { ...p, name, type } : p;
-              const updatedHandle = (h: { port: Port }) =>
-                h.port.id === port.id ? { ...h, port: { ...h.port, name, type } } : h;
-              return {
-                ...doc,
-                device: { ...doc.device, ports: doc.device.ports.map(updatedPort) },
-                handles: {
-                  left: (doc.handles.left ?? []).map(updatedHandle),
-                  right: (doc.handles.right ?? []).map(updatedHandle),
-                  top: (doc.handles.top ?? []).map(updatedHandle),
-                  bottom: (doc.handles.bottom ?? []).map(updatedHandle),
-                },
-              };
-            }),
-          } as Chart));
-          setDirty(true);
         } catch (e) {
-          console.error("Failed to update port:", e);
+          console.error("Failed to immediately persist port update:", e);
         }
-        setEditPortTarget(null);
       },
       [editPortTarget, applyChartChange, setDirty]
     );
@@ -2177,19 +2184,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         }
         return null;
       },
-      [
-        chart.description,
-        chart.devicesOnChart,
-        chart.id,
-        chart.linesOnChart,
-        chart.name,
-        chart.notesOnChart,
-        chart.zonesOnChart,
-        chart.cloudsOnChart,
-        chart.bondsOnChart,
-        setDirty,
-        updateMut,
-      ]
+      [chart, updateMut, setDirty]
     );
 
     // Keyboard shortcuts: Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo
@@ -2358,8 +2353,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                   className={[btnBase, canUndo ? btnHover : "cursor-not-allowed"].join(" ")}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    stroke={canUndo ? iconActive : iconDisabled}
-                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    style={{ stroke: canUndo ? iconActive : iconDisabled, strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
                     <path d="M3 7v6h6"/><path d="M3 13A9 9 0 1 0 6 6.7"/>
                   </svg>
                 </button>
@@ -2370,8 +2364,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                   className={[btnBase, canRedo ? btnHover : "cursor-not-allowed"].join(" ")}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    stroke={canRedo ? iconActive : iconDisabled}
-                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    style={{ stroke: canRedo ? iconActive : iconDisabled, strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
                     <path d="M21 7v6h-6"/><path d="M21 13A9 9 0 1 1 18 6.7"/>
                   </svg>
                 </button>
@@ -2382,8 +2375,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                   className={[btnBase, btnHover].join(" ")}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    stroke={iconActive}
-                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    style={{ stroke: iconActive, strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                   </svg>
                 </button>

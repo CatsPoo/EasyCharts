@@ -1,7 +1,6 @@
 import { LockState, Permission, type Chart } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import HistoryIcon from "@mui/icons-material/History";
-import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import {
   Alert,
   AppBar,
@@ -71,7 +70,7 @@ export function ChartsPage() {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
-        if (editorMadeChanges && !saving) handleSaveClick();
+        if (editorMadeChanges && !saving) setSaveNoteOpen(true);
       }
     };
     window.addEventListener("keydown", handler);
@@ -164,7 +163,8 @@ export function ChartsPage() {
   }
 
   async function handleSaveWithNote() {
-    const label = saveNoteLabel.trim() || undefined;
+    const label = saveNoteLabel.trim();
+    if (!label) return;
     setSaveNoteOpen(false);
     setSaveNoteLabel("");
     await handleSaveClick(label);
@@ -277,21 +277,10 @@ export function ChartsPage() {
                     </IconButton>
                   </Tooltip>
                 )}
-                <Tooltip title="Save with a note">
-                  <span>
-                    <IconButton
-                      color="inherit"
-                      onClick={() => setSaveNoteOpen(true)}
-                      disabled={saving || !editorMadeChanges}
-                    >
-                      <NoteAddIcon />
-                    </IconButton>
-                  </span>
-                </Tooltip>
                 <Button
                   color="success"
                   variant="contained"
-                  onClick={() => handleSaveClick()}
+                  onClick={() => setSaveNoteOpen(true)}
                   disabled={saving || !editorMadeChanges}
                 >
                   {saving ? "Saving…" : "Save"}
@@ -360,14 +349,15 @@ export function ChartsPage() {
         )}
 
         {/* Save with note dialog */}
-        <Dialog open={saveNoteOpen} onClose={() => setSaveNoteOpen(false)} maxWidth="xs" fullWidth>
+        <Dialog open={saveNoteOpen} onClose={() => { setSaveNoteOpen(false); setSaveNoteLabel(""); }} maxWidth="xs" fullWidth>
           <DialogTitle>Save with note</DialogTitle>
           <DialogContent>
             <TextField
               autoFocus
               fullWidth
+              required
               size="small"
-              label="Version note (optional)"
+              label="Version note"
               placeholder="e.g. Before major restructure"
               value={saveNoteLabel}
               onChange={(e) => setSaveNoteLabel(e.target.value)}
@@ -376,8 +366,8 @@ export function ChartsPage() {
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setSaveNoteOpen(false)}>Cancel</Button>
-            <Button variant="contained" color="success" onClick={handleSaveWithNote}>
+            <Button onClick={() => { setSaveNoteOpen(false); setSaveNoteLabel(""); }}>Cancel</Button>
+            <Button variant="contained" color="success" onClick={handleSaveWithNote} disabled={!saveNoteLabel.trim()}>
               Save
             </Button>
           </DialogActions>
