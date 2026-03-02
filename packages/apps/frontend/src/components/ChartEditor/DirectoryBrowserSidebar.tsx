@@ -35,6 +35,7 @@ import {
 } from "@mui/material";
 import { useCallback, useState } from "react";
 import { RequirePermissions } from "../../auth/RequirePermissions";
+import { useAuth } from "../../auth/useAuth";
 import type { ChartCreate } from "@easy-charts/easycharts-types";
 import {
   useCreateChartMutation,
@@ -58,12 +59,14 @@ import { ShareDirectoryDialog } from "./ShareDirectoryDialog";
 
 interface DirectoryBrowserSidebarProps {
   onSelect: (chartId: string) => void;
-  onEdit: (chartId: string) => void;
+  onEdit: (chartId: string, metadata?: ChartMetadata) => void;
 }
 
 type NavEntry = { id: string; name: string };
 
 export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSidebarProps) {
+  const { user } = useAuth();
+
   // ── Navigation ─────────────────────────────────────────────────────────────
   // navStack: empty = root; top entry = current directory
   const [navStack, setNavStack] = useState<NavEntry[]>([]);
@@ -94,6 +97,8 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [pendingChartToShare, setPendingChartToShare] = useState("");
+  const [pendingChartPrivileges, setPendingChartPrivileges] = useState<{ canEdit: boolean; canDelete: boolean; canShare: boolean } | undefined>(undefined);
+  const [pendingChartCreatorId, setPendingChartCreatorId] = useState<string | undefined>(undefined);
 
   const [dirContextMenu, setDirContextMenu] = useState<{ mouseX: number; mouseY: number; dirId: string } | null>(null);
 
@@ -197,6 +202,14 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
     setDeleteDirDialogOpen(false);
   }, [deleteDirMutation, pendingDirToDelete, navStack]);
 
+  // ── Derived (must be before callbacks that reference chartsToShow) ──────────
+  const chartsToShow: ChartMetadata[] = isInsideDir
+    ? (dirCharts ?? [])
+    : (unassignedCharts ?? []);
+
+  const myCharts = chartsToShow.filter(c => c.createdByUserId === user?.id);
+  const sharedCharts = chartsToShow.filter(c => c.createdByUserId !== user?.id);
+
   // ── Chart context menu handlers ────────────────────────────────────────────
   const handleChartContextMenu = useCallback((e: React.MouseEvent, chartId: string) => {
     e.preventDefault();
@@ -213,9 +226,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
 
   const handleContextMenuEdit = useCallback(() => {
     if (!contextMenu) return;
-    onEdit(contextMenu.chartId);
+    const chart = chartsToShow.find(c => c.id === contextMenu.chartId);
+    onEdit(contextMenu.chartId, chart);
     setContextMenu(null);
-  }, [contextMenu, onEdit]);
+  }, [contextMenu, onEdit, chartsToShow]);
 
   const handleContextMenuMove = useCallback(() => {
     if (!contextMenu) return;
@@ -228,10 +242,13 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
 
   const handleContextMenuShare = useCallback(() => {
     if (!contextMenu) return;
+    const chart = chartsToShow.find(c => c.id === contextMenu.chartId);
     setPendingChartToShare(contextMenu.chartId);
+    setPendingChartPrivileges(chart?.myPrivileges);
+    setPendingChartCreatorId(chart?.createdByUserId);
     setShareDialogOpen(true);
     setContextMenu(null);
-  }, [contextMenu]);
+  }, [contextMenu, chartsToShow]);
 
   const handleMoveToDirectory = useCallback(async (targetDirId: string) => {
     if (pendingChartSourceDirId) {
@@ -302,9 +319,6 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
     (isInsideDir && (childDirsLoading || dirChartsLoading));
 
   const dirsToShow = isInsideDir ? (childDirs ?? []) : (rootDirs ?? []);
-  const chartsToShow: ChartMetadata[] = isInsideDir
-    ? (dirCharts ?? [])
-    : (unassignedCharts ?? []);
   // Chart move dialog: children of currently-navigated dir, or root dirs
   const dirsForMoveDialog = moveCurrentDir ? (moveDirChildren ?? []) : (rootDirs ?? []);
   // Directory move dialog: same but exclude the directory being moved (can't move into itself)
@@ -396,35 +410,79 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           </ListItem>
         ))}
 
-        {/* Divider between dirs and charts */}
-        {dirsToShow.length > 0 && chartsToShow.length > 0 && (
-          <Divider sx={{ my: 0.5 }} />
+        {/* My Charts section */}
+        {myCharts.length > 0 && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
+            <ListItem sx={{ py: 0.25, px: 1.5 }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={600} letterSpacing={1}>
+                MY CHARTS
+              </Typography>
+            </ListItem>
+            {myCharts.map((chart) => (
+              <ListItem
+                key={chart.id}
+                disablePadding
+                onContextMenu={(e) => handleChartContextMenu(e, chart.id)}
+                secondaryAction={
+                  <Box>
+                    {chart.myPrivileges?.canDelete !== false && (
+                      <RequirePermissions required={[Permission.CHART_DELETE]}>
+                        <IconButton edge="end" size="small" onClick={() => handleDeleteChart(chart.id)}>
+                          <DeleteForeverIcon fontSize="small" />
+                        </IconButton>
+                      </RequirePermissions>
+                    )}
+                    <IconButton edge="end" size="small" onClick={() => onEdit(chart.id, chart)}>
+                      <ArrowForwardIosIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                }
+              >
+                <ListItemButton onClick={() => onSelect(chart.id)}>
+                  <ListItemText primary={chart.name} primaryTypographyProps={{ fontSize: 13 }} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </>
         )}
 
-        {/* Chart rows */}
-        {chartsToShow.map((chart) => (
-          <ListItem
-            key={chart.id}
-            disablePadding
-            onContextMenu={(e) => handleChartContextMenu(e, chart.id)}
-            secondaryAction={
-              <Box>
-                <RequirePermissions required={[Permission.CHART_DELETE]}>
-                  <IconButton edge="end" size="small" onClick={() => handleDeleteChart(chart.id)}>
-                    <DeleteForeverIcon fontSize="small" />
-                  </IconButton>
-                </RequirePermissions>
-                <IconButton edge="end" size="small" onClick={() => onEdit(chart.id)}>
-                  <ArrowForwardIosIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            }
-          >
-            <ListItemButton onClick={() => onSelect(chart.id)}>
-              <ListItemText primary={chart.name} primaryTypographyProps={{ fontSize: 13 }} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+        {/* Shared Charts section */}
+        {sharedCharts.length > 0 && (
+          <>
+            <Divider sx={{ my: 0.5 }} />
+            <ListItem sx={{ py: 0.25, px: 1.5 }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={600} letterSpacing={1}>
+                SHARED WITH ME
+              </Typography>
+            </ListItem>
+            {sharedCharts.map((chart) => (
+              <ListItem
+                key={chart.id}
+                disablePadding
+                onContextMenu={(e) => handleChartContextMenu(e, chart.id)}
+                secondaryAction={
+                  <Box>
+                    {chart.myPrivileges?.canDelete !== false && (
+                      <RequirePermissions required={[Permission.CHART_DELETE]}>
+                        <IconButton edge="end" size="small" onClick={() => handleDeleteChart(chart.id)}>
+                          <DeleteForeverIcon fontSize="small" />
+                        </IconButton>
+                      </RequirePermissions>
+                    )}
+                    <IconButton edge="end" size="small" onClick={() => onEdit(chart.id, chart)}>
+                      <ArrowForwardIosIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                }
+              >
+                <ListItemButton onClick={() => onSelect(chart.id)}>
+                  <ListItemText primary={chart.name} primaryTypographyProps={{ fontSize: 13 }} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </>
+        )}
 
         {/* Empty states */}
         {isAtRoot && dirsToShow.length === 0 && chartsToShow.length === 0 && (
@@ -552,17 +610,23 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           <ListItemIcon><DriveFileMoveIcon fontSize="small" /></ListItemIcon>
           Move to directory
         </MenuItem>
-        <MenuItem onClick={handleContextMenuShare}>
-          <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
-          Share
-        </MenuItem>
-        <Divider />
-        <RequirePermissions required={[Permission.CHART_DELETE]}>
-          <MenuItem onClick={handleContextMenuDelete} sx={{ color: "error.main" }}>
-            <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
-            Delete chart
+        {contextMenu !== null && chartsToShow.find(c => c.id === contextMenu.chartId)?.myPrivileges?.canShare !== false && (
+          <MenuItem onClick={handleContextMenuShare}>
+            <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
+            Share
           </MenuItem>
-        </RequirePermissions>
+        )}
+        {contextMenu !== null && chartsToShow.find(c => c.id === contextMenu.chartId)?.myPrivileges?.canDelete !== false && (
+          <>
+            <Divider />
+            <RequirePermissions required={[Permission.CHART_DELETE]}>
+              <MenuItem onClick={handleContextMenuDelete} sx={{ color: "error.main" }}>
+                <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
+                Delete chart
+              </MenuItem>
+            </RequirePermissions>
+          </>
+        )}
       </Menu>
 
       {/* ── Directory context menu ───────────────────────────────────────────── */}
@@ -792,8 +856,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
       {/* ── Share chart dialog ───────────────────────────────────────────────── */}
       <ShareChartDialog
         open={shareDialogOpen}
-        onClose={() => { setShareDialogOpen(false); setPendingChartToShare(""); }}
+        onClose={() => { setShareDialogOpen(false); setPendingChartToShare(""); setPendingChartPrivileges(undefined); setPendingChartCreatorId(undefined); }}
         chartId={pendingChartToShare}
+        myPrivileges={pendingChartPrivileges}
+        creatorId={pendingChartCreatorId}
       />
 
       {/* ── Share directory dialog ───────────────────────────────────────────── */}

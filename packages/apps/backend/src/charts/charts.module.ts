@@ -29,6 +29,7 @@ import { DirectoryShareEntity } from '../chartsDirectories/entities/directorySha
 import { ChartVersionEntity } from './entities/chartVersion.entity';
 import { ChartVersionsService } from './chartVersions.service';
 import { ChartVersionsController } from './chartVersions.controller';
+import { ChartShareGuard } from './guards/chartShare.guard';
 
 @Module({
     imports: [
@@ -56,7 +57,7 @@ import { ChartVersionsController } from './chartVersions.controller';
         AuthModule
     ],
     controllers: [ChartsController, ChartVersionsController],
-    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,ZonesOnChartService,CloudsOnChartService,PortsOnChartService,ChartVersionsService],
+    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,ZonesOnChartService,CloudsOnChartService,PortsOnChartService,ChartVersionsService,ChartShareGuard],
     exports:[ChartsService]
 })
 export class ChartsModule {}
