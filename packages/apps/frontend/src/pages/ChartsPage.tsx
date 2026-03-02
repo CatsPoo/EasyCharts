@@ -1,4 +1,4 @@
-import { LockState, Permission, type Chart } from "@easy-charts/easycharts-types";
+import { LockState, Permission, type Chart, type ChartMetadata } from "@easy-charts/easycharts-types";
 import CloseIcon from "@mui/icons-material/Close";
 import HistoryIcon from "@mui/icons-material/History";
 import {
@@ -44,6 +44,7 @@ export function ChartsPage() {
   const [tab, setTab] = useState(0);
   const [selectedId, setSelectedId] = useState<string>("");
   const [editMode, setEditMode] = useState(false);
+  const [selectedMetadata, setSelectedMetadata] = useState<ChartMetadata | undefined>(undefined);
 
   // dialog state:
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -108,8 +109,9 @@ export function ChartsPage() {
     }
   },[lockChart, unlockChart])
 
-  const handleEdit = (chartId: string) => {
+  const handleEdit = (chartId: string, metadata?: ChartMetadata) => {
     setSelectedId(chartId);
+    setSelectedMetadata(metadata);
     setEditMode(false);
     setDialogOpen(true);
     setEditorMadeChanges(false);
@@ -137,6 +139,7 @@ export function ChartsPage() {
     setEditMode(false);
     setEditorMadeChanges(false);
     setEditChart(undefined);
+    setSelectedMetadata(undefined);
   };
 
   async function handleSaveClick(versionLabel?: string) {
@@ -297,7 +300,7 @@ export function ChartsPage() {
                 unlocking={unlocking}
               />
               <RequirePermissions required={[Permission.CHART_UPDATE]}>
-                {!readonly && lockState !== LockState.OTHERs ? (
+                {!readonly && lockState !== LockState.OTHERs && selectedMetadata?.myPrivileges?.canEdit !== false ? (
                   <FormControlLabel
                     sx={{
                       ml: 1,

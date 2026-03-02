@@ -178,7 +178,7 @@ export class ChartsDirectoriesService {
       .where("(c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL)", { userId })
       .leftJoinAndSelect("c.lockedBy", "lb")
       .getMany();
-    return charts.map(c => this.chartsService.convertChartToChartMetadata(c));
+    return this.chartsService.buildChartMetadataWithPrivileges(charts, userId);
   }
 
   async addChart(directoryId: string, chartId: string, addedByUserId: string): Promise<void> {

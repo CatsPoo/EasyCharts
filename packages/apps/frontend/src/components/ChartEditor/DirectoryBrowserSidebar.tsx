@@ -58,7 +58,7 @@ import { ShareDirectoryDialog } from "./ShareDirectoryDialog";
 
 interface DirectoryBrowserSidebarProps {
   onSelect: (chartId: string) => void;
-  onEdit: (chartId: string) => void;
+  onEdit: (chartId: string, metadata?: ChartMetadata) => void;
 }
 
 type NavEntry = { id: string; name: string };
@@ -213,9 +213,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
 
   const handleContextMenuEdit = useCallback(() => {
     if (!contextMenu) return;
-    onEdit(contextMenu.chartId);
+    const chart = chartsToShow.find(c => c.id === contextMenu.chartId);
+    onEdit(contextMenu.chartId, chart);
     setContextMenu(null);
-  }, [contextMenu, onEdit]);
+  }, [contextMenu, onEdit, chartsToShow]);
 
   const handleContextMenuMove = useCallback(() => {
     if (!contextMenu) return;
@@ -409,14 +410,18 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
             onContextMenu={(e) => handleChartContextMenu(e, chart.id)}
             secondaryAction={
               <Box>
-                <RequirePermissions required={[Permission.CHART_DELETE]}>
-                  <IconButton edge="end" size="small" onClick={() => handleDeleteChart(chart.id)}>
-                    <DeleteForeverIcon fontSize="small" />
+                {chart.myPrivileges?.canDelete !== false && (
+                  <RequirePermissions required={[Permission.CHART_DELETE]}>
+                    <IconButton edge="end" size="small" onClick={() => handleDeleteChart(chart.id)}>
+                      <DeleteForeverIcon fontSize="small" />
+                    </IconButton>
+                  </RequirePermissions>
+                )}
+                {chart.myPrivileges?.canEdit !== false && (
+                  <IconButton edge="end" size="small" onClick={() => onEdit(chart.id, chart)}>
+                    <ArrowForwardIosIcon fontSize="small" />
                   </IconButton>
-                </RequirePermissions>
-                <IconButton edge="end" size="small" onClick={() => onEdit(chart.id)}>
-                  <ArrowForwardIosIcon fontSize="small" />
-                </IconButton>
+                )}
               </Box>
             }
           >
@@ -544,25 +549,33 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
         anchorReference="anchorPosition"
         anchorPosition={contextMenu ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined}
       >
-        <MenuItem onClick={handleContextMenuEdit}>
-          <ListItemIcon><ArrowForwardIosIcon fontSize="small" /></ListItemIcon>
-          Edit chart
-        </MenuItem>
+        {chartsToShow.find(c => c.id === contextMenu?.chartId)?.myPrivileges?.canEdit !== false && (
+          <MenuItem onClick={handleContextMenuEdit}>
+            <ListItemIcon><ArrowForwardIosIcon fontSize="small" /></ListItemIcon>
+            Edit chart
+          </MenuItem>
+        )}
         <MenuItem onClick={handleContextMenuMove}>
           <ListItemIcon><DriveFileMoveIcon fontSize="small" /></ListItemIcon>
           Move to directory
         </MenuItem>
-        <MenuItem onClick={handleContextMenuShare}>
-          <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
-          Share
-        </MenuItem>
-        <Divider />
-        <RequirePermissions required={[Permission.CHART_DELETE]}>
-          <MenuItem onClick={handleContextMenuDelete} sx={{ color: "error.main" }}>
-            <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
-            Delete chart
+        {chartsToShow.find(c => c.id === contextMenu?.chartId)?.myPrivileges?.canShare !== false && (
+          <MenuItem onClick={handleContextMenuShare}>
+            <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
+            Share
           </MenuItem>
-        </RequirePermissions>
+        )}
+        {chartsToShow.find(c => c.id === contextMenu?.chartId)?.myPrivileges?.canDelete !== false && (
+          <>
+            <Divider />
+            <RequirePermissions required={[Permission.CHART_DELETE]}>
+              <MenuItem onClick={handleContextMenuDelete} sx={{ color: "error.main" }}>
+                <ListItemIcon><DeleteForeverIcon fontSize="small" color="error" /></ListItemIcon>
+                Delete chart
+              </MenuItem>
+            </RequirePermissions>
+          </>
+        )}
       </Menu>
 
       {/* ── Directory context menu ───────────────────────────────────────────── */}

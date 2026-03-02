@@ -64,9 +64,10 @@ export class ChartsController {
   @RequireChartPrivilege('read')
   @Get(":id/metadata")
   async getChartMetadata(
-    @Param("id", new ParseUUIDPipe()) id: string
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Req() req: { user: string },
   ): Promise<ChartMetadata> {
-    return this.chartService.getChartMetadataById(id);
+    return this.chartService.getChartMetadataById(id, req.user);
   }
 
   @RequirePermissions(Permission.CHART_UPDATE)

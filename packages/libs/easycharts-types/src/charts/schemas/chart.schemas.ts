@@ -39,8 +39,16 @@ export const ChartUpdateSchema = ChartCreateSchema.partial().extend({
   versionLabel: z.string().max(255).optional(),
 });
 
+const ChartPrivilegesSchema = z.object({
+  canEdit: z.boolean(),
+  canDelete: z.boolean(),
+  canShare: z.boolean(),
+});
+
 export const ChartMetadataSchema = ChartSchema.omit({
   devicesOnChart: true,
   linesOnChart: true,
   bondsOnChart:true
+}).extend({
+  myPrivileges: ChartPrivilegesSchema.optional(),
 });
