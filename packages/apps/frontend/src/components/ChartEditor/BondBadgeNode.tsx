@@ -1,6 +1,7 @@
 import type { Bond } from "@easy-charts/easycharts-types";
 import { useEffect, useMemo, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
+import { useThemeMode } from "../../contexts/ThemeModeContext";
 import { Orientation } from "./enums/BondBridgeNode.enum";
 
 export interface BondBridgeNodeData {
@@ -13,6 +14,7 @@ export function BondBridgeNode({ id, data, selected }: NodeProps<BondBridgeNodeD
   const { bond,orientation  } = data;
   const {name,membersLines} = bond
   const [text, setText] = useState(name ?? "Bond");
+  const { isDark } = useThemeMode();
 
   useEffect(() => setText(name ?? "Bond"), [name]);
 
@@ -36,9 +38,9 @@ export function BondBridgeNode({ id, data, selected }: NodeProps<BondBridgeNodeD
         width,
         height,
         borderRadius: 9999,
-        background: "#ffffff",
-        color: "#111827",
-        border: selected ? "2px solid #2563eb" : "1px solid #cbd5e1",
+        background: isDark ? "#1e293b" : "#ffffff",
+        color: isDark ? "#f1f5f9" : "#111827",
+        border: selected ? "2px solid #2563eb" : isDark ? "1px solid #475569" : "1px solid #cbd5e1",
         boxShadow: "0 6px 24px rgba(0,0,0,.12)",
         display: "grid",
         placeItems: "center",

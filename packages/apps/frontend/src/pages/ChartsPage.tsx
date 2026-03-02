@@ -38,9 +38,11 @@ import { ChartHistoryPanel } from "../components/VersionHistory/ChartHistoryPane
 import { useChartById } from "../hooks/chartsHooks";
 import { useChartLock } from "../hooks/chartsLockHooks";
 import { LockStatusChip } from "../components/ChartEditor/LockStatusClip";
+import { useThemeMode } from "../contexts/ThemeModeContext";
 
 export function ChartsPage() {
   const { user } = useAuth();
+  const { isDark } = useThemeMode();
   const [tab, setTab] = useState(0);
   const [selectedId, setSelectedId] = useState<string>("");
   const [editMode, setEditMode] = useState(false);
@@ -306,7 +308,7 @@ export function ChartsPage() {
                       ml: 1,
                       px: 1,
                       borderRadius: 1,
-                      bgcolor: "#7676c4",
+                      bgcolor: isDark ? "#5252a3" : "#7676c4",
                       color: "white",
                       "& .MuiFormControlLabel-label": { fontWeight: 600 },
                     }}

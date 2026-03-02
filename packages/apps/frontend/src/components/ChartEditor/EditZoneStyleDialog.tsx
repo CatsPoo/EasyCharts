@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useThemeMode } from "../../contexts/ThemeModeContext";
 import {
   Box,
   Button,
@@ -51,6 +52,7 @@ export function EditZoneStyleDialog({
   onClose,
   onSubmit,
 }: EditZoneStyleDialogProps) {
+  const { isDark } = useThemeMode();
   const [label, setLabel] = useState("");
   const [shape, setShape] = useState<"rectangle" | "ellipse">("rectangle");
   const [color, setColor] = useState("blue");
@@ -105,7 +107,9 @@ export function EditZoneStyleDialog({
                 width: "100%",
                 padding: "8px 12px",
                 borderRadius: 6,
-                border: "1px solid #ccc",
+                border: isDark ? "1px solid #475569" : "1px solid #cbd5e1",
+                background: isDark ? "#1e293b" : "#ffffff",
+                color: isDark ? "#f1f5f9" : "#111827",
                 fontSize: 14,
                 boxSizing: "border-box",
               }}
@@ -159,7 +163,7 @@ export function EditZoneStyleDialog({
                   borderRadius: "50%",
                   overflow: "hidden",
                   cursor: "pointer",
-                  border: !isPreset ? "3px solid #6366f1" : "2px solid #999",
+                  border: !isPreset ? "3px solid #6366f1" : isDark ? "2px solid #475569" : "2px solid #999",
                   flexShrink: 0,
                   position: "relative",
                 }}
@@ -209,8 +213,10 @@ export function EditZoneStyleDialog({
                   height: 28,
                   borderRadius: "50%",
                   cursor: "pointer",
-                  border: fillColor === "" ? "3px solid #6366f1" : "2px solid #999",
-                  background: "repeating-linear-gradient(45deg, #ccc 0px, #ccc 4px, #fff 4px, #fff 8px)",
+                  border: fillColor === "" ? "3px solid #6366f1" : isDark ? "2px solid #475569" : "2px solid #999",
+                  background: isDark
+                    ? "repeating-linear-gradient(45deg, #475569 0px, #475569 4px, #1e293b 4px, #1e293b 8px)"
+                    : "repeating-linear-gradient(45deg, #ccc 0px, #ccc 4px, #fff 4px, #fff 8px)",
                   boxSizing: "border-box",
                   flexShrink: 0,
                 }}
@@ -241,7 +247,7 @@ export function EditZoneStyleDialog({
                   borderRadius: "50%",
                   overflow: "hidden",
                   cursor: "pointer",
-                  border: fillColor && !isFillPreset ? "3px solid #6366f1" : "2px solid #999",
+                  border: fillColor && !isFillPreset ? "3px solid #6366f1" : isDark ? "2px solid #475569" : "2px solid #999",
                   flexShrink: 0,
                   position: "relative",
                 }}

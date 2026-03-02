@@ -56,6 +56,7 @@ import { ConfirmDialog } from "../DeleteAlertDialog";
 import { CreateChartDialog } from "../CreateChartDialog";
 import { ShareChartDialog } from "./ShareChartDialog";
 import { ShareDirectoryDialog } from "./ShareDirectoryDialog";
+import { useThemeMode } from "../../contexts/ThemeModeContext";
 
 interface DirectoryBrowserSidebarProps {
   onSelect: (chartId: string) => void;
@@ -66,6 +67,7 @@ type NavEntry = { id: string; name: string };
 
 export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSidebarProps) {
   const { user } = useAuth();
+  const { isDark } = useThemeMode();
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   // navStack: empty = root; top entry = current directory
@@ -561,7 +563,9 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
               if (e.key === "Escape") setCreateDirOpen(false);
             }}
             style={{
-              border: "1px solid #ccc",
+              border: isDark ? "1px solid #475569" : "1px solid #cbd5e1",
+              background: isDark ? "#1e293b" : "#ffffff",
+              color: isDark ? "#f1f5f9" : "#111827",
               borderRadius: 4,
               padding: "4px 8px",
               fontSize: 13,
