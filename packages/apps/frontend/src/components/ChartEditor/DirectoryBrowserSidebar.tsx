@@ -557,13 +557,13 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
           <ListItemIcon><DriveFileMoveIcon fontSize="small" /></ListItemIcon>
           Move to directory
         </MenuItem>
-        {chartsToShow.find(c => c.id === contextMenu?.chartId)?.myPrivileges?.canShare !== false && (
+        {contextMenu !== null && chartsToShow.find(c => c.id === contextMenu.chartId)?.myPrivileges?.canShare !== false && (
           <MenuItem onClick={handleContextMenuShare}>
             <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
             Share
           </MenuItem>
         )}
-        {chartsToShow.find(c => c.id === contextMenu?.chartId)?.myPrivileges?.canDelete !== false && (
+        {contextMenu !== null && chartsToShow.find(c => c.id === contextMenu.chartId)?.myPrivileges?.canDelete !== false && (
           <>
             <Divider />
             <RequirePermissions required={[Permission.CHART_DELETE]}>
