@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs (rebuilt inside Docker)
+dist
+**/dist
+
+# Git
+.git
+.gitignore
+
+# Nx cache
+.nx
+**/.nx
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files (injected at runtime)
+.env
+**/.env
+!**/.env.example
+
+# Editor / OS
+.vscode
+.idea
+*.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage
+**/coverage
+
+# CI
+.woodpecker
