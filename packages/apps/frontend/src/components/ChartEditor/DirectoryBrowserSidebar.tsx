@@ -512,19 +512,47 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
             ariaLabel="Create"
             icon={<SpeedDialIcon />}
             sx={{ position: "fixed", right: 16, bottom: 16, zIndex: 1300 }}
-            FabProps={{ size: "small", color: "primary" }}
+            FabProps={{
+              size: "small",
+              sx: isDark
+                ? {
+                    bgcolor: "#1e293b",
+                    color: "#60a5fa",
+                    border: "1px solid #334155",
+                    "&:hover": { bgcolor: "#334155" },
+                  }
+                : {
+                    bgcolor: "#2563eb",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "#1d4ed8" },
+                  },
+            }}
           >
             <SpeedDialAction
               icon={<FolderIcon fontSize="small" />}
               tooltipTitle={isInsideDir ? "New subdirectory" : "New directory"}
               tooltipOpen
               onClick={() => setCreateDirOpen(true)}
+              FabProps={{
+                sx: {
+                  bgcolor: isDark ? "#1e293b" : "#fff",
+                  color: isDark ? "#f1f5f9" : "#374151",
+                  "&:hover": { bgcolor: isDark ? "#334155" : "#f3f4f6" },
+                },
+              }}
             />
             <SpeedDialAction
               icon={<AddIcon fontSize="small" />}
               tooltipTitle={isInsideDir ? "New chart here" : "New unassigned chart"}
               tooltipOpen
               onClick={() => setCreateChartOpen(true)}
+              FabProps={{
+                sx: {
+                  bgcolor: isDark ? "#1e293b" : "#fff",
+                  color: isDark ? "#f1f5f9" : "#374151",
+                  "&:hover": { bgcolor: isDark ? "#334155" : "#f3f4f6" },
+                },
+              }}
             />
           </SpeedDial>
           <CreateChartDialog
