@@ -1,0 +1,89 @@
+# EasyCharts CI/CD Pipeline
+# Requires Woodpecker CI v2+
+#
+# Secrets to configure in Woodpecker repository settings:
+#   docker_username  — container registry username
+#   docker_password  — container registry password / token
+#
+# Repository variables to configure (or override per-step):
+#   BACKEND_IMAGE   — e.g. registry.example.com/easycharts/backend
+#   FRONTEND_IMAGE  — e.g. registry.example.com/easycharts/frontend
+
+steps:
+
+  # ── 1. Install dependencies ─────────────────────────────────────
+  - name: install
+    image: node:22-alpine
+    environment:
+      CI: "true"
+    commands:
+      - npm ci
+
+  # ── 2a. Lint (parallel with test) ───────────────────────────────
+  - name: lint
+    image: node:22-alpine
+    depends_on: [install]
+    environment:
+      CI: "true"
+    commands:
+      - npx nx run-many --target=lint --all --parallel=3
+
+  # ── 2b. Test (parallel with lint) ───────────────────────────────
+  - name: test
+    image: node:22-alpine
+    depends_on: [install]
+    environment:
+      CI: "true"
+    commands:
+      - npx nx run-many --target=test --all --passWithNoTests --parallel=3
+
+  # ── 3. Verify build compiles ─────────────────────────────────────
+  - name: build
+    image: node:22-alpine
+    depends_on: [lint, test]
+    environment:
+      CI: "true"
+    commands:
+      - apk add --no-cache python3 make g++
+      - npx nx run-many --target=build --all --parallel=3
+
+  # ── 4a. Publish backend image ────────────────────────────────────
+  # Runs only on pushes to main or on git tags.
+  - name: publish-backend
+    image: woodpeckerci/plugin-docker-buildx
+    privileged: true
+    depends_on: [build]
+    settings:
+      dockerfile: packages/apps/backend/Dockerfile
+      context: .
+      repo:
+        from_env: BACKEND_IMAGE
+      auto_tag: true
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    when:
+      - event: push
+        branch: main
+      - event: tag
+
+  # ── 4b. Publish frontend image ───────────────────────────────────
+  - name: publish-frontend
+    image: woodpeckerci/plugin-docker-buildx
+    privileged: true
+    depends_on: [build]
+    settings:
+      dockerfile: packages/apps/frontend/Dockerfile
+      context: .
+      repo:
+        from_env: FRONTEND_IMAGE
+      auto_tag: true
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    when:
+      - event: push
+        branch: main
+      - event: tag
