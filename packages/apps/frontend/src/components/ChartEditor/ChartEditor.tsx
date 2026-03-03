@@ -2333,27 +2333,25 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
           {/* Floating editor toolbar — undo / redo / fit view */}
           {editMode && (() => {
-            const iconActive  = isDark ? "#a5b4fc" : "#4f46e5"; // indigo-300 / indigo-600
-            const iconDisabled = isDark ? "#475569" : "#94a3b8"; // slate-600 / slate-400
-            const btnHover    = isDark ? "hover:bg-slate-700" : "hover:bg-indigo-100";
             const btnBase     = "flex items-center justify-center w-7 h-7 rounded transition-colors";
+            const btnEnabled  = isDark ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-blue-600 hover:bg-blue-700 text-white";
+            const btnDisabled = isDark ? "bg-slate-700 text-slate-500 cursor-not-allowed" : "bg-blue-200 text-blue-300 cursor-not-allowed";
+            const btnFit      = isDark ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-blue-900 hover:bg-blue-800 text-white";
             return (
               <div
                 className={[
-                  "absolute top-3 left-3 z-10 flex items-center gap-1 px-1.5 py-1 rounded-lg border shadow-lg select-none",
-                  isDark
-                    ? "bg-slate-900 border-slate-600"
-                    : "bg-white border-slate-200",
+                  "absolute top-3 left-3 z-10 flex items-center gap-1 p-0.5 rounded-lg shadow-lg select-none",
+                  isDark ? "bg-slate-800" : "bg-blue-200",
                 ].join(" ")}
               >
                 <button
                   title="Undo (Ctrl+Z)"
                   disabled={!canUndo}
                   onClick={onUndoClick}
-                  className={[btnBase, canUndo ? btnHover : "cursor-not-allowed"].join(" ")}
+                  className={[btnBase, canUndo ? btnEnabled : btnDisabled].join(" ")}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    style={{ stroke: canUndo ? iconActive : iconDisabled, strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
+                    style={{ stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
                     <path d="M3 7v6h6"/><path d="M3 13A9 9 0 1 0 6 6.7"/>
                   </svg>
                 </button>
@@ -2361,21 +2359,21 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                   title="Redo (Ctrl+Y)"
                   disabled={!canRedo}
                   onClick={onRedoClick}
-                  className={[btnBase, canRedo ? btnHover : "cursor-not-allowed"].join(" ")}
+                  className={[btnBase, canRedo ? btnEnabled : btnDisabled].join(" ")}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    style={{ stroke: canRedo ? iconActive : iconDisabled, strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
+                    style={{ stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
                     <path d="M21 7v6h-6"/><path d="M21 13A9 9 0 1 1 18 6.7"/>
                   </svg>
                 </button>
-                <div style={{ width: 1, height: 20, margin: "0 2px", background: isDark ? "#334155" : "#e2e8f0" }} />
+                <div style={{ width: 1, height: 20, margin: "0 2px", background: isDark ? "#334155" : "#93c5fd" }} />
                 <button
                   title="Fit view"
                   onClick={() => fitView({ padding: 0.1 })}
-                  className={[btnBase, btnHover].join(" ")}
+                  className={[btnBase, btnFit].join(" ")}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    style={{ stroke: iconActive, strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
+                    style={{ stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                   </svg>
                 </button>
