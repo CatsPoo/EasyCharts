@@ -42,7 +42,7 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
     : cloudsList;
 
   const tabBase =
-    "flex-1 min-w-0 py-1 text-[10px] font-semibold rounded transition-colors truncate";
+    "flex-1 py-1.5 flex items-center justify-center rounded transition-colors";
 
   const tabActive = isDark ? "bg-indigo-600 text-white" : "bg-indigo-500 text-white";
   const tabInactive = isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-500 hover:text-slate-700";
@@ -57,18 +57,27 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
       {/* Tabs */}
       <div
         className={[
-          "flex gap-1 p-0.5 rounded-lg mb-3 overflow-hidden",
+          "flex gap-1 p-0.5 rounded-lg mb-3",
           isDark ? "bg-slate-800" : "bg-slate-100",
         ].join(" ")}
       >
-        <button className={[tabBase, activeTab === "devices" ? tabActive : tabInactive].join(" ")} onClick={() => setActiveTab("devices")}>
-          Devices
+        {/* Devices — server rack icon */}
+        <button className={[tabBase, activeTab === "devices" ? tabActive : tabInactive].join(" ")} onClick={() => setActiveTab("devices")} title="Devices">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 3H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 5H5V6h14v2zM4 13h16c1.1 0 2-.9 2-2v-1H2v1c0 1.1.9 2 2 2zm0 6h16c1.1 0 2-.9 2-2v-1H2v1c0 1.1.9 2 2 2z"/>
+          </svg>
         </button>
-        <button className={[tabBase, activeTab === "clouds" ? tabActive : tabInactive].join(" ")} onClick={() => setActiveTab("clouds")}>
-          Clouds
+        {/* Clouds — cloud icon */}
+        <button className={[tabBase, activeTab === "clouds" ? tabActive : tabInactive].join(" ")} onClick={() => setActiveTab("clouds")} title="Clouds">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+          </svg>
         </button>
-        <button className={[tabBase, activeTab === "elements" ? tabActive : tabInactive].join(" ")} onClick={() => setActiveTab("elements")}>
-          Elements
+        {/* Elements — dashboard/grid icon */}
+        <button className={[tabBase, activeTab === "elements" ? tabActive : tabInactive].join(" ")} onClick={() => setActiveTab("elements")} title="Elements">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+          </svg>
         </button>
       </div>
 
