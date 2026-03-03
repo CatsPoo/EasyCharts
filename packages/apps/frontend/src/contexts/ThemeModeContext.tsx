@@ -47,18 +47,22 @@ export function ThemeModeProvider({ children }: { children: React.ReactNode }) {
       createTheme({
         palette: {
           mode,
-          // pick a blue you like; these match Tailwind blue-600/50/200-ish
           primary: {
-            main: "#2563eb", 
-            light: "#eff6ff",
-            dark: "#1e40af",
+            main: "#6366f1",        // indigo-500
+            light: "#eef2ff",       // indigo-50
+            dark: "#4338ca",        // indigo-700
             contrastText: "#ffffff",
           },
           background: {
-            default: isDark ? "#0b1020" : "#ffffff",
-            paper: isDark ? "#0f172a" : "#ffffff",
+            default: isDark ? "#0b1020" : "#eef2ff",   // indigo-50 in light
+            paper:   isDark ? "#0f172a" : "#ffffff",
           },
-          divider: isDark ? "rgba(148,163,184,0.24)" : "#e5e7eb",
+          text: {
+            primary:   isDark ? "#f1f5f9" : "#0f172a",  // slate-900
+            secondary: isDark ? "#94a3b8" : "#64748b",  // slate-500
+            disabled:  isDark ? "#475569" : "#94a3b8",  // slate-400
+          },
+          divider: isDark ? "rgba(148,163,184,0.24)" : "#c7d2fe",  // indigo-200
         },
         shape: { borderRadius: 12 },
       }),

@@ -2334,14 +2334,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           {/* Floating editor toolbar — undo / redo / fit view */}
           {editMode && (() => {
             const btnBase     = "flex items-center justify-center w-7 h-7 rounded transition-colors";
-            const btnEnabled  = isDark ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-blue-600 hover:bg-blue-700 text-white";
-            const btnDisabled = isDark ? "bg-slate-700 text-slate-500 cursor-not-allowed" : "bg-blue-200 text-blue-300 cursor-not-allowed";
-            const btnFit      = isDark ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-blue-900 hover:bg-blue-800 text-white";
+            const btnEnabled  = isDark ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-indigo-600 hover:bg-indigo-500 text-white";
+            const btnDisabled = isDark ? "bg-slate-700 text-slate-500 cursor-not-allowed" : "bg-slate-200 text-slate-400 cursor-not-allowed";
+            const btnFit      = isDark ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-indigo-700 hover:bg-indigo-600 text-white";
             return (
               <div
                 className={[
                   "absolute top-3 left-3 z-10 flex items-center gap-1 p-0.5 rounded-lg shadow-lg select-none",
-                  isDark ? "bg-slate-800" : "bg-blue-200",
+                  isDark ? "bg-slate-800" : "bg-white border border-slate-200 shadow-md",
                 ].join(" ")}
               >
                 <button
@@ -2366,7 +2366,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                     <path d="M21 7v6h-6"/><path d="M21 13A9 9 0 1 1 18 6.7"/>
                   </svg>
                 </button>
-                <div style={{ width: 1, height: 20, margin: "0 2px", background: isDark ? "#334155" : "#93c5fd" }} />
+                <div style={{ width: 1, height: 20, margin: "0 2px", background: isDark ? "#334155" : "#e2e8f0" }} />
                 <button
                   title="Fit view"
                   onClick={() => fitView({ padding: 0.1 })}

@@ -44,21 +44,21 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
   const tabBase =
     "flex-1 py-1.5 flex flex-col items-center justify-center gap-0.5 rounded transition-colors";
 
-  const tabActive = isDark ? "bg-indigo-600 text-white" : "bg-blue-900 text-white";
-  const tabInactive = isDark ? "text-slate-400 hover:text-slate-200" : "bg-blue-600 text-white hover:bg-blue-700";
+  const tabActive = isDark ? "bg-indigo-600 text-white" : "bg-white text-indigo-600 shadow-sm";
+  const tabInactive = isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-500 hover:text-slate-700";
 
   return (
     <aside
       className={[
         "flex flex-col h-full p-3 border-r",
-        isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200",
+        isDark ? "bg-slate-900 border-slate-700" : "bg-indigo-50 border-indigo-200",
       ].join(" ")}
     >
       {/* Tabs */}
       <div
         className={[
           "flex gap-1 p-0.5 rounded-lg mb-3",
-          isDark ? "bg-slate-800" : "bg-blue-200",
+          isDark ? "bg-slate-800" : "bg-slate-100",
         ].join(" ")}
       >
         {/* Devices — server rack icon */}
@@ -98,7 +98,7 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
                   onClick={onCreateDevice}
                   title="Create new device"
                   className={["flex items-center justify-center w-5 h-5 rounded text-xs font-bold transition-colors",
-                    isDark ? "bg-indigo-700 hover:bg-indigo-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"].join(" ")}
+                    isDark ? "bg-indigo-700 hover:bg-indigo-600 text-white" : "bg-indigo-600 hover:bg-indigo-500 text-white"].join(" ")}
                 >+</button>
               )}
             </div>
@@ -168,7 +168,7 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
                   onClick={onCreateCloud}
                   title="Create new cloud"
                   className={["flex items-center justify-center w-5 h-5 rounded text-xs font-bold transition-colors",
-                    isDark ? "bg-sky-700 hover:bg-sky-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"].join(" ")}
+                    isDark ? "bg-sky-700 hover:bg-sky-600 text-white" : "bg-indigo-600 hover:bg-indigo-500 text-white"].join(" ")}
                 >+</button>
               )}
             </div>

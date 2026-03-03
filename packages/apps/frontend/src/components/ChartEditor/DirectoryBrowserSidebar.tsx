@@ -332,8 +332,8 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
     flexShrink: 0,
     height: "100%",
     borderRight: 1,
-    borderColor: t.palette.mode === "dark" ? "divider" : "primary.200",
-    bgcolor: t.palette.mode === "dark" ? "background.paper" : "primary.light",
+    borderColor: "divider",
+    bgcolor: t.palette.mode === "dark" ? "background.paper" : "#e0e7ff",
     color: "text.primary",
     display: "flex",
     flexDirection: "column",
@@ -522,9 +522,9 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
                     "&:hover": { bgcolor: "#334155" },
                   }
                 : {
-                    bgcolor: "#2563eb",
+                    bgcolor: "#6366f1",
                     color: "#fff",
-                    "&:hover": { bgcolor: "#1d4ed8" },
+                    "&:hover": { bgcolor: "#4f46e5" },
                   },
             }}
           >
@@ -535,9 +535,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
               onClick={() => setCreateDirOpen(true)}
               FabProps={{
                 sx: {
-                  bgcolor: isDark ? "#1e293b" : "#fff",
-                  color: isDark ? "#f1f5f9" : "#374151",
-                  "&:hover": { bgcolor: isDark ? "#334155" : "#f3f4f6" },
+                  bgcolor: isDark ? "#1e293b" : "#ffffff",
+                  color: isDark ? "#f1f5f9" : "#4338ca",
+                  border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
+                  "&:hover": { bgcolor: isDark ? "#334155" : "#eef2ff" },
                 },
               }}
             />
@@ -548,9 +549,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
               onClick={() => setCreateChartOpen(true)}
               FabProps={{
                 sx: {
-                  bgcolor: isDark ? "#1e293b" : "#fff",
-                  color: isDark ? "#f1f5f9" : "#374151",
-                  "&:hover": { bgcolor: isDark ? "#334155" : "#f3f4f6" },
+                  bgcolor: isDark ? "#1e293b" : "#ffffff",
+                  color: isDark ? "#f1f5f9" : "#4338ca",
+                  border: isDark ? "1px solid #334155" : "1px solid #e2e8f0",
+                  "&:hover": { bgcolor: isDark ? "#334155" : "#eef2ff" },
                 },
               }}
             />
@@ -591,9 +593,9 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
               if (e.key === "Escape") setCreateDirOpen(false);
             }}
             style={{
-              border: isDark ? "1px solid #475569" : "1px solid #cbd5e1",
+              border: isDark ? "1px solid #475569" : "1px solid #e2e8f0",
               background: isDark ? "#1e293b" : "#ffffff",
-              color: isDark ? "#f1f5f9" : "#111827",
+              color: isDark ? "#f1f5f9" : "#0f172a",
               borderRadius: 4,
               padding: "4px 8px",
               fontSize: 13,

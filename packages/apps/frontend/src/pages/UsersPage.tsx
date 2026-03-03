@@ -170,50 +170,88 @@ export function UsersPage() {
           Create User
         </Button>
       </Toolbar>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>User</TableCell>
-            <TableCell>Status</TableCell>
-            {Object.values(Permission).map((perm) => (
-              <TableCell key={perm}>{perm}</TableCell>
-            ))}
-            <TableCell>Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {users.map((u) => (
-            <TableRow key={u.id}>
-              <TableCell>{u.username}</TableCell>
-              <TableCell>{u.isActive ? "Active" : "Disabled"}</TableCell>
+      <Box
+        sx={(t) => ({
+          mx: 2,
+          borderRadius: 2,
+          overflow: "hidden",
+          border: t.palette.mode === "dark"
+            ? `1px solid ${t.palette.divider}`
+            : "1px solid #c7d2fe",
+        })}
+      >
+        <Table>
+          <TableHead>
+            <TableRow
+              sx={(t) => ({
+                bgcolor: t.palette.mode === "dark" ? "background.paper" : "#e0e7ff",
+                "& .MuiTableCell-root": {
+                  borderBottom: t.palette.mode === "dark"
+                    ? `1px solid ${t.palette.divider}`
+                    : "1px solid #c7d2fe",
+                  color: t.palette.mode === "dark" ? t.palette.text.primary : "#4338ca",
+                  fontWeight: 700,
+                  fontSize: 13,
+                },
+              })}
+            >
+              <TableCell>User</TableCell>
+              <TableCell>Status</TableCell>
               {Object.values(Permission).map((perm) => (
-                <TableCell key={perm}>
-                  <Checkbox
-                    checked={u.permissions?.includes(perm) ?? false}
-                    onChange={() =>
-                      togglePermission(
-                        u.id,
-                        perm,
-                        !u.permissions?.includes(perm)
-                      )
-                    }
-                  />
-                </TableCell>
+                <TableCell key={perm}>{perm}</TableCell>
               ))}
-              <TableCell>
-                <IconButton onClick={() => onEditHandle(u)}>
-                  <EditIcon />
-                </IconButton>
-                {u.id !== user?.id && (
-                  <IconButton color="error" onClick={() => onDeleteHandle(u)}>
-                    <DeleteIcon />
-                  </IconButton>
-                )}
-              </TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHead>
+          <TableBody>
+            {users.map((u) => (
+              <TableRow
+                key={u.id}
+                sx={(t) => ({
+                  "&:last-child .MuiTableCell-root": { borderBottom: 0 },
+                  "& .MuiTableCell-root": {
+                    borderBottom: t.palette.mode === "dark"
+                      ? `1px solid ${t.palette.divider}`
+                      : "1px solid #e0e7ff",
+                  },
+                  "&:hover": {
+                    bgcolor: t.palette.mode === "dark"
+                      ? "rgba(99,102,241,0.06)"
+                      : "#eef2ff",
+                  },
+                })}
+              >
+                <TableCell>{u.username}</TableCell>
+                <TableCell>{u.isActive ? "Active" : "Disabled"}</TableCell>
+                {Object.values(Permission).map((perm) => (
+                  <TableCell key={perm}>
+                    <Checkbox
+                      checked={u.permissions?.includes(perm) ?? false}
+                      onChange={() =>
+                        togglePermission(
+                          u.id,
+                          perm,
+                          !u.permissions?.includes(perm)
+                        )
+                      }
+                    />
+                  </TableCell>
+                ))}
+                <TableCell>
+                  <IconButton onClick={() => onEditHandle(u)}>
+                    <EditIcon />
+                  </IconButton>
+                  {u.id !== user?.id && (
+                    <IconButton color="error" onClick={() => onDeleteHandle(u)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Box>
       <Box mt={2}>
         <Button
           startIcon={<ArrowBackIcon />}
