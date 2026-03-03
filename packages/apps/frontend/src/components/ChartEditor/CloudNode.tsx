@@ -31,10 +31,10 @@ function CloudNode({ data, selected }: NodeProps<CloudNodeData>) {
     [cloudOnChart.cloudId, onSizeChange]
   );
 
-  const fill   = isDark ? "#0c2340" : "#e0f2fe";
-  const stroke = selected ? "#6366f1" : isDark ? "#38bdf8" : "#0ea5e9";
-  const textColor = isDark ? "#93c5fd" : "#0369a1";
-  const subColor  = isDark ? "#7dd3fc" : "#0c4a6e";
+  const fill   = isDark ? "#0c2340" : "#eef2ff";
+  const stroke = selected ? "#a78bfa" : isDark ? "#38bdf8" : "#6366f1";
+  const textColor = isDark ? "#93c5fd" : "#4338ca";
+  const subColor  = isDark ? "#7dd3fc" : "#6366f1";
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>

@@ -42,33 +42,45 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
     : cloudsList;
 
   const tabBase =
-    "flex-1 min-w-0 py-1 text-[10px] font-semibold rounded transition-colors truncate";
+    "flex-1 py-1.5 flex flex-col items-center justify-center gap-0.5 rounded transition-colors";
 
-  const tabActive = isDark ? "bg-indigo-600 text-white" : "bg-indigo-500 text-white";
+  const tabActive = isDark ? "bg-indigo-600 text-white" : "bg-white text-indigo-600 shadow-sm";
   const tabInactive = isDark ? "text-slate-400 hover:text-slate-200" : "text-slate-500 hover:text-slate-700";
 
   return (
     <aside
       className={[
         "flex flex-col h-full p-3 border-r",
-        isDark ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200",
+        isDark ? "bg-slate-900 border-slate-700" : "bg-indigo-50 border-indigo-200",
       ].join(" ")}
     >
       {/* Tabs */}
       <div
         className={[
-          "flex gap-1 p-0.5 rounded-lg mb-3 overflow-hidden",
+          "flex gap-1 p-0.5 rounded-lg mb-3",
           isDark ? "bg-slate-800" : "bg-slate-100",
         ].join(" ")}
       >
+        {/* Devices — server rack icon */}
         <button className={[tabBase, activeTab === "devices" ? tabActive : tabInactive].join(" ")} onClick={() => setActiveTab("devices")}>
-          Devices
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 3H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 5H5V6h14v2zM4 13h16c1.1 0 2-.9 2-2v-1H2v1c0 1.1.9 2 2 2zm0 6h16c1.1 0 2-.9 2-2v-1H2v1c0 1.1.9 2 2 2z"/>
+          </svg>
+          <span className="text-[9px] font-semibold leading-none">Devices</span>
         </button>
+        {/* Clouds — cloud icon */}
         <button className={[tabBase, activeTab === "clouds" ? tabActive : tabInactive].join(" ")} onClick={() => setActiveTab("clouds")}>
-          Clouds
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+          </svg>
+          <span className="text-[9px] font-semibold leading-none">Clouds</span>
         </button>
+        {/* Elements — dashboard/grid icon */}
         <button className={[tabBase, activeTab === "elements" ? tabActive : tabInactive].join(" ")} onClick={() => setActiveTab("elements")}>
-          Elements
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+          </svg>
+          <span className="text-[9px] font-semibold leading-none">Elements</span>
         </button>
       </div>
 
@@ -86,7 +98,7 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
                   onClick={onCreateDevice}
                   title="Create new device"
                   className={["flex items-center justify-center w-5 h-5 rounded text-xs font-bold transition-colors",
-                    isDark ? "bg-indigo-700 hover:bg-indigo-600 text-white" : "bg-indigo-100 hover:bg-indigo-200 text-indigo-700"].join(" ")}
+                    isDark ? "bg-indigo-700 hover:bg-indigo-600 text-white" : "bg-indigo-600 hover:bg-indigo-500 text-white"].join(" ")}
                 >+</button>
               )}
             </div>
@@ -156,7 +168,7 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
                   onClick={onCreateCloud}
                   title="Create new cloud"
                   className={["flex items-center justify-center w-5 h-5 rounded text-xs font-bold transition-colors",
-                    isDark ? "bg-sky-700 hover:bg-sky-600 text-white" : "bg-sky-100 hover:bg-sky-200 text-sky-700"].join(" ")}
+                    isDark ? "bg-sky-700 hover:bg-sky-600 text-white" : "bg-indigo-600 hover:bg-indigo-500 text-white"].join(" ")}
                 >+</button>
               )}
             </div>

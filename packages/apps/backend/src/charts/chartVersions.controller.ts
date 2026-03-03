@@ -16,8 +16,10 @@ import { PermissionsGuard } from "../auth/guards/permissions.guard";
 import { RequirePermissions } from "../auth/decorators/permissions.decorator";
 import { ChartsService } from "./charts.service";
 import { ChartVersionsService } from "./chartVersions.service";
+import { ChartShareGuard } from "./guards/chartShare.guard";
+import { RequireChartPrivilege } from "./decorators/requireChartPrivilege.decorator";
 
-@UseGuards(JwdAuthGuard, PermissionsGuard)
+@UseGuards(JwdAuthGuard, PermissionsGuard, ChartShareGuard)
 @Controller("charts")
 export class ChartVersionsController {
   constructor(
@@ -26,6 +28,7 @@ export class ChartVersionsController {
   ) {}
 
   @RequirePermissions(Permission.CHART_READ)
+  @RequireChartPrivilege('read')
   @Get(":chartId/versions")
   listVersions(
     @Param("chartId", new ParseUUIDPipe()) chartId: string,
@@ -34,6 +37,7 @@ export class ChartVersionsController {
   }
 
   @RequirePermissions(Permission.CHART_READ)
+  @RequireChartPrivilege('read')
   @Get(":chartId/versions/:versionId")
   getVersion(
     @Param("chartId", new ParseUUIDPipe()) chartId: string,
@@ -43,6 +47,7 @@ export class ChartVersionsController {
   }
 
   @RequirePermissions(Permission.CHART_UPDATE)
+  @RequireChartPrivilege('canEdit')
   @Post(":chartId/versions/:versionId/rollback")
   @HttpCode(HttpStatus.OK)
   async rollback(
@@ -53,15 +58,18 @@ export class ChartVersionsController {
     const version = await this.chartVersionsService.getVersion(chartId, versionId);
     const snap = version.snapshot as Chart;
 
+    // When rolling back, any field not present in the old snapshot (added later)
+    // is explicitly set to its empty default so it gets cleared rather than left as-is.
     return this.chartsService.updateChart(
       chartId,
       {
         name: snap.name,
         description: snap.description,
-        devicesOnChart: snap.devicesOnChart,
-        linesOnChart: snap.linesOnChart,
-        bondsOnChart: snap.bondsOnChart,
+        devicesOnChart: snap.devicesOnChart ?? [],
+        linesOnChart: snap.linesOnChart ?? [],
+        bondsOnChart: snap.bondsOnChart ?? [],
         notesOnChart: snap.notesOnChart ?? [],
+        zonesOnChart: snap.zonesOnChart ?? [],
         cloudsOnChart: snap.cloudsOnChart ?? [],
         versionLabel: `Rollback to v${version.versionNumber}`,
       },

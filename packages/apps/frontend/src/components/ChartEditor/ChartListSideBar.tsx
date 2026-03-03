@@ -86,9 +86,8 @@ export function ChartListSidebar({
         flexShrink: 0,
         height: "100%",
         borderRight: 1,
-        borderColor: t.palette.mode === "dark" ? "divider" : "primary.200",
-        bgcolor:
-          t.palette.mode === "dark" ? "background.paper" : "primary.light",
+        borderColor: "divider",
+        bgcolor: t.palette.mode === "dark" ? "background.paper" : "#e0e7ff",
         color: "text.primary",
         transition: "background-color 200ms, border-color 200ms",
       })}

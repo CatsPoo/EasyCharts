@@ -5,7 +5,7 @@ import LockOpenIcon from "@mui/icons-material/LockOpen";
 
 
 type LockStatusChipProps = {
-  lock: ChartLock;
+  lock: ChartLock | undefined;
   lockState : LockState
   isLoading?: boolean; // initial fetch if you want
   locking?: boolean; // acquire pending

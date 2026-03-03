@@ -39,6 +39,7 @@ import ReactFlow, {
   Background,
   ConnectionLineType,
   Controls,
+  MiniMap,
   reconnectEdge,
   useEdgesState,
   useNodesState,
@@ -172,7 +173,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const createDeviceMut = useCreateAsset("devices");
     const createCloudMut = useCreateAsset("clouds");
     const deleteCloudMut = useDeleteAsset("clouds");
-    const { project,getEdge } = useReactFlow();
+    const { project, getEdge, fitView } = useReactFlow();
     const {devicePos} = useDevices({chart})
     const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,applyChartChange})
     
@@ -601,33 +602,40 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       async ({ name, type }: PortFormValues) => {
         if (!editPortTarget) return;
         const { port, deviceId } = editPortTarget;
+        // Always update local state first so the visual reflects the change
+        // immediately. For ports not yet in the DB (newly created via inline
+        // editor), the updatePort call below will fail — that is expected and
+        // the correct name/type will be persisted the next time the chart is
+        // saved (via upsertPortsForDevice in syncPlacementsAndHandles).
+        applyChartChange((prev) => ({
+          ...prev,
+          devicesOnChart: prev.devicesOnChart.map((doc) => {
+            if (doc.device.id !== deviceId) return doc;
+            const updatedPort = (p: Port) =>
+              p.id === port.id ? { ...p, name, type } : p;
+            const updatedHandle = (h: { port: Port }) =>
+              h.port.id === port.id ? { ...h, port: { ...h.port, name, type } } : h;
+            return {
+              ...doc,
+              device: { ...doc.device, ports: doc.device.ports.map(updatedPort) },
+              handles: {
+                left: (doc.handles.left ?? []).map(updatedHandle),
+                right: (doc.handles.right ?? []).map(updatedHandle),
+                top: (doc.handles.top ?? []).map(updatedHandle),
+                bottom: (doc.handles.bottom ?? []).map(updatedHandle),
+              },
+            };
+          }),
+        } as Chart));
+        setDirty(true);
+        setEditPortTarget(null);
+        // Try to persist immediately for ports that already exist in the DB.
+        // Silently ignore failures — the chart save will persist the change.
         try {
           await updatePort(port.id, { name, type });
-          applyChartChange((prev) => ({
-            ...prev,
-            devicesOnChart: prev.devicesOnChart.map((doc) => {
-              if (doc.device.id !== deviceId) return doc;
-              const updatedPort = (p: Port) =>
-                p.id === port.id ? { ...p, name, type } : p;
-              const updatedHandle = (h: { port: Port }) =>
-                h.port.id === port.id ? { ...h, port: { ...h.port, name, type } } : h;
-              return {
-                ...doc,
-                device: { ...doc.device, ports: doc.device.ports.map(updatedPort) },
-                handles: {
-                  left: (doc.handles.left ?? []).map(updatedHandle),
-                  right: (doc.handles.right ?? []).map(updatedHandle),
-                  top: (doc.handles.top ?? []).map(updatedHandle),
-                  bottom: (doc.handles.bottom ?? []).map(updatedHandle),
-                },
-              };
-            }),
-          } as Chart));
-          setDirty(true);
         } catch (e) {
-          console.error("Failed to update port:", e);
+          console.error("Failed to immediately persist port update:", e);
         }
-        setEditPortTarget(null);
       },
       [editPortTarget, applyChartChange, setDirty]
     );
@@ -2176,20 +2184,30 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         }
         return null;
       },
-      [
-        chart.description,
-        chart.devicesOnChart,
-        chart.id,
-        chart.linesOnChart,
-        chart.name,
-        chart.notesOnChart,
-        chart.zonesOnChart,
-        chart.cloudsOnChart,
-        chart.bondsOnChart,
-        setDirty,
-        updateMut,
-      ]
+      [chart, updateMut, setDirty]
     );
+
+    // Keyboard shortcuts: Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo
+    useEffect(() => {
+      if (!editMode) return;
+      const handler = (e: KeyboardEvent) => {
+        const tag = (e.target as HTMLElement)?.tagName;
+        // Don't intercept shortcuts while the user is typing in an input/textarea
+        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+        if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          onUndoClick();
+        } else if (
+          (e.ctrlKey || e.metaKey) &&
+          (e.key === "y" || (e.key === "z" && e.shiftKey))
+        ) {
+          e.preventDefault();
+          onRedoClick();
+        }
+      };
+      window.addEventListener("keydown", handler);
+      return () => window.removeEventListener("keydown", handler);
+    }, [editMode, onUndoClick, onRedoClick]);
 
     useImperativeHandle(
       ref,
@@ -2226,7 +2244,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           ref={reactFlowWrapper}
           onDragOver={onDragOver}
           onDrop={onDrop}
-          className="flex-1"
+          className="flex-1 relative"
         >
           {ctx.open && (
             <>
@@ -2313,6 +2331,56 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             </div>
           )}
 
+          {/* Floating editor toolbar — undo / redo / fit view */}
+          {editMode && (() => {
+            const btnBase     = "flex items-center justify-center w-7 h-7 rounded transition-colors";
+            const btnEnabled  = isDark ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-indigo-600 hover:bg-indigo-500 text-white";
+            const btnDisabled = isDark ? "bg-slate-700 text-slate-500 cursor-not-allowed" : "bg-slate-200 text-slate-400 cursor-not-allowed";
+            const btnFit      = isDark ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-indigo-700 hover:bg-indigo-600 text-white";
+            return (
+              <div
+                className={[
+                  "absolute top-3 left-3 z-10 flex items-center gap-1 p-0.5 rounded-lg shadow-lg select-none",
+                  isDark ? "bg-slate-800" : "bg-white border border-slate-200 shadow-md",
+                ].join(" ")}
+              >
+                <button
+                  title="Undo (Ctrl+Z)"
+                  disabled={!canUndo}
+                  onClick={onUndoClick}
+                  className={[btnBase, canUndo ? btnEnabled : btnDisabled].join(" ")}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    style={{ stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
+                    <path d="M3 7v6h6"/><path d="M3 13A9 9 0 1 0 6 6.7"/>
+                  </svg>
+                </button>
+                <button
+                  title="Redo (Ctrl+Y)"
+                  disabled={!canRedo}
+                  onClick={onRedoClick}
+                  className={[btnBase, canRedo ? btnEnabled : btnDisabled].join(" ")}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    style={{ stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
+                    <path d="M21 7v6h-6"/><path d="M21 13A9 9 0 1 1 18 6.7"/>
+                  </svg>
+                </button>
+                <div style={{ width: 1, height: 20, margin: "0 2px", background: isDark ? "#334155" : "#e2e8f0" }} />
+                <button
+                  title="Fit view"
+                  onClick={() => fitView({ padding: 0.1 })}
+                  className={[btnBase, btnFit].join(" ")}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    style={{ stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                  </svg>
+                </button>
+              </div>
+            );
+          })()}
+
           <ReactFlow
             nodeTypes={nodeTypes}
             nodes={nodes}
@@ -2335,6 +2403,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           >
             <Background color={isDark ? "#1f2937" : "#e5e7eb"} gap={16} />
             <Controls className={isDark ? "invert" : ""} />
+            <MiniMap
+              style={{
+                background: isDark ? "#1e293b" : "#f8fafc",
+                border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`,
+              }}
+              nodeColor={isDark ? "#6366f1" : "#818cf8"}
+              maskColor={isDark ? "rgba(0,0,0,0.5)" : "rgba(100,116,139,0.15)"}
+            />
           </ReactFlow>
         </div>
         <EditLineDialog

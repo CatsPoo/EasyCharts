@@ -18,16 +18,16 @@ export function NavBar({ children }: NavBarProps) {
   return (
     <AppBar
       position="static"
+      elevation={0}
       sx={(t) => ({
-        bgcolor:
-          t.palette.mode === "dark"
-            ? t.palette.background.paper
-            : t.palette.primary.main,
-        color:
-          t.palette.mode === "dark"
-            ? t.palette.text.primary
-            : t.palette.primary.contrastText,
-        transition: "background-color 200ms, color 200ms",
+        bgcolor: t.palette.mode === "dark"
+          ? t.palette.background.paper
+          : t.palette.primary.main,
+        color: "#ffffff",
+        boxShadow: t.palette.mode === "dark"
+          ? "none"
+          : "0 2px 8px rgba(99,102,241,0.3)",
+        transition: "background-color 200ms",
       })}
     >
       <Toolbar
@@ -42,7 +42,13 @@ export function NavBar({ children }: NavBarProps) {
         {/* Leftmost: brand */}
         <Typography
           variant="h6"
-          sx={{ mr: 2, whiteSpace: "nowrap", lineHeight: 1 }}
+          sx={{
+            mr: 2,
+            whiteSpace: "nowrap",
+            lineHeight: 1,
+            fontWeight: 700,
+            color: "inherit",
+          }}
         >
           EasyCharts
         </Typography>
@@ -53,7 +59,7 @@ export function NavBar({ children }: NavBarProps) {
             display: "flex",
             alignItems: "center",
             gap: 1,
-            minWidth: 0, // allow shrinking if space is tight
+            minWidth: 0,
           }}
         >
           {children}
@@ -73,16 +79,21 @@ export function NavBar({ children }: NavBarProps) {
               display: "flex",
               alignItems: "center",
               gap: 1,
-              bgcolor: t.palette.background.paper,
-              color: t.palette.text.primary,
+              bgcolor: "rgba(255,255,255,0.15)",
+              color: "#ffffff",
+              border: "1px solid rgba(255,255,255,0.25)",
               borderRadius: 2,
               px: 1.5,
               py: 0.5,
-              boxShadow: 2,
               mr: 1,
+              ...(t.palette.mode === "dark" && {
+                bgcolor: t.palette.background.default,
+                color: t.palette.text.primary,
+                border: `1px solid ${t.palette.divider}`,
+              }),
             })}
           >
-            <span style={{ opacity: 0.85, fontSize: 12 }}>
+            <span style={{ opacity: 0.9, fontSize: 12 }}>
               {user?.username ?? user?.id ?? "User"}
             </span>
             <Button
@@ -90,7 +101,17 @@ export function NavBar({ children }: NavBarProps) {
               variant="outlined"
               color="inherit"
               onClick={logout}
-              sx={{ borderColor: "divider" }}
+              sx={(t) => ({
+                borderColor: t.palette.mode === "dark"
+                  ? t.palette.divider
+                  : "rgba(255,255,255,0.4)",
+                "&:hover": {
+                  borderColor: t.palette.mode === "dark"
+                    ? t.palette.divider
+                    : "rgba(255,255,255,0.7)",
+                  bgcolor: "rgba(255,255,255,0.1)",
+                },
+              })}
             >
               Logout
             </Button>
