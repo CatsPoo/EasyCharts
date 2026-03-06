@@ -1,6 +1,4 @@
-
 steps:
-
   # ── 1. Install dependencies ─────────────────────────────────────
   - name: install
     image: node:22-bookworm
@@ -45,7 +43,7 @@ steps:
       - apk add --no-cache python3 make g++
       - npx nx affected --target=build --parallel=3
     when:
-      branch: main3
+      branch: main
 
   # ── 4a. Publish backend image ────────────────────────────────────
   - name: publish-backend
@@ -82,4 +80,3 @@ steps:
     when:
       branch: main
       path: "packages/apps/frontend/**"
-      #
