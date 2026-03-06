@@ -58,7 +58,7 @@ steps:
       repo: rongorlik/easy-charts:backend-latest
       auto_tag: true
       username:
-        from_secret: dockerhub_usernamenpx nx affected --target=lint --parallel=
+        from_secret: dockerhub_username
       password:
         from_secret: dockerhub_password
     when:
