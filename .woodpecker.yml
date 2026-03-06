@@ -3,17 +3,17 @@ steps:
 
   # ── 1. Install dependencies ─────────────────────────────────────
   - name: install
-    image: node:22-alpine
+    image: node:22-bookworm
     environment:
       CI: "true"
     commands:
-      - npm ci
+      - npm ci --no-audit --no-fund --prefer-offline --legacy-peer-deps
     when:
       branch: [main, dev]
 
   # ── 2a. Lint (parallel with test) ───────────────────────────────
   - name: lint
-    image: node:22-alpine
+    image: node:22-bookworm
     depends_on: [install]
     environment:
       CI: "true"
@@ -26,7 +26,7 @@ steps:
 
   # ── 2b. Test (parallel with lint) ───────────────────────────────
   - name: test
-    image: node:22-alpine
+    image: node:22-bookworm
     depends_on: [install]
     environment:
       CI: "true"
@@ -37,7 +37,7 @@ steps:
 
   # ── 3. Verify build compiles ─────────────────────────────────────
   - name: build
-    image: node:22-alpine
+    image: node:22-bookworm
     depends_on: [lint, test]
     environment:
       CI: "true"
