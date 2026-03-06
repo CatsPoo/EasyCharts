@@ -45,38 +45,38 @@ steps:
     when:
       branch: main
 
-  # ── 4a. Publish backend image ───────────────────────────────────
-  - name: publish-backend
-    image: woodpeckerci/plugin-docker-buildx
-    privileged: true # Required for buildx to run
-    depends_on: [build]
-    settings:
-      dockerfile: packages/apps/backend/Dockerfile
-      context: . # Start at root so it can see all packages
-      repo: rongorlik/easy-charts:backend-latest
-      auto_tag: true
-      username:
-        from_secret: dockerhub_username
-      password:
-        from_secret: dockerhub_password
-    when:
-      branch: main
-      path: "packages/apps/backend/**"
+  # # ── 4a. Publish backend image ───────────────────────────────────
+  # - name: publish-backend
+  #   image: woodpeckerci/plugin-docker-buildx
+  #   privileged: true # Required for buildx to run
+  #   depends_on: [build]
+  #   settings:
+  #     dockerfile: packages/apps/backend/Dockerfile
+  #     context: . # Start at root so it can see all packages
+  #     repo: rongorlik/easy-charts:backend-latest
+  #     auto_tag: true
+  #     username:
+  #       from_secret: dockerhub_username
+  #     password:
+  #       from_secret: dockerhub_password
+  #   when:
+  #     branch: main
+  #     path: "packages/apps/backend/**"
 
-  # ── 4b. Publish frontend image ───────────────────────────────────
-  - name: publish-frontend
-    image: woodpeckerci/plugin-docker-buildx
-    privileged: true
-    depends_on: [build]
-    settings:
-      dockerfile: packages/apps/frontend/Dockerfile
-      context: .
-      repo: rongorlik/easy-charts:frontend-latest
-      auto_tag: true
-      username:
-        from_secret: dockehub_username
-      password:
-        from_secret: dockerhub_password
-    when:
-      branch: main
-      path: "packages/apps/frontend/**"
+  # # ── 4b. Publish frontend image ───────────────────────────────────
+  # - name: publish-frontend
+  #   image: woodpeckerci/plugin-docker-buildx
+  #   privileged: true
+  #   depends_on: [build]
+  #   settings:
+  #     dockerfile: packages/apps/frontend/Dockerfile
+  #     context: .
+  #     repo: rongorlik/easy-charts:frontend-latest
+  #     auto_tag: true
+  #     username:
+  #       from_secret: dockehub_username
+  #     password:
+  #       from_secret: dockerhub_password
+  #   when:
+  #     branch: main
+  #     path: "packages/apps/frontend/**"
