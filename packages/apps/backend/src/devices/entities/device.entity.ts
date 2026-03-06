@@ -17,7 +17,7 @@ export class DeviceEntity extends AuditableEntity{
   // type!: string;
   @ManyToOne(() => DeviceTypeEntity, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "type_id" })
-  type: DeviceTypeEntity;
+  type: Relation<DeviceTypeEntity>;
 
   @ManyToOne(() => ModelEntity, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "model_id" })

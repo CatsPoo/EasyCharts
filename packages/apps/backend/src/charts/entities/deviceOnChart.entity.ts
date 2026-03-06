@@ -32,7 +32,7 @@ export class DeviceOnChartEntity {
       onDelete: "CASCADE",
     }
   )
-  chart!: ChartEntity;
+  chart!: Relation<ChartEntity>;
 
   @ManyToOne(() => DeviceEntity, (device: DeviceEntity) => device.charts, {
     eager: true,

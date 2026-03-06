@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx nx test @easy-charts/backend --passWithNoTests)"
+      "Bash(npx nx test @easy-charts/backend --passWithNoTests)",
+      "Bash(grep -A 8 \"Cannot access ''DeviceTypeEntity''\")"
     ]
   }
 }
