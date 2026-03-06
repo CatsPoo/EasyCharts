@@ -33,7 +33,7 @@ export function ChartListSidebar({
   const {
     data: chartsMeatadata,
     isLoading: isChartsMetadataLoading,
-    error: chartMetadataLoading,
+    error: _chartMetadataLoading,
   } = useChartsMetadataQuery();
 
   const createMutation = useCreateChartMutation();

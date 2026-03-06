@@ -4,8 +4,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/useAuth";
 import {
-  AppBar,
-  Toolbar,
   Typography,
   Paper,
   Box,
@@ -14,7 +12,6 @@ import {
   Alert,
   Divider,
 } from "@mui/material";
-import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { NavBar } from "../components/NavBar";
 
 export const LoginPage: React.FC = () => {
@@ -35,7 +32,7 @@ export const LoginPage: React.FC = () => {
     try {
       await login(username.trim(), password);
       navigate(from, { replace: true });
-    } catch (err: any) {
+    } catch {
       setError("Login failed");
     } finally {
       setSubmitting(false);

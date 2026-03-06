@@ -45,7 +45,7 @@ export class UsersController {
   }
 
   @Get("/search")
-  search(@Query("q") q: string = "", @Req() req: { user: string }) {
+  search(@Query("q") q = "", @Req() req: { user: string }) {
     return this.userService.searchUsers(q, req.user);
   }
 

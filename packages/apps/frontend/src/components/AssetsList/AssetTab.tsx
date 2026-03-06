@@ -154,7 +154,7 @@ export default function AssetTab() {
         ),
       },
     ],
-    [kind]
+    [kind, onRowDeleteClick]
   );
 
   return (

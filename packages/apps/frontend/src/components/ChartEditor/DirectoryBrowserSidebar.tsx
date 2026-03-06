@@ -33,7 +33,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { RequirePermissions } from "../../auth/RequirePermissions";
 import { useAuth } from "../../auth/useAuth";
 import type { ChartCreate } from "@easy-charts/easycharts-types";
@@ -205,9 +205,10 @@ export function DirectoryBrowserSidebar({ onSelect, onEdit }: DirectoryBrowserSi
   }, [deleteDirMutation, pendingDirToDelete, navStack]);
 
   // ── Derived (must be before callbacks that reference chartsToShow) ──────────
-  const chartsToShow: ChartMetadata[] = isInsideDir
-    ? (dirCharts ?? [])
-    : (unassignedCharts ?? []);
+  const chartsToShow = useMemo<ChartMetadata[]>(
+    () => (isInsideDir ? (dirCharts ?? []) : (unassignedCharts ?? [])),
+    [isInsideDir, dirCharts, unassignedCharts]
+  );
 
   const myCharts = chartsToShow.filter(c => c.createdByUserId === user?.id);
   const sharedCharts = chartsToShow.filter(c => c.createdByUserId !== user?.id);

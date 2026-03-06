@@ -1,16 +1,15 @@
 /* @jest-environment jsdom */
-import { act, render, screen } from '@testing-library/react';
-import React from 'react';
-import { AuthProvider, useAuth } from './authProvider';
+import { act, render, screen } from "@testing-library/react";
+import { AuthProvider, useAuth } from "./authProvider";
 
 // Mock the http module so AuthProvider's useEffect doesn't throw
-jest.mock('../api/http', () => ({
+jest.mock("../api/http", () => ({
   createHttp: jest.fn(),
   setupHttpAuth: jest.fn(),
 }));
 
 // Mock axios so axios.create at module level returns a controllable instance
-jest.mock('axios', () => ({
+jest.mock("axios", () => ({
   __esModule: true,
   default: {
     create: jest.fn(() => ({ post: jest.fn() })),
@@ -19,9 +18,9 @@ jest.mock('axios', () => ({
 }));
 
 const mockUser = {
-  id: 'user-1',
-  username: 'testuser',
-  displayName: 'Test User',
+  id: "user-1",
+  username: "testuser",
+  displayName: "Test User",
   isActive: true,
   permissions: [],
 };
@@ -32,8 +31,10 @@ function AuthConsumer() {
   const { isAuthenticated, user, logout } = useAuth();
   return (
     <div>
-      <span data-testid="auth-status">{isAuthenticated ? 'authenticated' : 'unauthenticated'}</span>
-      <span data-testid="username">{user?.username ?? 'none'}</span>
+      <span data-testid="auth-status">
+        {isAuthenticated ? "authenticated" : "unauthenticated"}
+      </span>
+      <span data-testid="username">{user?.username ?? "none"}</span>
       <button onClick={logout}>Logout</button>
     </div>
   );
@@ -41,86 +42,92 @@ function AuthConsumer() {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('AuthProvider', () => {
+describe("AuthProvider", () => {
   beforeEach(() => {
     localStorage.clear();
     jest.clearAllMocks();
   });
 
-  it('starts unauthenticated when localStorage has no token', () => {
+  it("starts unauthenticated when localStorage has no token", () => {
     render(
       <AuthProvider>
         <AuthConsumer />
-      </AuthProvider>,
+      </AuthProvider>
     );
-    expect(screen.getByTestId('auth-status').textContent).toBe('unauthenticated');
-    expect(screen.getByTestId('username').textContent).toBe('none');
+    expect(screen.getByTestId("auth-status").textContent).toBe(
+      "unauthenticated"
+    );
+    expect(screen.getByTestId("username").textContent).toBe("none");
   });
 
-  it('starts authenticated when access_token exists in localStorage', () => {
-    localStorage.setItem('access_token', 'existing_token');
-    localStorage.setItem('user', JSON.stringify(mockUser));
+  it("starts authenticated when access_token exists in localStorage", () => {
+    localStorage.setItem("access_token", "existing_token");
+    localStorage.setItem("user", JSON.stringify(mockUser));
 
     render(
       <AuthProvider>
         <AuthConsumer />
-      </AuthProvider>,
+      </AuthProvider>
     );
-    expect(screen.getByTestId('auth-status').textContent).toBe('authenticated');
-    expect(screen.getByTestId('username').textContent).toBe('testuser');
+    expect(screen.getByTestId("auth-status").textContent).toBe("authenticated");
+    expect(screen.getByTestId("username").textContent).toBe("testuser");
   });
 
-  it('handles corrupted user JSON in localStorage gracefully', () => {
-    localStorage.setItem('access_token', 'token');
-    localStorage.setItem('user', 'not-valid-json{');
+  it("handles corrupted user JSON in localStorage gracefully", () => {
+    localStorage.setItem("access_token", "token");
+    localStorage.setItem("user", "not-valid-json{");
 
     // Should not throw
     expect(() =>
       render(
         <AuthProvider>
           <AuthConsumer />
-        </AuthProvider>,
-      ),
+        </AuthProvider>
+      )
     ).not.toThrow();
   });
 
-  it('logout clears tokens and state', async () => {
-    localStorage.setItem('access_token', 'token');
-    localStorage.setItem('refresh_token', 'rtoken');
-    localStorage.setItem('user', JSON.stringify(mockUser));
+  it("logout clears tokens and state", async () => {
+    localStorage.setItem("access_token", "token");
+    localStorage.setItem("refresh_token", "rtoken");
+    localStorage.setItem("user", JSON.stringify(mockUser));
 
     render(
       <AuthProvider>
         <AuthConsumer />
-      </AuthProvider>,
+      </AuthProvider>
     );
 
     // Verify authenticated before logout
-    expect(screen.getByTestId('auth-status').textContent).toBe('authenticated');
+    expect(screen.getByTestId("auth-status").textContent).toBe("authenticated");
 
     await act(async () => {
-      screen.getByText('Logout').click();
+      screen.getByText("Logout").click();
     });
 
-    expect(screen.getByTestId('auth-status').textContent).toBe('unauthenticated');
-    expect(screen.getByTestId('username').textContent).toBe('none');
-    expect(localStorage.getItem('access_token')).toBeNull();
-    expect(localStorage.getItem('refresh_token')).toBeNull();
-    expect(localStorage.getItem('user')).toBeNull();
+    expect(screen.getByTestId("auth-status").textContent).toBe(
+      "unauthenticated"
+    );
+    expect(screen.getByTestId("username").textContent).toBe("none");
+    expect(localStorage.getItem("access_token")).toBeNull();
+    expect(localStorage.getItem("refresh_token")).toBeNull();
+    expect(localStorage.getItem("user")).toBeNull();
   });
 });
 
 // ── useAuth outside provider ──────────────────────────────────────────────────
 
-describe('useAuth', () => {
-  it('throws when used outside AuthProvider', () => {
+describe("useAuth", () => {
+  it("throws when used outside AuthProvider", () => {
     function Bare() {
       useAuth();
       return null;
     }
     // Suppress React's error boundary console output
-    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() => render(<Bare />)).toThrow('useAuth must be used inside <AuthProvider>');
+    const spy = jest.spyOn(console, "error").mockImplementation(jest.fn());
+    expect(() => render(<Bare />)).toThrow(
+      "useAuth must be used inside <AuthProvider>"
+    );
     spy.mockRestore();
   });
 });

@@ -40,7 +40,7 @@ export function UsersPage() {
   const {user} = useAuth()
 
   const { mutateAsync:updateUserMut, isPending : isUpdateUserPanding} = useUpdateUserMutation()
-  const { mutateAsync:createUserMut, isPending : isCreateUserPanding} = useCreateUserMutation()
+  const { mutateAsync:createUserMut } = useCreateUserMutation()
   const { mutateAsync:deleteUserMut, isPending : isDeleteUserPanding} = useDeleteUserMutation()
 
   const updateUser = useCallback(

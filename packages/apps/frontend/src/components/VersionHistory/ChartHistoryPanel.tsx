@@ -1,6 +1,5 @@
 import {
   Box,
-  Button,
   Chip,
   CircularProgress,
   Divider,
@@ -58,8 +57,6 @@ export function ChartHistoryPanel({ chartId, open, onClose, onRollbackSuccess }:
       },
     );
   };
-
-  const latestVersion = versions?.[0]?.versionNumber;
 
   return (
     <>

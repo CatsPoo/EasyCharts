@@ -173,7 +173,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const createDeviceMut = useCreateAsset("devices");
     const createCloudMut = useCreateAsset("clouds");
     const deleteCloudMut = useDeleteAsset("clouds");
-    const { project, getEdge, fitView } = useReactFlow();
+    const { project, fitView } = useReactFlow();
     const {devicePos} = useDevices({chart})
     const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,applyChartChange})
     
@@ -284,7 +284,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         payload: { node },
         canConnectPaired,
       });
-    }, [chart.devicesOnChart, chart.cloudsOnChart]);
+    }, [chart.devicesOnChart, chart.cloudsOnChart, chart.bondsOnChart]);
 
     const onEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
       e.preventDefault();
@@ -345,14 +345,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       );
     }, [setChart]);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
       actionsHistory.current = [chart];
       actionsHistoryIndex.current = 0;
       setCanRedo(false);
       setCanRedo(false);
-    }, [chart.id]);
+    }, [chart.id]); // intentionally omit `chart` — only reset on chart ID change
 
-    const convertLineToEdge = (lineonChart: LineOnChart): Edge => {
+    const convertLineToEdge = useCallback((lineonChart: LineOnChart): Edge => {
       return {
         id: lineonChart.line.id,
         source: lineonChart.line.sourcePort.deviceId,
@@ -363,7 +364,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         type: lineonChart.type,
         animated: false,
       };
-    };
+    }, []);
 
     const [nodes, setNodes, onNodesChangeRF] = useNodesState<Node[]>([]);
     const [edges, setEdges, onEdgesChangeRF] = useEdgesState<Edge[]>([]);
@@ -1514,7 +1515,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         .map(convertLineToEdge);
 
       return { bridgeNodes, displayEdges: [...plainEdges, ...splitEdges] };
-    }, [devicePos, getBondCenterPos, pickOrientation, setMadeChanges]);
+    }, [devicePos, getBondCenterPos, pickOrientation]);
 
     useEffect(() => {
       setNodes((prev) => {
@@ -2155,7 +2156,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.zonesOnChart, chart.cloudsOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setColorPickerNoteId, setColorPickerValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.cloudsOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setColorPickerNoteId, setColorPickerValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud]
     );
 
     const onSave = useCallback(

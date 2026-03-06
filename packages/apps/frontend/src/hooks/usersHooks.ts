@@ -36,7 +36,7 @@ export async function getUserProfile(): Promise<User> {
     const {data} = await http.get<User>(`/users/profile`);
     return data
   }
-  catch(err:any){
+  catch {
     throw new Error(`Failed to fetch user profile`);
   }
 }
@@ -105,8 +105,6 @@ export async function deleteUser(id: string): Promise<void> {
 }
 
 export function useDeleteUserMutation() {
-  const qc = useQueryClient();
-
   return useMutation({
     mutationFn: ({ id }: { id: string }) => deleteUser(id)
   });
