@@ -28,7 +28,6 @@ export function EditLineDialog({
   const schema = EditLineDialogFormSchema
 
   const {
-    control,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },

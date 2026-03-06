@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions} from '@tanstack/react-query';
-import type { AssetMap, Device, DeviceUpdate, Model, ModelUpdate, Vendor, VendorUpdate } from '@easy-charts/easycharts-types';
+import type { AssetMap, Model, ModelUpdate, Vendor, VendorUpdate } from '@easy-charts/easycharts-types';
 import { http } from '../api/http';
 
 // helpful alias
@@ -51,7 +51,7 @@ export function useListAssets<K extends keyof AssetMap>(
         const { data } = await http.get(`/${kind}?${qs}`);
         return data
       }
-      catch(err:any){ throw new Error("Failed to fetch");}
+      catch { throw new Error("Failed to fetch");}
     },
     placeholderData: (prev) => prev,
     ...options,
@@ -67,7 +67,7 @@ export function useCreateAsset<K extends keyof AssetMap>(kind: K) {
       try {
         const { data } = await http.post(`/${kind}`, dto);
         return data;
-      } catch (err: any) {
+      } catch {
         throw new Error("Create failed");
       }
     },

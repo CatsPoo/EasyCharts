@@ -20,5 +20,8 @@
      "strictPropertyInitialization": false,
      "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "paths": {
+      "@easycharts/easycharts-types": ["./packages/libs/easycharts-types/src/index.ts"]
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { type AssetVersion, type AssetVersionMeta, type AssetKind } from '@easy-charts/easycharts-types';
+import { type AssetVersionMeta, type AssetKind } from '@easy-charts/easycharts-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { http } from '../api/http';
 

@@ -62,7 +62,7 @@ export function ChartsPage() {
   const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
   const [saveErrorOpen, setSaveErrorOpen] = useState(false);
 
-  const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,refetch,isLoading} = useChartLock(user!.id,selectedId || undefined)
+  const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,isLoading} = useChartLock(user!.id,selectedId || undefined)
   const readonly = false;
 
   const nope = useCallback(()=>{return} ,[])
@@ -78,17 +78,12 @@ export function ChartsPage() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [dialogOpen, editMode, editorMadeChanges, saving]);
 
   useEffect(() => {
     setSelectedId("");
   }, [tab]);
-
-  const onEditChartdialogClose = useCallback(async ()=>{
-    if(lockState === LockState.MINE) await unlockChart()
-  },[lockState, unlockChart])
-
 
   const {
     data: selectedChart,

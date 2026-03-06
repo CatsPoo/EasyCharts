@@ -5,7 +5,7 @@ export async function getPortById(portId: string): Promise<Port> {
   try {
     const { data } = await http.get<Port>(`/ports/${portId}`);
     return data;
-  } catch (err: any) {
+  } catch {
     throw new Error(`Failed to fetch data for port ID: ${portId}`);
   }
 }

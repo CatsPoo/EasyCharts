@@ -1,13 +1,4 @@
 // Mock ../api/http before importing the hooks so the http singleton is replaced
-jest.mock('../api/http', () => ({
-  http: {
-    get: jest.fn(),
-    post: jest.fn(),
-    patch: jest.fn(),
-    delete: jest.fn(),
-  },
-}));
-
 import { http } from '../api/http';
 import {
   createChart,
@@ -16,6 +7,15 @@ import {
   getChartsMetadata,
   updateChart,
 } from './chartsHooks';
+
+jest.mock('../api/http', () => ({
+  http: {
+    get: jest.fn(),
+    post: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
+  },
+}));
 
 // Cast to jest.Mocked for type-safe mock access
 const mockHttp = http as jest.Mocked<typeof http>;

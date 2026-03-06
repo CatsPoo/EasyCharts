@@ -8,13 +8,12 @@ import {
   type Side,
 } from "@easy-charts/easycharts-types";
 import AddIcon from "@mui/icons-material/Add";
-import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import { IconButton } from "@mui/material";
 import { PortFormDialog } from "../PortFormDialog";
-import { Fragment, useLayoutEffect, useMemo, useState, type CSSProperties } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
-import { Handle, Position, useUpdateNodeInternals } from "reactflow";
+import { useUpdateNodeInternals } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
 import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
