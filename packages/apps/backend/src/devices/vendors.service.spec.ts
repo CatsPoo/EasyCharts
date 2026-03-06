@@ -1,6 +1,7 @@
 import { HttpException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { VendorEntity } from './entities/vendor.entity';
 import { VendorsService } from './vendors.service';
 import { AssetVersionsService } from './assetVersions.service';
@@ -54,14 +55,14 @@ describe('VendorsService', () => {
         VendorsService,
         { provide: getRepositoryToken(VendorEntity), useValue: mockRepo },
         { provide: AssetVersionsService, useValue: mockAssetVersionsService },
-        { provide: 'DataSource', useValue: mockDataSource },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 
     service = module.get<VendorsService>(VendorsService);
     repo = module.get(getRepositoryToken(VendorEntity));
     assetVersionsService = module.get(AssetVersionsService);
-    dataSource = module.get('DataSource');
+    dataSource = module.get(DataSource);
   });
 
   // ── createVendor ─────────────────────────────────────────────────────────────

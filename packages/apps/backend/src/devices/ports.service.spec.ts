@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { PortEntity } from './entities/port.entity';
 import { PortsService } from './ports.service';
 
@@ -53,7 +54,7 @@ describe('PortsService', () => {
       providers: [
         PortsService,
         { provide: getRepositoryToken(PortEntity), useValue: mockRepo },
-        { provide: 'DataSource', useValue: mockDataSource },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 

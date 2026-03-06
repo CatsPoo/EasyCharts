@@ -1,3 +1,7 @@
+when:
+  - branch: [main, dev]
+    event: [push, pull_request]
+
 steps:
   # ── 1. Install dependencies ─────────────────────────────────────
   - name: install
@@ -45,15 +49,26 @@ steps:
     when:
       branch: main
 
+  - name: get-version
+    image: node:22-bookworm
+    depends_on: [build]
+    commands:
+      # This pulls the version from package.json and writes it to a file named .tags
+      - node -p "require('./package.json').version" > .tags
+      # Optional: Add 'latest' so you always have a pointer to the newest version
+      - echo ",latest" >> .tags 
+    when:
+      branch: main
+
   # # ── 4a. Publish backend image ───────────────────────────────────
   # - name: publish-backend
   #   image: woodpeckerci/plugin-docker-buildx
   #   privileged: true # Required for buildx to run
-  #   depends_on: [build]
+  #   depends_on: [get-version]
   #   settings:
   #     dockerfile: packages/apps/backend/Dockerfile
   #     context: . # Start at root so it can see all packages
-  #     repo: rongorlik/easy-charts:backend-latest
+  #     repo: rongorlik/easy-charts
   #     auto_tag: true
   #     username:
   #       from_secret: dockerhub_username
@@ -67,11 +82,11 @@ steps:
   # - name: publish-frontend
   #   image: woodpeckerci/plugin-docker-buildx
   #   privileged: true
-  #   depends_on: [build]
+  #   depends_on: [get-version]
   #   settings:
   #     dockerfile: packages/apps/frontend/Dockerfile
   #     context: .
-  #     repo: rongorlik/easy-charts:frontend-latest
+  #     repo: rongorlik/easy-charts
   #     auto_tag: true
   #     username:
   #       from_secret: dockehub_username

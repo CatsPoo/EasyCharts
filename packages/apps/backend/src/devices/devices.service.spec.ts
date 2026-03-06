@@ -1,6 +1,7 @@
 import { HttpException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { DeviceEntity } from './entities/device.entity';
 import { ModelEntity } from './entities/model.entity';
 import { DeviceTypeEntity } from './entities/deviceType.entity';
@@ -83,7 +84,7 @@ describe('DevicesService', () => {
         { provide: getRepositoryToken(ModelEntity), useValue: mockModelsRepo },
         { provide: getRepositoryToken(DeviceTypeEntity), useValue: mockDeviceTypesRepo },
         { provide: AssetVersionsService, useValue: mockAssetVersionsService },
-        { provide: 'DataSource', useValue: mockDataSource },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 
@@ -92,7 +93,7 @@ describe('DevicesService', () => {
     modelsRepo = module.get(getRepositoryToken(ModelEntity));
     deviceTypesRepo = module.get(getRepositoryToken(DeviceTypeEntity));
     assetVersionsService = module.get(AssetVersionsService);
-    dataSource = module.get('DataSource');
+    dataSource = module.get(DataSource);
   });
 
   // ── convertDeviceEntity ────────────────────────────────────────────────────────
