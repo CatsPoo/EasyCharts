@@ -65,7 +65,7 @@ steps:
     privileged: true
     depends_on: [build]
     settings:
-      dockerfile: packages/apps/backend/Dockerfile
+      dockerfile: ./Dockerfile
       context: .
       repo: rongorlik/easy-charts
       # Automatically use version from package.json for tagging
