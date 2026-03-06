@@ -73,8 +73,9 @@ import { PortsEditorDialog } from "./PortsEditorDialog";
 import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
-import type { DeleteSets } from "./interfaces/deleteSets.interfaces";
+import type { DeleteSets } from "./interfaces/DeleteSets.interfaces";
 import type { EditLineDialogFormResponse } from "./interfaces/editLineDialogForm.interfaces";
+import type { CtxState } from "./interfaces/ctsMenu.interfaces";
 
 interface ChardEditorProps {
   chart: Chart;

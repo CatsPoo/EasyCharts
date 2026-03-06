@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, type Relation, UpdateDateColumn } from 'typeorm';
 import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entity';
 import { ModelEntity } from './model.entity';
 import { PortEntity } from './port.entity';
@@ -17,11 +17,11 @@ export class DeviceEntity extends AuditableEntity{
   // type!: string;
   @ManyToOne(() => DeviceTypeEntity, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "type_id" })
-  type: DeviceTypeEntity;
+  type: Relation<DeviceTypeEntity>;
 
   @ManyToOne(() => ModelEntity, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "model_id" })
-  model: ModelEntity;
+  model: Relation<ModelEntity>;
 
   @Column({ name: "ip_address", nullable: true })
   ipAddress: string;

@@ -1,4 +1,33 @@
+when:
+  - branch: [main, dev]
+    event: [push, pull_request]
+
 steps:
+  - name: version-guard
+    image: node:22-bookworm
+    depends_on: [install]
+    commands:
+      # 1. Fetch main so we can see its history
+      - git fetch origin main
+      
+      # 2. Extract versions using node
+      - CURRENT_VERSION=$(node -p "require('./package.json').version")
+      - LAST_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
+      
+      - echo "Current version in branch: $CURRENT_VERSION"
+      - echo "Latest version in main:   $LAST_VERSION"
+      
+      # 3. Compare using semver. 
+      # This fails the build (exit 1) if CURRENT is NOT greater than LAST.
+      - |
+        npx semver $CURRENT_VERSION --range ">$LAST_VERSION" || (
+          echo "❌ VERSION ERROR: Current version ($CURRENT_VERSION) must be higher than main ($LAST_VERSION).";
+          echo "Please update package.json before pushing to dev.";
+          exit 1
+        )
+    when:
+      branch: main
+      
   # ── 1. Install dependencies ─────────────────────────────────────
   - name: install
     image: node:22-bookworm
@@ -33,50 +62,41 @@ steps:
     when:
       branch: [main, dev]
 
-  # ── 3. Verify build compiles ─────────────────────────────────────
+  # ── 3. Build all apps (both are needed for the single Docker image) ──
   - name: build
     image: node:22-bookworm
     depends_on: [lint, test]
     environment:
       CI: "true"
     commands:
-      - apk add --no-cache python3 make g++
-      - npx nx affected --target=build --parallel=3
+      - apt-get update -qq && apt-get install -y --no-install-recommends python3 make g++
+      - npx nx run-many --all --target=build --parallel=3
     when:
       branch: main
 
-  # # ── 4a. Publish backend image ───────────────────────────────────
-  # - name: publish-backend
-  #   image: woodpeckerci/plugin-docker-buildx
-  #   privileged: true # Required for buildx to run
-  #   depends_on: [build]
-  #   settings:
-  #     dockerfile: packages/apps/backend/Dockerfile
-  #     context: . # Start at root so it can see all packages
-  #     repo: rongorlik/easy-charts:backend-latest
-  #     auto_tag: true
-  #     username:
-  #       from_secret: dockerhub_username
-  #     password:
-  #       from_secret: dockerhub_password
-  #   when:
-  #     branch: main
-  #     path: "packages/apps/backend/**"
+  # ── 4. Extract version tag ───────────────────────────────────────
+  - name: get-version
+    image: node:22-bookworm
+    depends_on: [build]
+    commands:
+      - node -p "require('./package.json').version" > .tags
+      - echo ",latest" >> .tags
+    when:
+      branch: main
 
-  # # ── 4b. Publish frontend image ───────────────────────────────────
-  # - name: publish-frontend
-  #   image: woodpeckerci/plugin-docker-buildx
-  #   privileged: true
-  #   depends_on: [build]
-  #   settings:
-  #     dockerfile: packages/apps/frontend/Dockerfile
-  #     context: .
-  #     repo: rongorlik/easy-charts:frontend-latest
-  #     auto_tag: true
-  #     username:
-  #       from_secret: dockehub_username
-  #     password:
-  #       from_secret: dockerhub_password
-  #   when:
-  #     branch: main
-  #     path: "packages/apps/frontend/**"
+  # ── 5. Publish single unified image ─────────────────────────────
+  - name: publish
+    image: woodpeckerci/plugin-docker-buildx
+    privileged: true
+    depends_on: [get-version]
+    settings:
+      dockerfile: packages/apps/backend/Dockerfile
+      context: . # root so COPY can reach both packages/apps/backend/dist and packages/apps/frontend/dist
+      repo: rongorlik/easy-charts
+      auto_tag: true
+      username:
+        from_secret: dockerhub_username
+      password:
+        from_secret: dockerhub_password
+    when:
+      branch: main

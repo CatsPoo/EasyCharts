@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, UpdateDateColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, UpdateDateColumn, CreateDateColumn, type Relation } from 'typeorm';
 import { VendorEntity } from './vendor.entity';
 import { DeviceEntity } from './device.entity';
 import { AuditableEntity } from '../../auth/entities/auditableEntity.culumns';
@@ -13,7 +13,7 @@ export class ModelEntity extends AuditableEntity{
 
   @ManyToOne(() => VendorEntity, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "vendor_id" })
-  vendor: VendorEntity;
+  vendor: Relation<VendorEntity>;
 
   @OneToMany(() => DeviceEntity, (device) => device.model)
   devices?: DeviceEntity[];
