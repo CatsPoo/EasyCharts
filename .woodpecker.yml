@@ -16,7 +16,7 @@ steps:
       # Using --loglevel error to keep logs clean
       - npm ci --no-audit --no-fund --prefer-offline --legacy-peer-deps --loglevel error
 
-  # ── 1.5 Version Guard (Enforces bump on 'dev' branch) ────────────
+# ── 1.5 Version Guard (Enforces bump on 'dev' branch) ────────────
   - name: version-guard
     image: node:22-bookworm
     depends_on: [install]
@@ -25,8 +25,8 @@ steps:
       - CURRENT_VERSION=$(node -p "require('./package.json').version")
       - LAST_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
       - echo "Checking version... Branch ($CURRENT_VERSION) vs Main ($LAST_VERSION)"
-      # We chain the command with && and || to avoid complex YAML blocks
-      - npx semver $CURRENT_VERSION --range ">$LAST_VERSION" || (echo "❌ VERSION ERROR: You must bump the version in package.json before pushing to dev!" && exit 1)
+      # Wrap the command in quotes so the colon doesn't break YAML
+      - "npx semver $CURRENT_VERSION --range \">$LAST_VERSION\" || (echo \"❌ VERSION ERROR: You must bump the version in package.json before pushing to dev!\" && exit 1)"
     when:
       branch: dev
 
