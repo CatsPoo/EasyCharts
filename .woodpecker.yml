@@ -9,7 +9,7 @@
 #   BACKEND_IMAGE   — e.g. registry.example.com/easycharts/backend
 #   FRONTEND_IMAGE  — e.g. registry.example.com/easycharts/frontend
 
-
+#
 steps:
 
   # ── 1. Install dependencies ─────────────────────────────────────
