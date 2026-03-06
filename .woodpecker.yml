@@ -14,7 +14,7 @@ steps:
       CI: "true"
     commands:
       # Using --loglevel error to keep logs clean
-      - npm ci --no-audit --no-fund --prefer-offline --legacy-peer-deps --loglevel error
+      - npm ci --legacy-peer-deps --loglevel info#--no-audit --no-fund --prefer-offline 
 
 # ── 1.5 Version Guard (Enforces bump on 'dev' branch) ────────────
   - name: version-guard
