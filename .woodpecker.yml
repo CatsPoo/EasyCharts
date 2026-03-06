@@ -45,7 +45,7 @@ steps:
     when:
       branch: main
 
-  # ── 4a. Publish backend image ────────────────────────────────────
+  # ── 4a. Publish backend image ───────────────────────────────────
   - name: publish-backend
     image: woodpeckerci/plugin-docker-buildx
     privileged: true # Required for buildx to run
