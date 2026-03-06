@@ -7,6 +7,7 @@ import {
   Index,
   Check,
   Unique,
+  type Relation,
 } from "typeorm";
 import { DeviceOnChartEntity } from "./deviceOnChart.entity";
 import { PortEntity } from "../../devices/entities/port.entity";
@@ -35,14 +36,14 @@ export class PortOnChartEntity {
     { name: "chart_id", referencedColumnName: "chartId" },
     { name: "device_id", referencedColumnName: "deviceId" },
   ])
-  deviceOnChart!: DeviceOnChartEntity;
+  deviceOnChart!: Relation<DeviceOnChartEntity>;
 
   @Column({ name: "port_id", type: "uuid" })
   portId!: string;
 
   @ManyToOne(() => PortEntity, { onDelete: "CASCADE" })
   @JoinColumn({ name: "port_id" })
-  port!: PortEntity;
+  port!: Relation<PortEntity>;
 
   @Column({ type: "varchar", length: 8 })
   side!: PortSide; // "left" | "right" | "top" | "bottom"

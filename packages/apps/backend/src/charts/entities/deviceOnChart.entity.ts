@@ -5,6 +5,7 @@ import {
   PrimaryColumn,
   Index,
   OneToMany,
+  type Relation,
 } from "typeorm";
 import { ChartEntity } from "./chart.entity";
 import { Position } from "./position.entity";
@@ -37,7 +38,7 @@ export class DeviceOnChartEntity {
     eager: true,
     onDelete: "CASCADE",
   })
-  device!: DeviceEntity;
+  device!: Relation<DeviceEntity>;
 
   @OneToMany(() => PortOnChartEntity, (poc) => poc.deviceOnChart, {
     cascade: true,
