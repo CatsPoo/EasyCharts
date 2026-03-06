@@ -1,5 +1,7 @@
-# CI builds the backend first (nx build @easy-charts/backend).
-# This Dockerfile just packages the pre-built dist into a node image.
+# CI builds both apps first (nx run-many --all --target=build).
+# This Dockerfile packages them into a single image:
+#   - NestJS backend serves the API on port 3000
+#   - ServeStaticModule serves the React frontend from /app/public
 FROM node:22-alpine
 
 # Build tools needed to compile native addons (bcrypt, argon2, pg)
@@ -7,8 +9,12 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-# Copy pre-built bundle + webpack-generated package.json from CI workspace
+# Copy pre-built backend bundle + webpack-generated package.json
 COPY packages/apps/backend/dist .
+
+# Copy pre-built frontend static files into the public folder
+# NestJS ServeStaticModule reads from process.cwd()/public = /app/public
+COPY packages/apps/frontend/dist ./public
 
 # Install only production deps from the webpack-generated package.json
 RUN npm install --omit=dev \

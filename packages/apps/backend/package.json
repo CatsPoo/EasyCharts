@@ -51,6 +51,7 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.5",
+    "@nestjs/serve-static": "^5.0.4",
     "@nestjs/typeorm": "^11.0.0",
     "argon2": "^0.44.0",
     "bcrypt": "^6.0.0",
