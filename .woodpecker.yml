@@ -20,7 +20,7 @@ steps:
 
   # ── 1. Install dependencies ─────────────────────────────────────
   - name: install
-    image: node:22-alpine
+    image: node:22-bookworm-slim
     environment:
       CI: "true"
     commands:
@@ -43,10 +43,11 @@ steps:
     when:
       event: push
       branch: [main, dev]
+    depends_on: [install]
 
 # ── 1.5 Version Guard (Enforces bump on 'dev' branch) ────────────
   - name: version-guard
-    image: node:22-alpine
+    image: node:22-bookworm-slim
     depends_on: [install]
     commands:
       - git fetch origin main
@@ -60,7 +61,7 @@ steps:
 
   # ── 2. Lint & Test (Parallel) ───────────────────────────────────
   - name: lint
-    image: node:22-alpine
+    image: node:22-bookworm-slim
     depends_on: [install]
     commands:
       - git fetch origin main
@@ -69,7 +70,7 @@ steps:
       branch: [main, dev]
 
   - name: test
-    image: node:22-alpine
+    image: node:22-bookworm-slim
     depends_on: [install]
     commands:
       - git fetch origin main
@@ -79,7 +80,7 @@ steps:
 
   # ── 3. Build (Only on Main) ─────────────────────────────────────
   - name: build
-    image: node:22-alpine
+    image: node:22-bookworm-slim
     depends_on: [lint, test]
     commands:
       - apt-get update -qq && apt-get install -y --no-install-recommends python3 make g++
