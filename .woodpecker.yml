@@ -24,10 +24,7 @@ steps:
     environment:
       CI: "true"
     commands:
-      - npm config set maxsockets 1 
-      - npm config set fetch-retry-mintimeout 20000
-      - npm config set fetch-retry-maxtimeout 120000
-      - npm ci --legacy-peer-deps --prefer-offline
+      - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
 
   - name: rebuild-cache
     image: meltwater/drone-cache
