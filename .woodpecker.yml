@@ -7,14 +7,41 @@ workspace:
   path: src
 
 steps:
+  - name: restore-cache
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      restore: true
+      cache_key: "node_modules"
+      archive_format: "gzip"
+      mount:
+        - node_modules
+
   # ── 1. Install dependencies ─────────────────────────────────────
   - name: install
     image: node:22-alpine
     environment:
       CI: "true"
     commands:
-      # Using --loglevel error to keep logs clean
-      - npm ci --legacy-peer-deps --loglevel info #--no-audit --no-fund --prefer-offline 
+      - npm config set maxsockets 3
+      # Increase the timeout so it doesn't give up so fast
+      - npm config set fetch-retry-maxtimeout 600000
+      - npm config set fetch-retries 10
+      # Now run the install
+      - npm ci --legacy-peer-deps --prefer-offline --loglevel warn #--no-audit --no-fund --prefer-offline 
+
+  - name: rebuild-cache
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      rebuild: true
+      cache_key: "node_modules"
+      archive_format: "gzip"
+      mount:
+        - node_modules
+    when:
+      event: push
+      branch: [main, dev]
 
 # ── 1.5 Version Guard (Enforces bump on 'dev' branch) ────────────
   - name: version-guard
