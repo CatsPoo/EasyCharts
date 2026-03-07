@@ -17,7 +17,7 @@ steps:
       restore: true
       cache_key: "node_modules"
       # This MUST match the path inside the container
-      filesystem_root: "/var/lib/cache"
+      filesystem_root: "/tmp/cache"
       mount:
         - node_modules
 
@@ -42,7 +42,7 @@ steps:
       backend: "filesystem"
       rebuild: true
       cache_key: "node_modules"
-      filesystem_root: "/var/lib/cache"
+      filesystem_root: "/tmp/cache"
       mount:
         - node_modules
     when:
