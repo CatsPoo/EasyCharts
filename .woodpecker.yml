@@ -24,7 +24,7 @@ steps:
     environment:
       CI: "true"
     commands:
-      - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
+      - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund --loglevel info
 
   - name: rebuild-cache
     image: meltwater/drone-cache
