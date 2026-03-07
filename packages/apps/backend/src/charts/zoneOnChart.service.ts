@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { EntityManager } from "typeorm";
-import type { ZoneOnChart } from "@Easy-charts/easycharts-types";
+import type { ZoneOnChart } from "@easy-charts/easycharts-types";
 import { ZoneOnChartEntity } from "./entities/zoneOnChart.entity";
 import { Position } from "./entities/position.entity";
 

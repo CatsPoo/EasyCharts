@@ -3,7 +3,7 @@ import {
   type User,
   type UserCreate,
   type UserUpdate
-} from "@Easy-charts/easycharts-types";
+} from "@easy-charts/easycharts-types";
 import {
   BadRequestException,
   Injectable,

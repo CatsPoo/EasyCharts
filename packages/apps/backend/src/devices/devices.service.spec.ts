@@ -169,6 +169,75 @@ describe('DevicesService', () => {
     });
   });
 
+  // ── listDevices ────────────────────────────────────────────────────────────────
+
+  describe('listDevices', () => {
+    it('returns paginated rows and total count', async () => {
+      const entity = makeDeviceEntity();
+      qbMock.getManyAndCount.mockResolvedValue([[entity], 1]);
+
+      const result = await service.listDevices({ page: 0, pageSize: 10 } as any);
+
+      expect(qbMock.skip).toHaveBeenCalledWith(0);
+      expect(qbMock.take).toHaveBeenCalledWith(10);
+      expect(result.rows).toHaveLength(1);
+      expect(result.total).toBe(1);
+    });
+
+    it('computes correct skip for page > 0', async () => {
+      qbMock.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.listDevices({ page: 2, pageSize: 5 } as any);
+
+      expect(qbMock.skip).toHaveBeenCalledWith(10);
+      expect(qbMock.take).toHaveBeenCalledWith(5);
+    });
+
+    it('applies search filter when q.search is provided', async () => {
+      qbMock.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.listDevices({ search: 'switch' } as any);
+
+      expect(qbMock.andWhere).toHaveBeenCalledWith(
+        'LOWER(d.name) LIKE :s',
+        { s: '%switch%' },
+      );
+    });
+
+    it('does not apply search filter when q.search is blank', async () => {
+      qbMock.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.listDevices({ search: '   ' } as any);
+
+      expect(qbMock.andWhere).not.toHaveBeenCalled();
+    });
+
+    it('uses default sort (d.name ASC) when sortBy is not provided', async () => {
+      qbMock.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.listDevices({} as any);
+
+      expect(qbMock.orderBy).toHaveBeenCalledWith('d.name', 'ASC');
+    });
+
+    it('maps sortBy=vendor to v.name column', async () => {
+      qbMock.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.listDevices({ sortBy: 'vendor', sortDir: 'desc' } as any);
+
+      expect(qbMock.orderBy).toHaveBeenCalledWith('v.name', 'DESC');
+    });
+
+    it('returns empty rows and zero total when no devices found', async () => {
+      qbMock.getManyAndCount.mockResolvedValue([[], 0]);
+
+      const result = await service.listDevices({} as any);
+
+      expect(result.rows).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+  });
+
   // ── getAllDevices ──────────────────────────────────────────────────────────────
 
   describe('getAllDevices', () => {

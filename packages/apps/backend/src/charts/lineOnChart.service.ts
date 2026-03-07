@@ -1,7 +1,7 @@
 // src/charts/instance/lines-on-chart.service.ts
 import { Injectable } from "@nestjs/common";
 import { EntityManager, In } from "typeorm";
-import type { LineOnChart } from "@Easy-charts/easycharts-types";
+import type { LineOnChart } from "@easy-charts/easycharts-types";
 import { LineOnChartEntity } from "./entities/lineonChart.emtity";
 import { LinessService } from "../lines/lines.service";
 

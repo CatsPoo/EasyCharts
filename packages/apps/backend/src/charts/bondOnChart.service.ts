@@ -2,7 +2,7 @@
 import { Injectable } from "@nestjs/common";
 import { EntityManager } from "typeorm";
 import { Position} from './entities/position.entity'
-import type { BondOnChart } from "@Easy-charts/easycharts-types";
+import type { BondOnChart } from "@easy-charts/easycharts-types";
 import { BondOnChartEntity } from "./entities/BondOnChart.emtity";
 import { LinessService } from "../lines/lines.service";
 
