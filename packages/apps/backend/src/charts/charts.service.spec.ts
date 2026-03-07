@@ -344,6 +344,152 @@ describe('ChartsService', () => {
     });
   });
 
+  // ── convertChartToChartMetadata ─────────────────────────────────────────────
+
+  describe('convertChartToChartMetadata', () => {
+    it('converts chart entity to metadata with lock and privileges', () => {
+      const chart = baseChart({ name: 'Test', description: 'Desc' });
+      const privileges = { canEdit: true, canDelete: false, canShare: true };
+      const result = service.convertChartToChartMetadata(chart, privileges);
+      expect(result.id).toBe('chart-1');
+      expect(result.name).toBe('Test');
+      expect(result.description).toBe('Desc');
+      expect(result.myPrivileges).toEqual(privileges);
+      expect(result.lock).toBeDefined();
+    });
+
+    it('omits myPrivileges when not provided', () => {
+      const chart = baseChart();
+      const result = service.convertChartToChartMetadata(chart);
+      expect((result as any).myPrivileges).toBeUndefined();
+    });
+  });
+
+  // ── getChartMetadataById ─────────────────────────────────────────────────────
+
+  describe('getChartMetadataById', () => {
+    it('returns metadata for an existing chart', async () => {
+      const chart = baseChart({ createdByUserId: 'user-1' });
+      chartRepo.findOne.mockResolvedValue(chart);
+      chartShareRepo.find = jest.fn().mockResolvedValue([]);
+
+      const result = await service.getChartMetadataById('chart-1', 'user-1');
+
+      expect(result.id).toBe('chart-1');
+    });
+
+    it('throws NotFoundException when chart does not exist', async () => {
+      chartRepo.findOne.mockResolvedValue(null);
+      await expect(service.getChartMetadataById('missing', 'user-1')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ── getChartShares ───────────────────────────────────────────────────────────
+
+  describe('getChartShares', () => {
+    it('returns share records for a chart', async () => {
+      const shares = [{ chartId: 'chart-1', sharedWithUserId: 'user-2' }] as any;
+      chartShareRepo.find = jest.fn().mockResolvedValue(shares);
+
+      const result = await service.getChartShares('chart-1');
+
+      expect(chartShareRepo.find).toHaveBeenCalledWith({ where: { chartId: 'chart-1' } });
+      expect(result).toEqual(shares);
+    });
+  });
+
+  // ── buildChartMetadataWithPrivileges ─────────────────────────────────────────
+
+  describe('buildChartMetadataWithPrivileges', () => {
+    it('returns empty array when given no charts', async () => {
+      const result = await service.buildChartMetadataWithPrivileges([], 'user-1');
+      expect(result).toEqual([]);
+    });
+
+    it('maps charts to metadata with privileges from share map', async () => {
+      const chart = baseChart({ createdByUserId: 'user-2' });
+      chartShareRepo.find = jest.fn().mockResolvedValue([
+        { chartId: 'chart-1', sharedWithUserId: 'user-1', canEdit: true, canDelete: false, canShare: false },
+      ]);
+
+      const result = await service.buildChartMetadataWithPrivileges([chart], 'user-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].myPrivileges).toEqual({ canEdit: true, canDelete: false, canShare: false });
+    });
+  });
+
+  // ── getAllUserChartsMetadata ──────────────────────────────────────────────────
+
+  describe('getAllUserChartsMetadata', () => {
+    it('returns metadata for all charts owned or shared with the user', async () => {
+      const chart = baseChart({ createdByUserId: 'user-1' });
+      const qb = chartRepo.createQueryBuilder();
+      qb.getMany.mockResolvedValue([chart]);
+      chartShareRepo.find = jest.fn().mockResolvedValue([]);
+
+      const result = await service.getAllUserChartsMetadata('user-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('chart-1');
+    });
+
+    it('returns empty array when user has no charts', async () => {
+      const qb = chartRepo.createQueryBuilder();
+      qb.getMany.mockResolvedValue([]);
+
+      const result = await service.getAllUserChartsMetadata('user-1');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ── getUnassignedChartsMetadata ──────────────────────────────────────────────
+
+  describe('getUnassignedChartsMetadata', () => {
+    it('returns metadata for charts not assigned to any directory', async () => {
+      const chart = baseChart({ createdByUserId: 'user-1' });
+      const qb = chartRepo.createQueryBuilder();
+      qb.getMany.mockResolvedValue([chart]);
+      chartShareRepo.find = jest.fn().mockResolvedValue([]);
+
+      const result = await service.getUnassignedChartsMetadata('user-1');
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('returns empty array when all charts are assigned', async () => {
+      const qb = chartRepo.createQueryBuilder();
+      qb.getMany.mockResolvedValue([]);
+
+      const result = await service.getUnassignedChartsMetadata('user-1');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ── shareChart — non-owner permission escalation ─────────────────────────────
+
+  describe('shareChart — non-owner trying to escalate permissions', () => {
+    it('throws ForbiddenException when non-owner grants canEdit without having it', async () => {
+      chartRepo.findOne.mockResolvedValue(baseChart({ createdByUserId: 'owner' }));
+      chartShareRepo.findOne = jest.fn().mockResolvedValue({ canEdit: false, canDelete: false, canShare: true });
+
+      await expect(
+        service.shareChart('chart-1', 'user-3', 'user-2', { canEdit: true, canDelete: false, canShare: false }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws ForbiddenException when non-owner grants canDelete without having it', async () => {
+      chartRepo.findOne.mockResolvedValue(baseChart({ createdByUserId: 'owner' }));
+      chartShareRepo.findOne = jest.fn().mockResolvedValue({ canEdit: true, canDelete: false, canShare: true });
+
+      await expect(
+        service.shareChart('chart-1', 'user-3', 'user-2', { canEdit: false, canDelete: true, canShare: false }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
   // ── unshareChart ────────────────────────────────────────────────────────────
 
   describe('unshareChart', () => {
