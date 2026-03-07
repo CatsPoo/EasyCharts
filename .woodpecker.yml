@@ -91,7 +91,7 @@ steps:
     depends_on: [lint, test]
     commands:
       - apt-get update -qq && apt-get install -y --no-install-recommends python3 make g++
-      - npx nx affected --all --target=build --parallel=3
+      - npx nx affected --target=build --parallel=3
     when:
       branch: main
 
