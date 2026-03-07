@@ -24,6 +24,7 @@ steps:
     environment:
       CI: "true"
     commands:
+      - npm config set maxsockets 1
       - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund --loglevel info
 
   - name: rebuild-cache
