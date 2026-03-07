@@ -10,7 +10,7 @@ import {
   type CloudOnChart,
   type DeviceOnChart,
   type ZoneOnChart
-} from "@Easy-charts/easycharts-types";
+} from "@easy-charts/easycharts-types";
 import {
   ForbiddenException,
   Injectable,

@@ -351,6 +351,181 @@ describe('ChartsDirectoriesService', () => {
     });
   });
 
+  // ── listRoots ─────────────────────────────────────────────────────────────────
+
+  describe('listRoots', () => {
+    it('returns root directories for the user via query builder', async () => {
+      qbInstance.getMany.mockResolvedValue([makeDir()]);
+      const result = await service.listRoots('user-owner');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('dir-1');
+    });
+
+    it('returns empty array when user has no root directories', async () => {
+      qbInstance.getMany.mockResolvedValue([]);
+      const result = await service.listRoots('user-owner');
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ── listChildren ──────────────────────────────────────────────────────────────
+
+  describe('listChildren', () => {
+    it('returns child directories for a given parentId and user', async () => {
+      const child = makeDir({ id: 'dir-2', parentId: 'dir-1' });
+      qbInstance.getMany.mockResolvedValue([child]);
+      const result = await service.listChildren('dir-1', 'user-owner');
+      expect(result).toHaveLength(1);
+      expect(result[0].parentId).toBe('dir-1');
+    });
+
+    it('returns empty array when there are no children', async () => {
+      qbInstance.getMany.mockResolvedValue([]);
+      const result = await service.listChildren('dir-1', 'user-owner');
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ── listCharts ────────────────────────────────────────────────────────────────
+
+  describe('listCharts', () => {
+    it('returns chart-in-directory records for an existing directory', async () => {
+      mockDirRepo.findOne.mockResolvedValue(makeDir());
+      mockCidRepo.find.mockResolvedValue([{ directoryId: 'dir-1', chartId: 'chart-1' }]);
+      const result = await service.listCharts('dir-1');
+      expect(result).toHaveLength(1);
+      expect(result[0].chartId).toBe('chart-1');
+    });
+
+    it('throws NotFoundException when directory does not exist', async () => {
+      mockDirRepo.findOne.mockResolvedValue(null);
+      await expect(service.listCharts('bad')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ── listChartsMetadata ────────────────────────────────────────────────────────
+
+  describe('listChartsMetadata', () => {
+    const chartQb = {
+      innerJoin: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getMany: jest.fn(),
+    };
+
+    beforeEach(() => {
+      mockChartRepo.createQueryBuilder.mockReturnValue(chartQb);
+    });
+
+    it('returns metadata for charts in the directory', async () => {
+      mockDirRepo.findOne.mockResolvedValue(makeDir());
+      chartQb.getMany.mockResolvedValue([{ id: 'chart-1', name: 'My Chart', createdByUserId: 'user-1' }]);
+      mockChartsService.buildChartMetadataWithPrivileges.mockResolvedValue([{ id: 'chart-1' }]);
+
+      const result = await service.listChartsMetadata('dir-1', 'user-owner');
+
+      expect(mockChartsService.buildChartMetadataWithPrivileges).toHaveBeenCalled();
+      expect(result).toEqual([{ id: 'chart-1' }]);
+    });
+
+    it('throws NotFoundException when directory does not exist', async () => {
+      mockDirRepo.findOne.mockResolvedValue(null);
+      await expect(service.listChartsMetadata('bad', 'user-owner')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ── getDirectoryShares ────────────────────────────────────────────────────────
+
+  describe('getDirectoryShares', () => {
+    it('returns all share records for a directory', async () => {
+      const shares = [{ directoryId: 'dir-1', sharedWithUserId: 'user-2' }];
+      mockShareDirRepo.find.mockResolvedValue(shares);
+
+      const result = await service.getDirectoryShares('dir-1');
+
+      expect(mockShareDirRepo.find).toHaveBeenCalledWith({ where: { directoryId: 'dir-1' } });
+      expect(result).toEqual(shares);
+    });
+  });
+
+  // ── unshareDirectoryContent ───────────────────────────────────────────────────
+
+  describe('unshareDirectoryContent', () => {
+    it('deletes chart shares for all charts in directory', async () => {
+      mockCidRepo.find.mockResolvedValue([{ chartId: 'chart-1' }, { chartId: 'chart-2' }]);
+      mockChartShareRepo.delete.mockResolvedValue({ affected: 2 });
+
+      await service.unshareDirectoryContent('dir-1', 'user-b');
+
+      expect(mockChartShareRepo.delete).toHaveBeenCalledWith(
+        expect.objectContaining({ sharedWithUserId: 'user-b' }),
+      );
+    });
+
+    it('does not call delete when directory has no charts', async () => {
+      mockCidRepo.find.mockResolvedValue([]);
+
+      await service.unshareDirectoryContent('dir-1', 'user-b');
+
+      expect(mockChartShareRepo.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── search ────────────────────────────────────────────────────────────────────
+
+  describe('search', () => {
+    it('returns directories matching query string', async () => {
+      mockDirRepo.find.mockResolvedValue([makeDir()]);
+      const result = await service.search('Root');
+      expect(mockDirRepo.find).toHaveBeenCalledWith(
+        expect.objectContaining({ order: { name: 'ASC' } }),
+      );
+      expect(result).toHaveLength(1);
+    });
+
+    it('returns empty array when no directories match', async () => {
+      mockDirRepo.find.mockResolvedValue([]);
+      const result = await service.search('nomatch');
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ── updateChartsDirectory — parentId changes ──────────────────────────────────
+
+  describe('updateChartsDirectory — parentId changes', () => {
+    it('throws BadRequestException when new parent does not exist', async () => {
+      const dir = makeDir({ createdByUserId: 'user-owner', parentId: null });
+      mockDirRepo.findOne
+        .mockResolvedValueOnce(dir)         // getChartsDirectoryById
+        .mockResolvedValueOnce(null);        // new parent lookup
+      qbInstance.getExists.mockResolvedValue(false);
+
+      await expect(
+        service.updateChartsDirectory('dir-1', { parentId: 'bad-parent' }, 'user-owner'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException when moving directory would create a cycle', async () => {
+      // dir-1 is currently a root; we try to move dir-1 under dir-2
+      // but dir-2's parent chain leads back to dir-1
+      const dir1 = makeDir({ id: 'dir-1', createdByUserId: 'user-owner', parentId: null });
+      const dir2 = makeDir({ id: 'dir-2', parentId: 'dir-1' });
+
+      mockDirRepo.findOne
+        .mockResolvedValueOnce(dir1)         // initial load in updateChartsDirectory
+        .mockResolvedValueOnce(dir2)         // new parent exists check
+        .mockResolvedValueOnce(dir2)         // assertNoCycle: cursor='dir-2' → parent='dir-1'
+        .mockResolvedValueOnce(dir1);        // not needed; cycle found after cursor=dir-1
+
+      qbInstance.getExists.mockResolvedValue(false);
+
+      await expect(
+        service.updateChartsDirectory('dir-1', { parentId: 'dir-2' }, 'user-owner'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
   // ── listChartIds ──────────────────────────────────────────────────────────────
 
   describe('listChartIds', () => {
