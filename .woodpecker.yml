@@ -9,11 +9,15 @@ workspace:
 steps:
   - name: restore-cache
     image: meltwater/drone-cache
+    volumes:
+      # This matches the right-hand side of your Agent's volume mapping
+      - /var/lib/cache:/var/lib/cache
     settings:
       backend: "filesystem"
       restore: true
       cache_key: "node_modules"
-      archive_format: "gzip"
+      # This MUST match the path inside the container
+      filesystem_root: "/var/lib/cache"
       mount:
         - node_modules
 
@@ -32,11 +36,13 @@ steps:
 
   - name: rebuild-cache
     image: meltwater/drone-cache
+    volumes:
+      - /var/lib/cache:/var/lib/cache
     settings:
       backend: "filesystem"
       rebuild: true
       cache_key: "node_modules"
-      archive_format: "gzip"
+      filesystem_root: "/var/lib/cache"
       mount:
         - node_modules
     when:
