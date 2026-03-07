@@ -29,7 +29,7 @@ steps:
       - npm config set fetch-retry-maxtimeout 600000
       - npm config set fetch-retries 10
       # Now run the install
-      - npm ci --legacy-peer-deps --prefer-offline --loglevel warn #--no-audit --no-fund --prefer-offline 
+      - npm ci --legacy-peer-deps --prefer-offline --loglevel info #--no-audit --no-fund --prefer-offline 
 
   - name: rebuild-cache
     image: meltwater/drone-cache
