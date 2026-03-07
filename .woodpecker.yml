@@ -9,9 +9,6 @@ workspace:
 steps:
   - name: restore-cache
     image: meltwater/drone-cache
-    volumes:
-      # This matches the right-hand side of your Agent's volume mapping
-      - /var/lib/cache:/var/lib/cache
     settings:
       backend: "filesystem"
       restore: true
@@ -36,8 +33,6 @@ steps:
 
   - name: rebuild-cache
     image: meltwater/drone-cache
-    volumes:
-      - /var/lib/cache:/var/lib/cache
     settings:
       backend: "filesystem"
       rebuild: true
