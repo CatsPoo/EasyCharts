@@ -53,7 +53,7 @@ describe('AssetVersionsController', () => {
   });
 
   it('listVersions — throws BadRequestException for invalid kind', () => {
-    expect(() => controller.listVersions('invalid', 'asset-1')).toThrow(BadRequestException);
+    expect(() => controller.listVersions('invalid', 'asset-1')).toThrow('Invalid asset kind: invalid');
   });
 
   // ── getVersion ─────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ describe('AssetVersionsController', () => {
   });
 
   it('getVersion — throws BadRequestException for invalid kind', () => {
-    expect(() => controller.getVersion('unknown', 'asset-1', 'ver-1')).toThrow(BadRequestException);
+    expect(() => controller.getVersion('unknown', 'asset-1', 'ver-1')).toThrow('Invalid asset kind: unknown');
   });
 
   // ── rollback ───────────────────────────────────────────────────────────────
