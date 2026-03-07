@@ -7,7 +7,7 @@ workspace:
   path: src
 
 steps:
-  - name: restore-cache
+  - name: restore-npm-cache
     image: meltwater/drone-cache
     settings:
       backend: "filesystem"
@@ -18,6 +18,17 @@ steps:
       mount:
         - node_modules
 
+  - name: restore-nx-cache
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      restore: true
+      cache_key: "nx"
+      # This MUST match the path inside the container
+      filesystem_root: "/tmp/cache"
+      mount:
+        - .cache/nx
+
   # ── 1. Install dependencies ─────────────────────────────────────
   - name: install
     image: node:22-bookworm-slim
@@ -27,7 +38,7 @@ steps:
       - npm config set maxsockets 1
       - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund --loglevel info
 
-  - name: rebuild-cache
+  - name: rebuild-npm-cache
     image: meltwater/drone-cache
     settings:
       backend: "filesystem"
@@ -80,9 +91,23 @@ steps:
     depends_on: [lint, test]
     commands:
       - apt-get update -qq && apt-get install -y --no-install-recommends python3 make g++
-      - npx nx run-many --all --target=build --parallel=3
+      - npx nx affected --all --target=build --parallel=3
     when:
       branch: main
+
+  - name: rebuild-nx-cache
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      rebuild: true
+      cache_key: "nx"
+      filesystem_root: "/tmp/cache"
+      mount:
+        - .cache/nx
+    when:
+      event: push
+      branch: main
+    depends_on: [build]
 
   # ── 4. Publish ──────────────────────────────────────────────────
   - name: publish
