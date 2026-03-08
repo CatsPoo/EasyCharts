@@ -22,6 +22,10 @@ const schemas = {
     name: z.string().min(1),
     description: z.string().optional(),
   }),
+  customElements: z.object({
+    name: z.string().min(1),
+    imageUrl: z.string().optional(),
+  }),
   devices: z.object({
     name: z.string().min(1),
     typeId: z.string().min(1),
@@ -156,6 +160,15 @@ export function AssetForm<K extends AssetKind>({
                 {...register("description")}
                 helperText={errors.description?.message as string}
                 error={!!errors.description}
+              />
+            )}
+            {kind === "customElements" && (
+              <TextField
+                label="Image URL"
+                placeholder="https://example.com/icon.png"
+                {...register("imageUrl")}
+                helperText={(errors as any).imageUrl?.message as string}
+                error={!!(errors as any).imageUrl}
               />
             )}
             {kind === "devices" && (

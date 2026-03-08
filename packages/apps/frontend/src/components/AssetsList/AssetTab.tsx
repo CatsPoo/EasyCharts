@@ -181,6 +181,7 @@ export default function AssetTab() {
         <Tab label="Vendors" value="vendors" />
         <Tab label="Models" value="models" />
         <Tab label="Clouds" value="clouds" />
+        <Tab label="Custom Elements" value="customElements" />
       </Tabs>
 
       <Toolbar sx={{ gap: 1 }}>

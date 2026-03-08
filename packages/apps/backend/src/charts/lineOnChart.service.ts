@@ -14,12 +14,12 @@ export class LinesOnChartService {
   convertLineonChartEntity = async (
     lineOnChartEntity: LineOnChartEntity
   ): Promise<LineOnChart> => {
-    const { line: lineEntity, label, type, chartId, fiberType, color } = lineOnChartEntity;
+    const { line: lineEntity, label, type, chartId, cableType, color } = lineOnChartEntity;
     return {
       label,
       type,
       chartId,
-      fiberType: fiberType ?? undefined,
+      cableType: cableType ?? undefined,
       color: color ?? undefined,
       line: this.linesService.convertLineEntity(lineEntity),
     } as LineOnChart;
@@ -44,7 +44,7 @@ export class LinesOnChartService {
             lineId: l.line.id,
             label: l.label,
             type: l.type,
-            fiberType: l.fiberType ?? null,
+            cableType: l.cableType ?? null,
             color: l.color ?? null,
           } as LineOnChartEntity)
       ),

@@ -6,6 +6,10 @@ export const columns: Record<AssetKind, GridColDef[]> = {
     { field: "name", headerName: "Name", flex: 1 },
     { field: "description", headerName: "Description", flex: 2 },
   ],
+  customElements: [
+    { field: "name", headerName: "Name", flex: 1 },
+    { field: "imageUrl", headerName: "Image URL", flex: 2 },
+  ],
   devices: [
     { field: "name", headerName: "Name", flex: 1 },
     {

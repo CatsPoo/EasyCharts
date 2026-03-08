@@ -14,6 +14,7 @@ import { LineOnChartEntity } from "./lineonChart.emtity";
 import { NoteOnChartEntity } from "./noteOnChart.entity";
 import { ZoneOnChartEntity } from "./zoneOnChart.entity";
 import { CloudOnChartEntity } from "./cloudOnChart.entity";
+import { CustomElementOnChartEntity, CustomElementEdgeOnChartEntity } from "./customElementOnChart.entity";
 import { AuditableEntity } from "../../auth/entities/auditableEntity.culumns";
 
 @Entity({ name: "charts" })
@@ -81,4 +82,16 @@ export class ChartEntity extends AuditableEntity {
     orphanedRowAction: "delete",
   })
   cloudsOnChart!: Relation<CloudOnChartEntity[]>;
+
+  @OneToMany(() => CustomElementOnChartEntity, (cec) => cec.chart, {
+    cascade: ["insert", "update"],
+    orphanedRowAction: "delete",
+  })
+  customElementsOnChart!: Relation<CustomElementOnChartEntity[]>;
+
+  @OneToMany(() => CustomElementEdgeOnChartEntity, (e) => e.chart, {
+    cascade: ["insert", "update"],
+    orphanedRowAction: "delete",
+  })
+  customElementEdgesOnChart!: Relation<CustomElementEdgeOnChartEntity[]>;
 }

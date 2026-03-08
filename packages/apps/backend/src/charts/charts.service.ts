@@ -8,6 +8,8 @@ import {
   type ChartMetadata,
   type ChartUpdate,
   type CloudOnChart,
+  type CustomElementOnChart,
+  type CustomElementEdgeOnChart,
   type DeviceOnChart,
   type ZoneOnChart
 } from "@easy-charts/easycharts-types";
@@ -27,6 +29,7 @@ import { BondsOnChartService } from "./bondOnChart.service";
 import { NotesOnChartService } from "./noteOnChart.service";
 import { ZonesOnChartService } from "./zoneOnChart.service";
 import { CloudsOnChartService } from "./cloudOnChart.service";
+import { CustomElementsOnChartService } from "./customElementOnChart.service";
 import { ChartLockFeilds } from "./chartLockes.types";
 import { DevicesOnChartService } from "./deviceOnChart.service";
 import { ChartEntity } from "./entities/chart.entity";
@@ -67,6 +70,7 @@ export class ChartsService {
     private readonly notesOnChartService: NotesOnChartService,
     private readonly zonesOnChartService: ZonesOnChartService,
     private readonly cloudsOnChartService: CloudsOnChartService,
+    private readonly customElementsOnChartService: CustomElementsOnChartService,
     private readonly portsOnChartService: PortsOnChartService,
     private readonly chartVersionsService: ChartVersionsService,
   ) {}
@@ -105,7 +109,7 @@ export class ChartsService {
   convertChartEntityToChart = async (
     chartEnrity: ChartEntity
   ): Promise<Chart> => {
-    const { devicesOnChart, linesOnChart, bondOnChart, notesOnChart, zonesOnChart, cloudsOnChart, createdAt, createdByUserId, updatedAt, updatedByUserId, ...chartData } = chartEnrity;
+    const { devicesOnChart, linesOnChart, bondOnChart, notesOnChart, zonesOnChart, cloudsOnChart, customElementsOnChart, customElementEdgesOnChart, createdAt, createdByUserId, updatedAt, updatedByUserId, ...chartData } = chartEnrity;
     const convertedDeviceOnCharts: DeviceOnChart[] = [];
     for (const dl of devicesOnChart) convertedDeviceOnCharts.push(await this.devicesOnChartService.convertDeviceOnChartEntity(dl));
 
@@ -127,6 +131,18 @@ export class ChartsService {
       this.cloudsOnChartService.convertCloudOnChartEntity(c)
     );
 
+    const convertedCustomElementsOnChart: CustomElementOnChart[] = (customElementsOnChart ?? []).map((c) =>
+      this.customElementsOnChartService.convertEntity(c)
+    );
+
+    const convertedCustomElementEdgesOnChart: CustomElementEdgeOnChart[] = (customElementEdgesOnChart ?? []).map((e) => ({
+      id: e.id,
+      sourceNodeId: e.sourceNodeId,
+      sourceHandle: e.sourceHandle,
+      targetNodeId: e.targetNodeId,
+      targetHandle: e.targetHandle,
+    }));
+
     return {
       devicesOnChart: convertedDeviceOnCharts,
       linesOnChart: convertedLinesOnChart,
@@ -134,6 +150,8 @@ export class ChartsService {
       notesOnChart: convertedNotesOnChart,
       zonesOnChart: convertedZonesOnChart,
       cloudsOnChart: convertedCloudsOnChart,
+      customElementsOnChart: convertedCustomElementsOnChart,
+      customElementEdgesOnChart: convertedCustomElementEdgesOnChart,
       lock: this.getLockFromChartEntity(chartEnrity),
       createdAt,
       createdByUserId,
@@ -165,6 +183,8 @@ export class ChartsService {
         notesOnChart: true,
         zonesOnChart: true,
         cloudsOnChart: { cloud: true, connections: true },
+        customElementsOnChart: { customElement: true },
+        customElementEdgesOnChart: true,
       },
     });
     if (!chart) throw new NotFoundException("chart not found");
@@ -376,6 +396,16 @@ export class ChartsService {
         await this.cloudsOnChartService.syncCloudsOnChart(manager, chartId, dto.cloudsOnChart);
       }
 
+      // 5d) Custom elements on chart
+      if (dto.customElementsOnChart !== undefined || dto.customElementEdgesOnChart !== undefined) {
+        await this.customElementsOnChartService.syncCustomElementsOnChart(
+          manager,
+          chartId,
+          dto.customElementsOnChart ?? [],
+          dto.customElementEdgesOnChart ?? [],
+        );
+      }
+
       // 6) Hard deletes (global)
       if (dto.deletes) {
         const { devices, lines, ports } = dto.deletes;
@@ -396,6 +426,8 @@ export class ChartsService {
           bondOnChart: { bond: { members: true } },
           notesOnChart: true,
           cloudsOnChart: { cloud: true, connections: true },
+          customElementsOnChart: { customElement: true },
+          customElementEdgesOnChart: true,
         },
       });
     });

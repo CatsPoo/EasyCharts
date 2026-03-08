@@ -2,11 +2,12 @@ import { DeviceSchema, DeviceTypeSchema } from "../devices/index.js";
 import { ModelBaseSchema } from "..//devices/schemas/model.schemas.js";
 import { VendorSchema } from "../devices/schemas/vendor.schemas.js";
 import { CloudSchema } from "../clouds/schemas/cloud.schemas.js";
+import { CustomElementSchema } from "../customElements/schemas/customElement.schemas.js";
 import z from "zod";
 import { Identifiable } from "src/generic.types.js";
 
 // 1) AssetKind — same literal keys
-export const assetKinds = ["devices", "types", "models", "vendors", "clouds"] as const;
+export const assetKinds = ["devices", "types", "models", "vendors", "clouds", "customElements"] as const;
 export type AssetKind = (typeof assetKinds)[number];
 
 // 2) AssetMap — map each key to the *view* type you expose externally
@@ -16,6 +17,7 @@ export type AssetMap = {
   models: z.infer<typeof ModelBaseSchema>;
   vendors: z.infer<typeof VendorSchema>;
   clouds: z.infer<typeof CloudSchema>;
+  customElements: z.infer<typeof CustomElementSchema>;
 };
 
 // 3) AnyAsset — union of the mapped types

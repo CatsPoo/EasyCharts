@@ -16,12 +16,14 @@ import { BondOnChartEntity } from './entities/BondOnChart.emtity';
 import { NoteOnChartEntity } from './entities/noteOnChart.entity';
 import { ZoneOnChartEntity } from './entities/zoneOnChart.entity';
 import { CloudOnChartEntity, CloudConnectionOnChartEntity } from './entities/cloudOnChart.entity';
+import { CustomElementOnChartEntity, CustomElementEdgeOnChartEntity } from './entities/customElementOnChart.entity';
 import { LinesOnChartService } from './lineOnChart.service';
 import { DevicesOnChartService } from './deviceOnChart.service';
 import { BondsOnChartService } from './bondOnChart.service';
 import { NotesOnChartService } from './noteOnChart.service';
 import { ZonesOnChartService } from './zoneOnChart.service';
 import { CloudsOnChartService } from './cloudOnChart.service';
+import { CustomElementsOnChartService } from './customElementOnChart.service';
 import { PortsOnChartService } from './portsOnChart.service';
 import { ChartShareEntity } from './entities/chartShare.entity';
 import { ChartInDirectoryEntity } from '../chartsDirectories/entities/chartsInDirectory.entity';
@@ -47,6 +49,8 @@ import { ChartShareGuard } from './guards/chartShare.guard';
            ZoneOnChartEntity,
            CloudOnChartEntity,
            CloudConnectionOnChartEntity,
+           CustomElementOnChartEntity,
+           CustomElementEdgeOnChartEntity,
            ChartShareEntity,
            ChartInDirectoryEntity,
            DirectoryShareEntity,
@@ -57,7 +61,7 @@ import { ChartShareGuard } from './guards/chartShare.guard';
         AuthModule
     ],
     controllers: [ChartsController, ChartVersionsController],
-    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,ZonesOnChartService,CloudsOnChartService,PortsOnChartService,ChartVersionsService,ChartShareGuard],
+    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,ZonesOnChartService,CloudsOnChartService,PortsOnChartService,ChartVersionsService,ChartShareGuard,CustomElementsOnChartService],
     exports:[ChartsService]
 })
 export class ChartsModule {}
