@@ -8,6 +8,9 @@ export const CustomElementEdgeOnChartSchema = z.object({
   sourceHandle: z.string(),
   targetNodeId: z.string(),
   targetHandle: z.string(),
+  // Set when the respective node is a device (to track port-inUse state)
+  sourcePortId: z.string().uuid().optional(),
+  targetPortId: z.string().uuid().optional(),
 });
 
 export const CustomElementOnChartSchema = z.object({

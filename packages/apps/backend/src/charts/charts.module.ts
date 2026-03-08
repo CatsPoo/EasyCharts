@@ -30,6 +30,8 @@ import { LinesOnChartService } from './lineOnChart.service';
 import { NotesOnChartService } from './noteOnChart.service';
 import { PortsOnChartService } from './portsOnChart.service';
 import { ZonesOnChartService } from './zoneOnChart.service';
+import { CustomElementsOnChartService } from './customElementOnChart.service';
+import { CustomElementOnChartEntity, CustomElementEdgeOnChartEntity } from './entities/customElementOnChart.entity';
 
 @Module({
     imports: [
@@ -51,13 +53,15 @@ import { ZonesOnChartService } from './zoneOnChart.service';
            ChartInDirectoryEntity,
            DirectoryShareEntity,
            ChartVersionEntity,
+           CustomElementOnChartEntity,
+           CustomElementEdgeOnChartEntity,
         ]),
         DevicesModule,
         LinesModule,
         AuthModule
     ],
     controllers: [ChartsController, ChartVersionsController],
-    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,ZonesOnChartService,CloudsOnChartService,PortsOnChartService,ChartVersionsService,ChartShareGuard],
+    providers: [ChartsService,LinesOnChartService,DevicesOnChartService,BondsOnChartService,NotesOnChartService,ZonesOnChartService,CloudsOnChartService,PortsOnChartService,ChartVersionsService,ChartShareGuard,CustomElementsOnChartService],
     exports:[ChartsService]
 })
 export class ChartsModule {}

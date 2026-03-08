@@ -51,6 +51,8 @@ export class CustomElementsOnChartService {
         sourceHandle: e.sourceHandle,
         targetNodeId: e.targetNodeId,
         targetHandle: e.targetHandle,
+        sourcePortId: e.sourcePortId ?? null,
+        targetPortId: e.targetPortId ?? null,
       }));
       await edgeRepo.insert(toInsert);
     }
