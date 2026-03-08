@@ -133,6 +133,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       useState<string>("");
     const [colorPickerNoteId, setColorPickerNoteId] = useState<string | null>(null);
     const [colorPickerValue, setColorPickerValue] = useState<string>("#4ade80");
+    const [colorPickerLineId, setColorPickerLineId] = useState<string | null>(null);
+    const [colorPickerLineValue, setColorPickerLineValue] = useState<string>("#ffffff");
     const [editBondTarget, setEditBondTarget] = useState<{ bondId: string; bondName: string } | null>(null);
     const [zoneStyleDialogZoneId, setZoneStyleDialogZoneId] = useState<string | null>(null);
 
@@ -354,7 +356,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       setCanRedo(false);
     }, [chart.id]); // intentionally omit `chart` — only reset on chart ID change
 
+    const FIBER_COLORS: Record<string, string> = {
+      single_mode: "#EAB308",
+      multimode: "#14B8A6",
+    };
+
     const convertLineToEdge = useCallback((lineonChart: LineOnChart): Edge => {
+      const edgeColor = lineonChart.color
+        ?? (lineonChart.fiberType ? FIBER_COLORS[lineonChart.fiberType] : undefined);
       return {
         id: lineonChart.line.id,
         source: lineonChart.line.sourcePort.deviceId,
@@ -364,6 +373,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         label: lineonChart.label,
         type: lineonChart.type,
         animated: false,
+        style: edgeColor ? { stroke: edgeColor, strokeWidth: 2 } : undefined,
       };
     }, []);
 
@@ -2137,6 +2147,60 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             setZoneStyleDialogZoneId(payload.zoneId);
             break;
 
+          case EditorMenuListKeys.SET_FIBER_SINGLE:
+            applyChartChange((prev) => ({
+              ...prev,
+              linesOnChart: prev.linesOnChart.map((loc) =>
+                loc.line.id === payload.edge.id
+                  ? { ...loc, fiberType: "single_mode", color: undefined }
+                  : loc
+              ),
+            } as Chart));
+            setEdges((eds) => eds.map((e) =>
+              e.id === payload.edge.id
+                ? { ...e, style: { stroke: "#EAB308", strokeWidth: 2 } }
+                : e
+            ));
+            break;
+
+          case EditorMenuListKeys.SET_FIBER_MULTIMODE:
+            applyChartChange((prev) => ({
+              ...prev,
+              linesOnChart: prev.linesOnChart.map((loc) =>
+                loc.line.id === payload.edge.id
+                  ? { ...loc, fiberType: "multimode", color: undefined }
+                  : loc
+              ),
+            } as Chart));
+            setEdges((eds) => eds.map((e) =>
+              e.id === payload.edge.id
+                ? { ...e, style: { stroke: "#14B8A6", strokeWidth: 2 } }
+                : e
+            ));
+            break;
+
+          case EditorMenuListKeys.SET_FIBER_NONE:
+            applyChartChange((prev) => ({
+              ...prev,
+              linesOnChart: prev.linesOnChart.map((loc) =>
+                loc.line.id === payload.edge.id
+                  ? { ...loc, fiberType: undefined, color: undefined }
+                  : loc
+              ),
+            } as Chart));
+            setEdges((eds) => eds.map((e) =>
+              e.id === payload.edge.id ? { ...e, style: undefined } : e
+            ));
+            break;
+
+          case EditorMenuListKeys.SET_LINE_COLOR: {
+            const loc = chart.linesOnChart.find((l) => l.line.id === payload.edge.id);
+            const current = loc?.color ?? (loc?.fiberType === "single_mode" ? "#EAB308" : loc?.fiberType === "multimode" ? "#14B8A6" : "#ffffff");
+            setColorPickerLineValue(current);
+            setColorPickerLineId(payload.edge.id);
+            break;
+          }
+
           case EditorMenuListKeys.EDIT_CLOUD: {
             const coc = (chart.cloudsOnChart ?? []).find((c) => c.cloudId === payload.cloudId);
             if (coc) setEditCloudTarget(coc.cloud as Cloud);
@@ -2157,7 +2221,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.cloudsOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setColorPickerNoteId, setColorPickerValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.cloudsOnChart, chart.linesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setEdges, setColorPickerNoteId, setColorPickerValue, setColorPickerLineId, setColorPickerLineValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud]
     );
 
     const onSave = useCallback(
@@ -2324,6 +2388,65 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                     onClick={() => {
                       onNoteColorChange(colorPickerNoteId, colorPickerValue);
                       setColorPickerNoteId(null);
+                    }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Custom line colour picker dialog */}
+          {colorPickerLineId && (
+            <div className="fixed inset-0 z-[100000] flex items-center justify-center">
+              <div className="fixed inset-0 bg-black/40" onClick={() => setColorPickerLineId(null)} />
+              <div
+                className={[
+                  "relative rounded-xl border shadow-2xl p-5 flex flex-col gap-4 min-w-[220px]",
+                  isDark
+                    ? "bg-slate-800 border-slate-600 text-slate-100"
+                    : "bg-white border-slate-200 text-slate-900",
+                ].join(" ")}
+              >
+                <p className="text-sm font-semibold">Pick line color</p>
+                <input
+                  type="color"
+                  value={colorPickerLineValue}
+                  onChange={(e) => setColorPickerLineValue(e.target.value)}
+                  className="w-full h-12 cursor-pointer rounded-md"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    className={[
+                      "px-3 py-1.5 text-sm rounded-md border",
+                      isDark
+                        ? "border-slate-600 hover:bg-slate-700"
+                        : "border-slate-300 hover:bg-slate-100",
+                    ].join(" ")}
+                    onClick={() => setColorPickerLineId(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-3 py-1.5 text-sm rounded-md bg-indigo-500 hover:bg-indigo-600 text-white"
+                    onClick={() => {
+                      const lineId = colorPickerLineId;
+                      const color = colorPickerLineValue;
+                      applyChartChange((prev) => ({
+                        ...prev,
+                        linesOnChart: prev.linesOnChart.map((loc) =>
+                          loc.line.id === lineId
+                            ? { ...loc, color, fiberType: undefined }
+                            : loc
+                        ),
+                      } as Chart));
+                      setEdges((eds) => eds.map((e) =>
+                        e.id === lineId
+                          ? { ...e, style: { stroke: color, strokeWidth: 2 } }
+                          : e
+                      ));
+                      setColorPickerLineId(null);
                     }}
                   >
                     Apply

@@ -50,6 +50,7 @@ export default function EditorMenuList({
 }: EditorMenuListProps) {
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
   const [colorSubmenuOpen, setColorSubmenuOpen] = useState(false);
+  const [fiberSubmenuOpen, setFiberSubmenuOpen] = useState(false);
   const { isDark } = useThemeMode();
   const colorMenuRef = useRef<HTMLLIElement>(null);
 
@@ -241,6 +242,67 @@ export default function EditorMenuList({
               </li>
             </ul>
           )}
+        </li>
+      )}
+
+      {/* Fiber type submenu (edge) */}
+      {kind === "edge" && (
+        <li
+          className="relative"
+          onMouseEnter={() => setFiberSubmenuOpen(true)}
+          onMouseLeave={() => setFiberSubmenuOpen(false)}
+        >
+          <button className={`${btnClass} flex justify-between items-center`}>
+            Fiber Type...
+            <span className="ml-2 text-slate-400">›</span>
+          </button>
+          {fiberSubmenuOpen && (
+            <ul className={submenuClass + " min-w-[140px]"}>
+              <li>
+                <button
+                  className={`${btnClass} flex items-center gap-2`}
+                  onClick={() => { onAction(EditorMenuListKeys.SET_FIBER_SINGLE); setFiberSubmenuOpen(false); }}
+                >
+                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: "#EAB308" }} />
+                  Single Mode
+                </button>
+              </li>
+              <li>
+                <button
+                  className={`${btnClass} flex items-center gap-2`}
+                  onClick={() => { onAction(EditorMenuListKeys.SET_FIBER_MULTIMODE); setFiberSubmenuOpen(false); }}
+                >
+                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: "#14B8A6" }} />
+                  Multimode
+                </button>
+              </li>
+              <li><hr className={dividerClass} /></li>
+              <li>
+                <button
+                  className={btnClass}
+                  onClick={() => { onAction(EditorMenuListKeys.SET_FIBER_NONE); setFiberSubmenuOpen(false); }}
+                >
+                  None
+                </button>
+              </li>
+            </ul>
+          )}
+        </li>
+      )}
+
+      {/* Custom line color (edge) */}
+      {kind === "edge" && (
+        <li>
+          <button
+            className={`${btnClass} flex items-center gap-2`}
+            onClick={() => onAction(EditorMenuListKeys.SET_LINE_COLOR)}
+          >
+            <span
+              className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{ background: "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" }}
+            />
+            Custom Color...
+          </button>
         </li>
       )}
 
