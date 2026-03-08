@@ -42,13 +42,14 @@ export class LinessService {
   }
 
   convertLineToEntity(line: Line): LineEntity {
-    const { id, sourcePort, targetPort } = line;
+    const { id, sourcePort, targetPort,cableType } = line;
     return {
       id,
       sourcePort,
       sourcePortId: sourcePort.id,
       targetPortId: targetPort.id,
       targetPort,
+      cableType
     } as LineEntity;
   }
 
@@ -307,7 +308,7 @@ export class LinessService {
     const portIds = [...new Set(lines.flatMap((l) => [l.sourcePort.id, l.targetPort.id]))];
     const existingLines = await repo.find({
       where: [{ sourcePortId: In(portIds) }, { targetPortId: In(portIds) }],
-      select: ['id', 'sourcePortId', 'targetPortId'],
+      select: ['id', 'sourcePortId', 'targetPortId','cableType'],
     });
     const existingIdByPair = new Map<string, string>();
     for (const el of existingLines) {
