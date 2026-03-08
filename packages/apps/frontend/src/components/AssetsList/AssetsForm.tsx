@@ -280,7 +280,7 @@ export function AssetForm<K extends AssetKind>({
   return (
     <Dialog open={open} onClose={onClose} maxWidth={kind === "devices" ? "md" : "sm"} fullWidth>
       <DialogTitle>
-        {initial?.id
+        {(initial as any)?.id
           ? `Edit ${kind.slice(0, -1)}`
           : `Create ${kind.slice(0, -1)}`}
       </DialogTitle>
@@ -292,7 +292,7 @@ export function AssetForm<K extends AssetKind>({
       >
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            {initial?.id && <input type="hidden" {...register("id")} />}
+            {(initial as any)?.id && <input type="hidden" {...register("id")} />}
             <TextField
               label="Name"
               {...register("name")}

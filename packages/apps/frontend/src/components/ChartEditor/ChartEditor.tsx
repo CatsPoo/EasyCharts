@@ -60,6 +60,8 @@ import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
 import { useListCustomElements } from "../../hooks/customElementsHooks";
+import CustomElementNode from "./CustomElementNode";
+import { CustomElementTextDialog } from "./CustomElementTextDialog";
 import { fetchBondPortSiblings, fetchConnectedPortIds, fetchConnectedPortInfo, type BondPortSiblingsResponse } from "../../hooks/linesHooks";
 import { useCableTypes } from "../../hooks/cableTypesHooks";
 import { useQueryClient } from "@tanstack/react-query";
@@ -149,6 +151,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const createCableTypeMut = useCreateAsset("cableTypes");
     const queryClient = useQueryClient();
     const [editBondTarget, setEditBondTarget] = useState<{ bondId: string; bondName: string } | null>(null);
+    const [createCustomElementOpen, setCreateCustomElementOpen] = useState(false);
+    const createCustomElementMut = useCreateAsset("customElements");
+    const [editCustomElementTextTarget, setEditCustomElementTextTarget] = useState<{ id: string; currentText: string } | null>(null);
 
     const { data: allCableTypes = [] } = useCableTypes();
     const [zoneStyleDialogZoneId, setZoneStyleDialogZoneId] = useState<string | null>(null);
@@ -206,6 +211,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         note: NoteNode,
         zone: ZoneNode,
         cloud: CloudNode,
+        customElement: CustomElementNode,
       } as any),
       []
     );
@@ -1371,6 +1377,20 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [editMode, onRemoveCloud, updateCloudSize]
     );
 
+    const convertCustomElementToNode = useCallback(
+      (ceOnChart: CustomElementOnChart): Node => ({
+        id: ceOnChart.id,
+        type: "customElement",
+        position: ceOnChart.position,
+        style: { width: ceOnChart.size?.width ?? 120, height: ceOnChart.size?.height ?? 120 },
+        data: {
+          ceOnChart,
+          editMode,
+        },
+      }),
+      [editMode]
+    );
+
     const { data: availableDevicesResponse } = useListAssets("devices", {
       page: 0,
       pageSize: 100000,
@@ -1585,9 +1605,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         const noteNodes: Node[] = (chart.notesOnChart ?? []).map(convertNoteToNode);
         const zoneNodes: Node[] = (chart.zonesOnChart ?? []).map(convertZoneToNode);
         const cloudNodes: Node[] = (chart.cloudsOnChart ?? []).map(convertCloudToNode);
-        return [...zoneNodes, ...devicesNodes, ...bridgeNodes, ...noteNodes, ...cloudNodes];
+        const ceNodes: Node[] = (chart.customElementsOnChart ?? []).map(convertCustomElementToNode);
+        return [...zoneNodes, ...devicesNodes, ...bridgeNodes, ...noteNodes, ...cloudNodes, ...ceNodes];
       });
-    }, [buildBridgeView, chart.bondsOnChart, chart.cloudsOnChart, chart.customElementsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, chart.zonesOnChart, convertCloudToNode, convertDeviceToNode, convertNoteToNode, convertZoneToNode, setNodes]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.cloudsOnChart, chart.customElementsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, chart.zonesOnChart, convertCloudToNode, convertCustomElementToNode, convertDeviceToNode, convertNoteToNode, convertZoneToNode, setNodes]);
 
     useEffect(() => {
       const { displayEdges } = buildBridgeView(chart.bondsOnChart, chart.linesOnChart);
@@ -1889,6 +1910,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             ...prev,
             cloudsOnChart: (prev.cloudsOnChart ?? []).map((c) =>
               c.cloudId === node.id ? { ...c, position: node.position } : c
+            ),
+          } as Chart));
+        } else if (node.type === "customElement") {
+          applyChartChange((prev) => ({
+            ...prev,
+            customElementsOnChart: (prev.customElementsOnChart ?? []).map((ce) =>
+              ce.id === node.id ? { ...ce, position: node.position } : ce
             ),
           } as Chart));
         }
@@ -2416,6 +2444,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 cloudsList={allClouds}
                 onCreateDevice={() => setCreateDeviceOpen(true)}
                 onCreateCloud={() => setCreateCloudOpen(true)}
+                onCreateCustomElement={() => setCreateCustomElementOpen(true)}
               />
             </motion.div>
           )}
@@ -2797,6 +2826,30 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           open={createCloudOpen}
           onClose={() => setCreateCloudOpen(false)}
           onSubmit={onCreateCloudSubmit}
+        />
+        <AssetForm
+          kind="customElements"
+          open={createCustomElementOpen}
+          onClose={() => setCreateCustomElementOpen(false)}
+          onSubmit={async (data) => {
+            await createCustomElementMut.mutateAsync(data);
+            setCreateCustomElementOpen(false);
+          }}
+        />
+        <CustomElementTextDialog
+          open={editCustomElementTextTarget !== null}
+          currentText={editCustomElementTextTarget?.currentText ?? ""}
+          onClose={() => setEditCustomElementTextTarget(null)}
+          onSave={(text) => {
+            if (!editCustomElementTextTarget) return;
+            applyChartChange((prev) => ({
+              ...prev,
+              customElementsOnChart: (prev.customElementsOnChart ?? []).map((ce) =>
+                ce.id === editCustomElementTextTarget.id ? { ...ce, freeText: text } : ce
+              ),
+            } as Chart));
+            setEditCustomElementTextTarget(null);
+          }}
         />
         <ConfirmDialog
           open={confirmDeleteOpen}
