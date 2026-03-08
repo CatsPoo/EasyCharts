@@ -131,11 +131,13 @@ export default function AssetTab() {
                 Ports
               </Button>
             )}
-            <Tooltip title="Version history">
-              <IconButton size="small" onClick={() => setHistoryAsset(params.row)}>
-                <HistoryIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            {kind !== "customElements" && (
+              <Tooltip title="Version history">
+                <IconButton size="small" onClick={() => setHistoryAsset(params.row)}>
+                  <HistoryIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <RequirePermissions required={[Permission.ASSET_EDIT]}>
               <Button size="small" onClick={() => setEditing(params.row)}>
                 Edit

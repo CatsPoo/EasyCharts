@@ -74,6 +74,7 @@ import ZoneNode, { type ZoneNodeData } from "./ZoneNode";
 import { EditZoneStyleDialog, type ZoneStyleValues } from "./EditZoneStyleDialog";
 import CloudNode, { type CloudNodeData } from "./CloudNode";
 import CustomElementNode, { type CustomElementNodeData } from "./CustomElementNode";
+import { CustomElementTextDialog } from "./CustomElementTextDialog";
 import { PortsEditorDialog } from "./PortsEditorDialog";
 import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
@@ -1908,6 +1909,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               c.cloudId === node.id ? { ...c, position: node.position } : c
             ),
           } as Chart));
+        } else if (node.type === "customElement") {
+          applyChartChange((prev) => ({
+            ...prev,
+            customElementsOnChart: (prev.customElementsOnChart ?? []).map((c) =>
+              c.id === node.id ? { ...c, position: node.position } : c
+            ),
+          } as Chart));
         }
       },
       [applyChartChange]
@@ -2359,7 +2367,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.cloudsOnChart, chart.customElementsOnChart, chart.customElementEdgesOnChart, chart.linesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setEdges, setColorPickerNoteId, setColorPickerValue, setColorPickerLineId, setColorPickerLineValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.cloudsOnChart, chart.linesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setEdges, setColorPickerNoteId, setColorPickerValue, setColorPickerLineId, setColorPickerLineValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud]
     );
 
     const onSave = useCallback(
@@ -2440,6 +2448,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 cloudsList={allClouds}
                 onCreateDevice={() => setCreateDeviceOpen(true)}
                 onCreateCloud={() => setCreateCloudOpen(true)}
+                onCreateCustomElement={() => setCreateCustomElementOpen(true)}
               />
             </motion.div>
           )}
@@ -2741,6 +2750,31 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           open={createCloudOpen}
           onClose={() => setCreateCloudOpen(false)}
           onSubmit={onCreateCloudSubmit}
+        />
+        <AssetForm
+          kind="customElements"
+          open={createCustomElementOpen}
+          onClose={() => setCreateCustomElementOpen(false)}
+          onSubmit={async (values) => {
+            await createCustomElementMut.mutateAsync(values);
+            setCreateCustomElementOpen(false);
+          }}
+        />
+        <CustomElementTextDialog
+          open={!!editCustomElementTextTarget}
+          currentText={editCustomElementTextTarget?.currentText ?? ""}
+          onClose={() => setEditCustomElementTextTarget(null)}
+          onSave={(text) => {
+            const id = editCustomElementTextTarget?.id;
+            if (!id) return;
+            applyChartChange((prev) => ({
+              ...prev,
+              customElementsOnChart: (prev.customElementsOnChart ?? []).map((c) =>
+                c.id === id ? { ...c, freeText: text } : c
+              ),
+            } as Chart));
+            setEditCustomElementTextTarget(null);
+          }}
         />
         <ConfirmDialog
           open={confirmDeleteOpen}

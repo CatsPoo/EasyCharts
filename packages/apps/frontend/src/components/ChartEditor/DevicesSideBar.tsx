@@ -1,6 +1,7 @@
 import { useState } from "react";
-import type { Device, Cloud } from "@easy-charts/easycharts-types";
+import type { Device, Cloud, CustomElement } from "@easy-charts/easycharts-types";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
+import { useListCustomElements } from "../../hooks/customElementsHooks";
 
 function initials(text?: string) {
   if (!text) return "?";
@@ -15,14 +16,17 @@ interface DevicesSideListProps {
   cloudsList: Cloud[];
   onCreateDevice?: () => void;
   onCreateCloud?: () => void;
+  onCreateCustomElement?: () => void;
 }
 
 type ActiveTab = "devices" | "elements" | "clouds";
 
-export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCreateCloud }: DevicesSideListProps) {
+export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCreateCloud, onCreateCustomElement }: DevicesSideListProps) {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<ActiveTab>("devices");
   const { isDark } = useThemeMode();
+  const { data: customElementsData } = useListCustomElements();
+  const customElementsList: CustomElement[] = customElementsData?.rows ?? [];
 
   const filteredDevices = search.trim()
     ? devicesList.filter((device) => {
@@ -228,7 +232,9 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
       {/* ── Elements Tab ── */}
       {activeTab === "elements" && (
         <>
-          <h2 className={["text-sm font-semibold mb-3", isDark ? "text-slate-200" : "text-slate-700"].join(" ")}>Chart Elements</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className={["text-sm font-semibold", isDark ? "text-slate-200" : "text-slate-700"].join(" ")}>Chart Elements</h2>
+          </div>
 
           <ul className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
             <li
@@ -277,6 +283,71 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
                 <p className={["text-xs font-semibold leading-4", isDark ? "text-slate-200" : "text-slate-800"].join(" ")}>Zone</p>
                 <p className={["text-[10px]", isDark ? "text-slate-500" : "text-slate-400"].join(" ")}>Background area marker</p>
               </div>
+            </li>
+
+            {/* Separator */}
+            {customElementsList.length > 0 && (
+              <li className={["text-[10px] font-semibold px-1 pt-2 pb-0.5", isDark ? "text-slate-500" : "text-slate-400"].join(" ")}>
+                Custom Elements
+              </li>
+            )}
+
+            {/* Custom element items */}
+            {customElementsList.map((ce) => (
+              <li
+                key={ce.id}
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.setData(
+                    "application/reactflow-customelement",
+                    JSON.stringify({ customElementId: ce.id })
+                  );
+                  event.dataTransfer.effectAllowed = "move";
+                }}
+                className={[
+                  "flex items-center gap-2 px-2 py-2 rounded-lg border border-transparent cursor-grab active:cursor-grabbing transition-colors select-none",
+                  isDark ? "hover:border-indigo-800 hover:bg-indigo-950" : "hover:border-indigo-200 hover:bg-indigo-50",
+                ].join(" ")}
+                title={`${ce.name} — drag onto canvas`}
+              >
+                {ce.imageUrl ? (
+                  <img
+                    src={ce.imageUrl}
+                    alt={ce.name}
+                    draggable={false}
+                    className="h-8 w-8 flex-none object-contain"
+                  />
+                ) : (
+                  <div
+                    className="h-8 w-8 flex-none rounded-md flex items-center justify-center"
+                    style={{ background: isDark ? "#312e81" : "#e0e7ff", border: `1px dashed ${isDark ? "#6366f1" : "#818cf8"}` }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: isDark ? "#a5b4fc" : "#4338ca" }}>
+                      <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                    </svg>
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className={["text-xs font-semibold truncate leading-4", isDark ? "text-slate-200" : "text-slate-800"].join(" ")}>{ce.name}</p>
+                </div>
+              </li>
+            ))}
+
+            {/* + button to create new custom element */}
+            <li className="pt-1">
+              <button
+                onClick={onCreateCustomElement}
+                className={[
+                  "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg border text-xs font-semibold transition-colors",
+                  isDark
+                    ? "border-indigo-700 text-indigo-400 hover:bg-indigo-950"
+                    : "border-indigo-300 text-indigo-600 hover:bg-indigo-50",
+                ].join(" ")}
+                title="Create new custom element"
+              >
+                <span className="text-base leading-none">+</span>
+                New Custom Element
+              </button>
             </li>
           </ul>
 
