@@ -3,7 +3,7 @@ import z from "zod";
 
 export const CustomElementBaseSchema = z.object({
   name: z.string().min(1),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  imageUrl: z.string().optional(),
 });
 
 export const CustomElementCreateSchema = CustomElementBaseSchema;

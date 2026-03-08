@@ -103,7 +103,7 @@ function ImageUploadField({
       const formData = new FormData();
       formData.append("file", file);
       const { data } = await http.post<{ url: string }>(
-        "/customElements/upload",
+        "/upload?folder=custom-elements",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );

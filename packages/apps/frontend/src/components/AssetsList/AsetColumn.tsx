@@ -9,7 +9,20 @@ export const columns: Record<AssetKind, GridColDef[]> = {
   ],
   customElements: [
     { field: "name", headerName: "Name", flex: 1 },
-    { field: "imageUrl", headerName: "Image URL", flex: 2 },
+    {
+      field: "imageUrl",
+      headerName: "Image",
+      width: 100,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) =>
+        params.value ? (
+          <img
+            src={params.value}
+            alt="preview"
+            style={{ height: 36, width: 36, objectFit: "contain", borderRadius: 4 }}
+          />
+        ) : null,
+    },
   ],
   devices: [
     { field: "name", headerName: "Name", flex: 1 },
