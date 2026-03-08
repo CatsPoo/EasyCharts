@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Device, Cloud } from "@easy-charts/easycharts-types";
+import type { Device, Cloud, CustomElement } from "@easy-charts/easycharts-types";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 
 function initials(text?: string) {
@@ -13,13 +13,15 @@ function initials(text?: string) {
 interface DevicesSideListProps {
   devicesList: Device[];
   cloudsList: Cloud[];
+  customElementsList?: CustomElement[];
   onCreateDevice?: () => void;
   onCreateCloud?: () => void;
+  onCreateCustomElement?: () => void;
 }
 
 type ActiveTab = "devices" | "elements" | "clouds";
 
-export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCreateCloud }: DevicesSideListProps) {
+export function DevicesSidebar({ devicesList, cloudsList, customElementsList = [], onCreateDevice, onCreateCloud, onCreateCustomElement }: DevicesSideListProps) {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<ActiveTab>("devices");
   const { isDark } = useThemeMode();
@@ -228,9 +230,9 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
       {/* ── Elements Tab ── */}
       {activeTab === "elements" && (
         <>
-          <h2 className={["text-sm font-semibold mb-3", isDark ? "text-slate-200" : "text-slate-700"].join(" ")}>Chart Elements</h2>
-
-          <ul className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
+          {/* Built-in layout elements: Note + Zone */}
+          <p className={["text-[10px] font-semibold uppercase tracking-wide mb-1", isDark ? "text-slate-500" : "text-slate-400"].join(" ")}>Layout</p>
+          <ul className="space-y-1.5 mb-3">
             <li
               draggable
               onDragStart={(event) => {
@@ -278,6 +280,53 @@ export function DevicesSidebar({ devicesList, cloudsList, onCreateDevice, onCrea
                 <p className={["text-[10px]", isDark ? "text-slate-500" : "text-slate-400"].join(" ")}>Background area marker</p>
               </div>
             </li>
+          </ul>
+
+          {/* Custom elements */}
+          <div className="flex items-center justify-between mb-1">
+            <p className={["text-[10px] font-semibold uppercase tracking-wide", isDark ? "text-slate-500" : "text-slate-400"].join(" ")}>Custom Elements</p>
+            {onCreateCustomElement && (
+              <button
+                onClick={onCreateCustomElement}
+                title="Create new custom element"
+                className={["flex items-center justify-center w-5 h-5 rounded text-xs font-bold transition-colors",
+                  isDark ? "bg-indigo-700 hover:bg-indigo-600 text-white" : "bg-indigo-600 hover:bg-indigo-500 text-white"].join(" ")}
+              >+</button>
+            )}
+          </div>
+          <ul className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-0.5">
+            {customElementsList.length === 0 && (
+              <li className={["text-xs text-center py-4", isDark ? "text-slate-600" : "text-slate-400"].join(" ")}>No custom elements yet</li>
+            )}
+            {customElementsList.map((ce: CustomElement) => (
+              <li
+                key={ce.id}
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.setData("application/reactflow-customelement", JSON.stringify({ customElementId: ce.id }));
+                  event.dataTransfer.effectAllowed = "move";
+                }}
+                className={[
+                  "flex items-center gap-2 px-2 py-2 rounded-lg border border-transparent cursor-grab active:cursor-grabbing transition-colors select-none",
+                  isDark ? "hover:border-purple-800 hover:bg-purple-950" : "hover:border-purple-200 hover:bg-purple-50",
+                ].join(" ")}
+                title={ce.name}
+              >
+                <div className={["h-8 w-8 flex-none rounded-md flex items-center justify-center border overflow-hidden",
+                  isDark ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-slate-100"].join(" ")}>
+                  {ce.imageUrl ? (
+                    <img src={ce.imageUrl} alt={ce.name} draggable={false} className="w-full h-full object-contain" />
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.4 }}>
+                      <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-7-10l2.5 3.01L19 15H5l4-5 2.5 3.01L14 9z"/>
+                    </svg>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={["text-xs font-semibold truncate leading-4", isDark ? "text-slate-200" : "text-slate-800"].join(" ")}>{ce.name}</p>
+                </div>
+              </li>
+            ))}
           </ul>
 
           <p className={["mt-3 text-[10px] text-center", isDark ? "text-slate-600" : "text-slate-400"].join(" ")}>Drag an element onto the canvas</p>

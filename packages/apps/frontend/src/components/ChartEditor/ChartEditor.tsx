@@ -298,6 +298,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "bond", payload: { bondId, bondName: bondOnChart?.bond.name ?? "" } });
         return;
       }
+      if (node.type === "customElement") {
+        const ceOnChart = (chartRef.current.customElementsOnChart ?? []).find((ce) => ce.id === node.id);
+        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "customElement", payload: { instanceId: node.id, currentText: ceOnChart?.freeText ?? "" } });
+        return;
+      }
       const doc = chart.devicesOnChart.find((d) => d.device.id === node.id);
       const canConnectPaired = doc?.device.ports.some((p) => greenPortIdsRef.current.has(p.id)) ?? false;
       setCtx({
@@ -447,15 +452,38 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             } as Chart;
           }
 
-          const isCeEdge = (prev.customElementEdgesOnChart ?? []).some(
+          const ceEdge = (prev.customElementEdgesOnChart ?? []).find(
             (e) => e.id === edgeToRemove.id
           );
-          if (isCeEdge) {
+          if (ceEdge) {
+            const releasedPortIds = new Set(
+              [ceEdge.sourcePortId, ceEdge.targetPortId].filter(Boolean) as string[]
+            );
+            // Only mark a port as free if no other CE edge still uses it
+            const remainingCeEdges = (prev.customElementEdgesOnChart ?? []).filter(
+              (e) => e.id !== edgeToRemove.id
+            );
+            const stillUsedByCe = new Set<string>();
+            for (const e of remainingCeEdges) {
+              if (e.sourcePortId) stillUsedByCe.add(e.sourcePortId);
+              if (e.targetPortId) stillUsedByCe.add(e.targetPortId);
+            }
             return {
               ...prev,
-              customElementEdgesOnChart: (prev.customElementEdgesOnChart ?? []).filter(
-                (e) => e.id !== edgeToRemove.id
-              ),
+              customElementEdgesOnChart: remainingCeEdges,
+              devicesOnChart: releasedPortIds.size
+                ? prev.devicesOnChart.map((doc) => ({
+                    ...doc,
+                    device: {
+                      ...doc.device,
+                      ports: doc.device.ports.map((p) =>
+                        releasedPortIds.has(p.id) && !stillUsedByCe.has(p.id)
+                          ? { ...p, inUse: false }
+                          : p
+                      ),
+                    },
+                  } as DeviceOnChart))
+                : prev.devicesOnChart,
             } as Chart;
           }
 
@@ -1655,12 +1683,17 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         const isSourceCE = (chart.customElementsOnChart ?? []).some((ce) => ce.id === c.source);
         const isTargetCE = (chart.customElementsOnChart ?? []).some((ce) => ce.id === c.target);
         if ((isSourceCE || isTargetCE) && c.source && c.target && c.sourceHandle && c.targetHandle) {
+          // If one side is a device, the handle is a port ID — track it for inUse computation
+          const sourcePortId = !isSourceCE ? c.sourceHandle : undefined;
+          const targetPortId = !isTargetCE ? c.targetHandle : undefined;
           const newEdge: CustomElementEdgeOnChart = {
             id: uuidv4(),
             sourceNodeId: c.source,
             sourceHandle: c.sourceHandle,
             targetNodeId: c.target,
             targetHandle: c.targetHandle,
+            sourcePortId,
+            targetPortId,
           };
           const rfEdge: Edge = {
             id: newEdge.id,
@@ -1671,9 +1704,21 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             type: "step",
           };
           setEdges((eds) => [...eds, rfEdge]);
+          const cePortIds = new Set([sourcePortId, targetPortId].filter(Boolean) as string[]);
           applyChartChange((prev) => ({
             ...prev,
             customElementEdgesOnChart: [...(prev.customElementEdgesOnChart ?? []), newEdge],
+            devicesOnChart: cePortIds.size
+              ? prev.devicesOnChart.map((doc) => ({
+                  ...doc,
+                  device: {
+                    ...doc.device,
+                    ports: doc.device.ports.map((p) =>
+                      cePortIds.has(p.id) ? { ...p, inUse: true } : p
+                    ),
+                  },
+                } as DeviceOnChart))
+              : prev.devicesOnChart,
           } as Chart));
           setMadeChanges(true);
           return;
@@ -2442,6 +2487,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               <DevicesSidebar
                 devicesList={unusedDevices}
                 cloudsList={allClouds}
+                customElementsList={allCustomElements}
                 onCreateDevice={() => setCreateDeviceOpen(true)}
                 onCreateCloud={() => setCreateCloudOpen(true)}
                 onCreateCustomElement={() => setCreateCustomElementOpen(true)}
