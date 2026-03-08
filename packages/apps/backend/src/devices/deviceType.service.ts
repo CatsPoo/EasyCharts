@@ -1,19 +1,51 @@
 import type { DeviceType, DeviceTypeCreate, DeviceTypeUpdate } from '@easy-charts/easycharts-types';
-import { HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, NotFoundException, OnApplicationBootstrap } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { DeviceTypeEntity } from "./entities/deviceType.entity";
 import { QueryDto } from "../query/dto/query.dto";
 import { AssetVersionsService } from "./assetVersions.service";
+import { UsersService } from "../auth/user.service";
+
+const DEFAULT_DEVICE_TYPES = [
+  'Switch',
+  'Router',
+  'Firewall',
+  'Server',
+  'Access Point',
+  'Load Balancer',
+  'UPS',
+  'Patch Panel',
+  'NAS / SAN',
+  'IP Phone',
+  'Camera',
+  'Printer',
+];
 
 @Injectable()
-export class DeviceTypeService {
+export class DeviceTypeService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(DeviceTypeEntity)
     private readonly deviceTypeRepo: Repository<DeviceTypeEntity>,
     private readonly assetVersionsService: AssetVersionsService,
     private readonly dataSource: DataSource,
+    private readonly usersService: UsersService,
   ) {}
+
+  async onApplicationBootstrap() {
+    const count = await this.deviceTypeRepo.count();
+    if (count === 0) {
+      const users = await this.usersService.getAllUsers();
+      const adminId = users[0]?.id ?? null;
+      for (const name of DEFAULT_DEVICE_TYPES) {
+        const entity = this.deviceTypeRepo.create({ name, createdByUserId: adminId });
+        const saved = await this.deviceTypeRepo.save(entity);
+        if (adminId) {
+          await this.assetVersionsService.saveVersion('types', saved.id, saved as unknown as object, adminId);
+        }
+      }
+    }
+  }
 
   async createDeviceType(dto: DeviceTypeCreate,createdByUserId:string) : Promise<DeviceType> {
     const entity = this.deviceTypeRepo.create({...dto,createdByUserId});
