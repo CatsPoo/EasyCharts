@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -16,10 +17,12 @@ import {
   Select,
   Stack,
   TextField,
+  Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useCreateAsset, useListAssets } from "../../hooks/assetsHooks";
+import { http } from "../../api/http";
 import z from "zod";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
 import { DevicePortsTable } from "./DevicePortsTable";
@@ -77,6 +80,77 @@ function CableTypeFields({ register, errors, control, setValue }: { register: an
   );
 }
 
+function ImageUploadField({
+  currentUrl,
+  onUploaded,
+}: {
+  currentUrl?: string;
+  onUploaded: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | undefined>(currentUrl);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPreview(currentUrl);
+  }, [currentUrl]);
+
+  async function handleFile(file: File) {
+    setError(null);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await http.post<{ url: string }>(
+        "/customElements/upload",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      setPreview(data.url);
+      onUploaded(data.url);
+    } catch {
+      setError("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <Box>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+        }}
+      />
+      <Stack direction="row" spacing={2} alignItems="center">
+        {preview && (
+          <Box
+            component="img"
+            src={preview}
+            alt="preview"
+            sx={{ width: 64, height: 64, objectFit: "contain", border: "1px solid", borderColor: "divider", borderRadius: 1 }}
+          />
+        )}
+        <Button
+          variant="outlined"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          startIcon={uploading ? <CircularProgress size={16} /> : undefined}
+        >
+          {uploading ? "Uploading…" : preview ? "Change Image" : "Upload Image"}
+        </Button>
+      </Stack>
+      {error && <Typography color="error" variant="caption" sx={{ mt: 0.5 }}>{error}</Typography>}
+    </Box>
+  );
+}
+
 const schemas = {
   clouds: z.object({
     name: z.string().min(1),
@@ -111,6 +185,7 @@ const schemas = {
     compatiblePortTypeIds: z.array(z.string()).min(0),
   }),
 } as const;
+
 type Props<K extends AssetKind> = {
   kind: K;
   open: boolean;
@@ -235,12 +310,9 @@ export function AssetForm<K extends AssetKind>({
               />
             )}
             {kind === "customElements" && (
-              <TextField
-                label="Image URL"
-                placeholder="https://example.com/icon.png"
-                {...register("imageUrl")}
-                helperText={(errors as any).imageUrl?.message as string}
-                error={!!(errors as any).imageUrl}
+              <ImageUploadField
+                currentUrl={(initial as any)?.imageUrl}
+                onUploaded={(url) => setValue("imageUrl", url)}
               />
             )}
             {kind === "devices" && (
