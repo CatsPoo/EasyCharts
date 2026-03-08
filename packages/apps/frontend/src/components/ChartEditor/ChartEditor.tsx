@@ -19,7 +19,6 @@ import {
   type Port,
   type Side,
   type Bond,
-  CableTypeEnum
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -62,6 +61,8 @@ import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
 import { useListCustomElements } from "../../hooks/customElementsHooks";
 import { fetchBondPortSiblings, fetchConnectedPortIds, fetchConnectedPortInfo, type BondPortSiblingsResponse } from "../../hooks/linesHooks";
+import { useCableTypes } from "../../hooks/cableTypesHooks";
+import { useQueryClient } from "@tanstack/react-query";
 import { DevicesSidebar } from "./DevicesSideBar";
 import { Alert, Button, Snackbar } from "@mui/material";
 import { ConfirmDialog } from "../DeleteAlertDialog";
@@ -71,6 +72,7 @@ import { BondBridgeNode, type BondBridgeNodeData } from "./BondBadgeNode";
 import { EditBondDialog } from "./EditBondDialog";
 import { EditLineDialog } from "./EditLineDialog";
 import MenuList from "./EditoroMenuList";
+import type { CableTypeOption } from "./EditoroMenuList";
 import NoteNode, { type NoteNodeData } from "./NoteNode";
 import ZoneNode, { type ZoneNodeData } from "./ZoneNode";
 import { EditZoneStyleDialog, type ZoneStyleValues } from "./EditZoneStyleDialog";
@@ -82,11 +84,6 @@ import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interface
 import type { DeleteSets } from "./interfaces/deleteSets.interfaces";
 import type { EditLineDialogFormResponse } from "./interfaces/editLineDialogForm.interfaces";
 import type { CtxState } from "./interfaces/ctsMenu.interfaces";
-
-const CABLE_COLORS: Record<string, string> = {
-  single_mode: "#EAB308",
-  multimode: "#14B8A6",
-};
 
 interface ChardEditorProps {
   chart: Chart;
@@ -146,7 +143,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [colorPickerValue, setColorPickerValue] = useState<string>("#4ade80");
     const [colorPickerLineId, setColorPickerLineId] = useState<string | null>(null);
     const [colorPickerLineValue, setColorPickerLineValue] = useState<string>("#ffffff");
+    const [createCableTypeOpen, setCreateCableTypeOpen] = useState(false);
+    const [createCableTypeName, setCreateCableTypeName] = useState("");
+    const [createCableTypeColor, setCreateCableTypeColor] = useState("#888888");
+    const createCableTypeMut = useCreateAsset("cableTypes");
+    const queryClient = useQueryClient();
     const [editBondTarget, setEditBondTarget] = useState<{ bondId: string; bondName: string } | null>(null);
+
+    const { data: allCableTypes = [] } = useCableTypes();
     const [zoneStyleDialogZoneId, setZoneStyleDialogZoneId] = useState<string | null>(null);
 
     const actionsHistory = useRef<Chart[]>([chart]);
@@ -305,13 +309,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       const allPorts = chart.devicesOnChart.flatMap((doc) => doc.device.ports);
       const srcType = allPorts.find((p) => p.id === edge.sourceHandle)?.type;
       const tgtType = allPorts.find((p) => p.id === edge.targetHandle)?.type;
-      const isCopperEdge = srcType === "rj45" && tgtType === "rj45";
       setCtx({
         open: true,
         x: e.clientX,
         y: e.clientY,
         kind: "edge",
-        payload: { edge, isCopperEdge },
+        payload: { edge, srcPortType: srcType, tgtPortType: tgtType },
       });
     }, [chart.devicesOnChart]);
 
@@ -372,8 +375,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     }, [chart.id]); // intentionally omit `chart` — only reset on chart ID change
 
     const convertLineToEdge = useCallback((lineonChart: LineOnChart): Edge => {
-      const edgeColor = lineonChart.color
-        ?? (lineonChart.line.cableType ? CABLE_COLORS[lineonChart.line.cableType] : undefined);
+      const cableColor = lineonChart.line.cableType
+        ? allCableTypes.find((ct) => ct.name === lineonChart.line.cableType)?.defaultColor
+        : undefined;
+      const edgeColor = lineonChart.color ?? cableColor;
       return {
         id: lineonChart.line.id,
         source: lineonChart.line.sourcePort.deviceId,
@@ -385,7 +390,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         animated: false,
         style: edgeColor ? { stroke: edgeColor, strokeWidth: 2,color:lineonChart.color } : undefined,
       };
-    }, []);
+    }, [allCableTypes]);
 
     const [nodes, setNodes, onNodesChangeRF] = useNodesState<Node[]>([]);
     const [edges, setEdges, onEdgesChangeRF] = useEdgesState<Edge[]>([]);
@@ -2247,50 +2252,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             setZoneStyleDialogZoneId(payload.zoneId);
             break;
 
-          case EditorMenuListKeys.SET_CABLE_SINGLE:
-            applyChartChange((prev) => ({
-              ...prev,
-              linesOnChart: prev.linesOnChart.map((loc) =>
-                loc.line.id === payload.edge.id
-                  ? {
-                     ...loc,
-                     line:{...loc.line,cableType: 'single_mode',},
-                      color: CABLE_COLORS.single_mode }
-                  : loc
-              ),
-            } as Chart));
-            setEdges((eds) => eds.map((e) =>
-              e.id === payload.edge.id
-                ? { ...e, style: { color: CABLE_COLORS.single_mode, strokeWidth: 2 } }
-                : e
-            ));
-            break;
-
-          case EditorMenuListKeys.SET_CABLE_MULTIMODE:
-            applyChartChange((prev) => ({
-              ...prev,
-              linesOnChart: prev.linesOnChart.map((loc) =>
-                loc.line.id === payload.edge.id
-                  ? { ...loc,
-                    line:{...loc.line,cableType: "multimode"}, 
-                    color: CABLE_COLORS.multimode
-                  }
-                  : loc
-              ),
-            } as Chart));
-            setEdges((eds) => eds.map((e) =>
-              e.id === payload.edge.id
-                ? { ...e, style: { color: CABLE_COLORS.multimode, strokeWidth: 2 } }
-                : e
-            ));
-            break;
-
           case EditorMenuListKeys.SET_CABLE_NONE:
             applyChartChange((prev) => ({
               ...prev,
               linesOnChart: prev.linesOnChart.map((loc) =>
                 loc.line.id === payload.edge.id
-                  ? { ...loc, cableType: undefined, color: undefined }
+                  ? { ...loc, color: undefined, line: { ...loc.line, cableType: undefined } }
                   : loc
               ),
             } as Chart));
@@ -2301,7 +2268,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
           case EditorMenuListKeys.SET_LINE_COLOR: {
             const loc = chart.linesOnChart.find((l) => l.line.id === payload.edge.id);
-            const current = loc?.color ?? (loc?.line.cableType ? CABLE_COLORS[loc.line.cableType] : undefined) ?? "#ffffff";
+            const cableDefaultColor = loc?.line.cableType
+              ? allCableTypes.find((ct) => ct.name === loc.line.cableType)?.defaultColor
+              : undefined;
+            const current = loc?.color ?? cableDefaultColor ?? "#ffffff";
             setColorPickerLineValue(current);
             setColorPickerLineId(payload.edge.id);
             break;
@@ -2343,7 +2313,29 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.cloudsOnChart, chart.customElementsOnChart, chart.customElementEdgesOnChart, chart.linesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setEdges, setColorPickerNoteId, setColorPickerValue, setColorPickerLineId, setColorPickerLineValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.cloudsOnChart, chart.customElementsOnChart, chart.customElementEdgesOnChart, chart.linesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setEdges, setColorPickerNoteId, setColorPickerValue, setColorPickerLineId, setColorPickerLineValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud, allCableTypes]
+    );
+
+    const onCableTypeSelect = useCallback(
+      (cableType: CableTypeOption) => {
+        const edgeId = ctx?.payload?.edge?.id;
+        if (!edgeId) return;
+        applyChartChange((prev) => ({
+          ...prev,
+          linesOnChart: prev.linesOnChart.map((loc) =>
+            loc.line.id === edgeId
+              ? { ...loc, color: undefined, line: { ...loc.line, cableType: cableType.name } }
+              : loc
+          ),
+        } as Chart));
+        setEdges((eds) => eds.map((e) =>
+          e.id === edgeId
+            ? { ...e, style: { ...e.style, stroke: cableType.defaultColor } }
+            : e
+        ));
+        closeCtx();
+      },
+      [ctx, applyChartChange, setEdges, closeCtx]
     );
 
     const onSave = useCallback(
@@ -2461,10 +2453,90 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                   isRedoEnabled={canRedo}
                   isUndoEnabled={canUndo}
                   canConnectPaired={ctx.canConnectPaired ?? false}
-                  isCopperEdge={ctx.payload?.isCopperEdge ?? false}
+                  availableCableTypes={ctx.kind === "edge"
+                    ? allCableTypes.filter((ct) => {
+                        const srcType = ctx.payload?.srcPortType;
+                        const tgtType = ctx.payload?.tgtPortType;
+                        if (!srcType && !tgtType) return true;
+                        const names = ct.compatiblePortTypes?.map((p: { name: string }) => p.name) ?? [];
+                        if (srcType && !names.includes(srcType)) return false;
+                        if (tgtType && !names.includes(tgtType)) return false;
+                        return true;
+                      })
+                    : undefined}
+                  onCableTypeSelect={ctx.kind === "edge" ? onCableTypeSelect : undefined}
+                  onCreateCableType={ctx.kind === "edge" ? () => setCreateCableTypeOpen(true) : undefined}
                 />
               </div>
             </>
+          )}
+
+          {/* Quick-create cable type dialog */}
+          {createCableTypeOpen && (
+            <div className="fixed inset-0 z-[100000] flex items-center justify-center">
+              <div className="fixed inset-0 bg-black/40" onClick={() => setCreateCableTypeOpen(false)} />
+              <div
+                className={[
+                  "relative rounded-xl border shadow-2xl p-5 flex flex-col gap-4 min-w-[260px]",
+                  isDark
+                    ? "bg-slate-800 border-slate-600 text-slate-100"
+                    : "bg-white border-slate-200 text-slate-900",
+                ].join(" ")}
+              >
+                <p className="text-sm font-semibold">Create Cable Type</p>
+                <input
+                  className={[
+                    "w-full px-2 py-1 text-sm rounded border",
+                    isDark ? "bg-slate-700 border-slate-600 text-slate-100" : "border-slate-300",
+                  ].join(" ")}
+                  placeholder="Name"
+                  value={createCableTypeName}
+                  onChange={(e) => setCreateCableTypeName(e.target.value)}
+                  autoFocus
+                />
+                <div className="flex items-center gap-3">
+                  <label className="text-sm">Color</label>
+                  <input
+                    type="color"
+                    value={createCableTypeColor}
+                    onChange={(e) => setCreateCableTypeColor(e.target.value)}
+                    className="w-10 h-8 cursor-pointer rounded"
+                  />
+                  <span className="text-xs text-slate-400">{createCableTypeColor}</span>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    size="small"
+                    onClick={() => { setCreateCableTypeOpen(false); setCreateCableTypeName(""); setCreateCableTypeColor("#888888"); }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={!createCableTypeName.trim() || createCableTypeMut.isPending}
+                    onClick={async () => {
+                      if (!createCableTypeName.trim()) return;
+                      try {
+                        await createCableTypeMut.mutateAsync({
+                          name: createCableTypeName.trim(),
+                          defaultColor: createCableTypeColor,
+                          compatiblePortTypeIds: [],
+                        } as Parameters<typeof createCableTypeMut.mutateAsync>[0]);
+                        await queryClient.invalidateQueries({ queryKey: ["cableTypes"] });
+                        setCreateCableTypeOpen(false);
+                        setCreateCableTypeName("");
+                        setCreateCableTypeColor("#888888");
+                      } catch {
+                        // keep open on error
+                      }
+                    }}
+                  >
+                    {createCableTypeMut.isPending ? "Creating…" : "Create"}
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Zone style dialog */}

@@ -24,14 +24,22 @@ export const NOTE_SWATCH: Record<string, string> = {
   gray:   "#94a3b8",
 };
 
+export interface CableTypeOption {
+  id: string;
+  name: string;
+  defaultColor: string;
+}
+
 interface EditorMenuListProps {
   kind: CtxKind;
   onAction: (a: EditorMenuListKeys) => void;
   onNoteColorChange?: (colorKey: string) => void;
+  onCableTypeSelect?: (cableType: CableTypeOption) => void;
+  onCreateCableType?: () => void;
   isUndoEnabled: boolean;
   isRedoEnabled: boolean;
   canConnectPaired?: boolean;
-  isCopperEdge?: boolean;
+  availableCableTypes?: CableTypeOption[];
 }
 
 const MOVE_SUBMENU_ITEMS = [
@@ -45,10 +53,12 @@ export default function EditorMenuList({
   kind,
   onAction,
   onNoteColorChange,
+  onCableTypeSelect,
+  onCreateCableType,
   isRedoEnabled,
   isUndoEnabled,
   canConnectPaired = false,
-  isCopperEdge = false,
+  availableCableTypes = [],
 }: EditorMenuListProps) {
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
   const [colorSubmenuOpen, setColorSubmenuOpen] = useState(false);
@@ -251,16 +261,8 @@ export default function EditorMenuList({
         </li>
       )}
 
-      {/* Cable type submenu (edge) — hidden for copper/RJ45 lines */}
-      {kind === "edge" && isCopperEdge && (
-        <li>
-          <span className={`${btnClass} flex items-center gap-2 opacity-60 cursor-default`}>
-            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: "#F97316" }} />
-            Copper (RJ45)
-          </span>
-        </li>
-      )}
-      {kind === "edge" && !isCopperEdge && (
+      {/* Cable type submenu (edge) */}
+      {kind === "edge" && (
         <li
           className="relative"
           onMouseEnter={() => setCableSubmenuOpen(true)}
@@ -271,32 +273,34 @@ export default function EditorMenuList({
             <span className="ml-2 text-slate-400">›</span>
           </button>
           {cableSubmenuOpen && (
-            <ul className={submenuClass + " min-w-[140px]"}>
-              <li>
-                <button
-                  className={`${btnClass} flex items-center gap-2`}
-                  onClick={() => { onAction(EditorMenuListKeys.SET_CABLE_SINGLE); setCableSubmenuOpen(false); }}
-                >
-                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: "#EAB308" }} />
-                  Single Mode
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`${btnClass} flex items-center gap-2`}
-                  onClick={() => { onAction(EditorMenuListKeys.SET_CABLE_MULTIMODE); setCableSubmenuOpen(false); }}
-                >
-                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: "#14B8A6" }} />
-                  Multimode
-                </button>
-              </li>
-              <li><hr className={dividerClass} /></li>
+            <ul className={submenuClass + " min-w-[160px]"}>
+              {availableCableTypes.map((ct) => (
+                <li key={ct.id}>
+                  <button
+                    className={`${btnClass} flex items-center gap-2`}
+                    onClick={() => { onCableTypeSelect?.(ct); setCableSubmenuOpen(false); }}
+                  >
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: ct.defaultColor }} />
+                    {ct.name}
+                  </button>
+                </li>
+              ))}
+              {availableCableTypes.length > 0 && <li><hr className={dividerClass} /></li>}
               <li>
                 <button
                   className={btnClass}
                   onClick={() => { onAction(EditorMenuListKeys.SET_CABLE_NONE); setCableSubmenuOpen(false); }}
                 >
                   None
+                </button>
+              </li>
+              <li><hr className={dividerClass} /></li>
+              <li>
+                <button
+                  className={`${btnClass} flex items-center gap-2`}
+                  onClick={() => { onCreateCableType?.(); setCableSubmenuOpen(false); }}
+                >
+                  + Create new type
                 </button>
               </li>
             </ul>

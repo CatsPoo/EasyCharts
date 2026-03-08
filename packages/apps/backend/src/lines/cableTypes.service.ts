@@ -38,7 +38,7 @@ export class CableTypesService implements OnModuleInit {
           name: seed.name,
           defaultColor: seed.defaultColor,
           compatiblePortTypes: portTypes,
-          createdByUserId: "system",
+          createdByUserId: null,
         });
         await this.cableTypeRepo.save(entity);
       }

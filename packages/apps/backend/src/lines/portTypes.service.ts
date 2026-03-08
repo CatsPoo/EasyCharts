@@ -24,7 +24,7 @@ export class PortTypesService implements OnModuleInit {
     const count = await this.portTypeRepo.count();
     if (count === 0) {
       await this.portTypeRepo.save(
-        DEFAULT_PORT_TYPES.map((name) => this.portTypeRepo.create({ name, createdByUserId: "system" }))
+        DEFAULT_PORT_TYPES.map((name) => this.portTypeRepo.create({ name, createdByUserId: null }))
       );
     }
   }

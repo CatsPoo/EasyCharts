@@ -30,9 +30,18 @@
         }
       }
     },
-    "@nx/react",
-    "@nx/nest",
-    "@nx/node",
+    {
+      "plugin": "@nx/react",
+      "include": ["packages/apps/frontend/**/*", "packages/libs/**/*"]
+    },
+    {
+      "plugin": "@nx/nest",
+      "include": ["packages/apps/backend/**/*"]
+    },
+    {
+      "plugin": "@nx/node",
+      "include": ["packages/apps/backend/**/*", "packages/apps/backend-e2e/**/*"]
+    },
     {
       "plugin": "@nx/react/router-plugin",
       "options": {
@@ -42,7 +51,8 @@
         "watchDepsTargetName": "watch-deps",
         "buildDepsTargetName": "build-deps",
         "typecheckTargetName": "typecheck"
-      }
+      },
+      "include": ["packages/apps/frontend/**/*"]
     },
     {
       "plugin": "@nx/eslint/plugin",
@@ -62,7 +72,8 @@
         "typecheckTargetName": "typecheck",
         "buildDepsTargetName": "build-deps",
         "watchDepsTargetName": "watch-deps"
-      }
+      },
+      "include": ["packages/apps/frontend/**/*", "packages/libs/**/*"]
     },
     {
       "plugin": "@nx/jest/plugin",
@@ -79,7 +90,8 @@
         "previewTargetName": "preview",
         "buildDepsTargetName": "build-deps",
         "watchDepsTargetName": "watch-deps"
-      }
+      },
+      "include": ["packages/apps/backend/**/*"]
     }
   ],
   "targetDefaults": {
