@@ -31,6 +31,7 @@ interface EditorMenuListProps {
   isUndoEnabled: boolean;
   isRedoEnabled: boolean;
   canConnectPaired?: boolean;
+  isCopperEdge?: boolean;
 }
 
 const MOVE_SUBMENU_ITEMS = [
@@ -47,10 +48,11 @@ export default function EditorMenuList({
   isRedoEnabled,
   isUndoEnabled,
   canConnectPaired = false,
+  isCopperEdge = false,
 }: EditorMenuListProps) {
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
   const [colorSubmenuOpen, setColorSubmenuOpen] = useState(false);
-  const [fiberSubmenuOpen, setFiberSubmenuOpen] = useState(false);
+  const [cableSubmenuOpen, setCableSubmenuOpen] = useState(false);
   const { isDark } = useThemeMode();
   const colorMenuRef = useRef<HTMLLIElement>(null);
 
@@ -109,6 +111,10 @@ export default function EditorMenuList({
     zone: [
       { key: EditorMenuListKeys.EDIT_ZONE_STYLE, label: "Edit Style..." },
       { key: EditorMenuListKeys.DELETE_ZONE, label: "Delete Zone" },
+    ],
+    customElement: [
+      { key: EditorMenuListKeys.EDIT_CUSTOM_ELEMENT_TEXT, label: "Edit Text..." },
+      { key: EditorMenuListKeys.REMOVE_CUSTOM_ELEMENT_FROM_CHART, label: "Remove From Chart" },
     ],
   };
 
@@ -245,23 +251,31 @@ export default function EditorMenuList({
         </li>
       )}
 
-      {/* Fiber type submenu (edge) */}
-      {kind === "edge" && (
+      {/* Cable type submenu (edge) — hidden for copper/RJ45 lines */}
+      {kind === "edge" && isCopperEdge && (
+        <li>
+          <span className={`${btnClass} flex items-center gap-2 opacity-60 cursor-default`}>
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: "#F97316" }} />
+            Copper (RJ45)
+          </span>
+        </li>
+      )}
+      {kind === "edge" && !isCopperEdge && (
         <li
           className="relative"
-          onMouseEnter={() => setFiberSubmenuOpen(true)}
-          onMouseLeave={() => setFiberSubmenuOpen(false)}
+          onMouseEnter={() => setCableSubmenuOpen(true)}
+          onMouseLeave={() => setCableSubmenuOpen(false)}
         >
           <button className={`${btnClass} flex justify-between items-center`}>
-            Fiber Type...
+            Cable Type...
             <span className="ml-2 text-slate-400">›</span>
           </button>
-          {fiberSubmenuOpen && (
+          {cableSubmenuOpen && (
             <ul className={submenuClass + " min-w-[140px]"}>
               <li>
                 <button
                   className={`${btnClass} flex items-center gap-2`}
-                  onClick={() => { onAction(EditorMenuListKeys.SET_FIBER_SINGLE); setFiberSubmenuOpen(false); }}
+                  onClick={() => { onAction(EditorMenuListKeys.SET_CABLE_SINGLE); setCableSubmenuOpen(false); }}
                 >
                   <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: "#EAB308" }} />
                   Single Mode
@@ -270,7 +284,7 @@ export default function EditorMenuList({
               <li>
                 <button
                   className={`${btnClass} flex items-center gap-2`}
-                  onClick={() => { onAction(EditorMenuListKeys.SET_FIBER_MULTIMODE); setFiberSubmenuOpen(false); }}
+                  onClick={() => { onAction(EditorMenuListKeys.SET_CABLE_MULTIMODE); setCableSubmenuOpen(false); }}
                 >
                   <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: "#14B8A6" }} />
                   Multimode
@@ -280,7 +294,7 @@ export default function EditorMenuList({
               <li>
                 <button
                   className={btnClass}
-                  onClick={() => { onAction(EditorMenuListKeys.SET_FIBER_NONE); setFiberSubmenuOpen(false); }}
+                  onClick={() => { onAction(EditorMenuListKeys.SET_CABLE_NONE); setCableSubmenuOpen(false); }}
                 >
                   None
                 </button>

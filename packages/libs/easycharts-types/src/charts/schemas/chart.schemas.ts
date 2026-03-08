@@ -7,6 +7,7 @@ import { LineOnChartSchema } from "./lineOnChart.schemas.js";
 import { NoteOnChartSchema } from "./noteOnChart.schemas.js";
 import { ZoneOnChartSchema } from "./zoneOnChart.schemas.js";
 import { CloudOnChartSchema } from "../../clouds/schemas/cloudOnChart.schemas.js";
+import { CustomElementOnChartSchema, CustomElementEdgeOnChartSchema } from "../../customElements/schemas/customElementOnChart.schemas.js";
 
 
 
@@ -26,6 +27,8 @@ const ChartBaseSchema = z.object({
   notesOnChart: z.array(NoteOnChartSchema).optional().default([]),
   zonesOnChart: z.array(ZoneOnChartSchema).optional().default([]),
   cloudsOnChart: z.array(CloudOnChartSchema).optional().default([]),
+  customElementsOnChart: z.array(CustomElementOnChartSchema).optional().default([]),
+  customElementEdgesOnChart: z.array(CustomElementEdgeOnChartSchema).optional().default([]),
   lock: ChartLockSchema.optional().nullable().default(null),
 });
 export const ChartSchema = ChartBaseSchema.extend(IdentifiableSchema.shape).extend(AuditableSchema.shape);

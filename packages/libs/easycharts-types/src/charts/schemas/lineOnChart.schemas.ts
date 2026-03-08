@@ -10,13 +10,13 @@ export const LineTypeEnum = z.enum([
   "simplebezier",
 ]);
 
-export const FiberTypeEnum = z.enum(["single_mode", "multimode"]);
+export const CableTypeEnum = z.enum(["single_mode", "multimode", "copper"]);
 
 export const LineOnChartSchema = z.object({
   chartId: z.string().uuid(),
   line: LineSchema,
   type:LineTypeEnum,
   label: z.string().min(1).default(""),
-  fiberType: FiberTypeEnum.optional(),
+  cableType: CableTypeEnum.optional(),
   color: z.string().optional(),
 });

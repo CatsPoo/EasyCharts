@@ -29,8 +29,10 @@ export enum  EditorMenuListKeys{
     DELETE_CLOUD = 'delete_cloud',
     DELETE_ZONE = 'delete_zone',
     EDIT_ZONE_STYLE = 'edit_zone_style',
-    SET_FIBER_SINGLE = 'set_fiber_single',
-    SET_FIBER_MULTIMODE = 'set_fiber_multimode',
-    SET_FIBER_NONE = 'set_fiber_none',
+    SET_CABLE_SINGLE = 'set_cable_single',
+    SET_CABLE_MULTIMODE = 'set_cable_multimode',
+    SET_CABLE_NONE = 'set_cable_none',
     SET_LINE_COLOR = 'set_line_color',
+    EDIT_CUSTOM_ELEMENT_TEXT = 'edit_custom_element_text',
+    REMOVE_CUSTOM_ELEMENT_FROM_CHART = 'remove_custom_element_from_chart',
 }
