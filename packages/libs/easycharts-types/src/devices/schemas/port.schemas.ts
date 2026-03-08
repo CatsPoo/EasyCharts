@@ -1,11 +1,10 @@
 import { AuditableSchema, IdentifiableSchema } from "../../generic.schema.js";
 import z from "zod";
-import { PortTypeValues } from "../types/port.types.js";
 
 export const PortBaseSchema = z.object({
   name: z.string().min(1),
   deviceId: z.uuid(),
-  type: z.enum(PortTypeValues),
+  type: z.string().min(1),
   inUse: z.boolean().default(false),
   connectedPortId: z.string().uuid().optional(),
 });
