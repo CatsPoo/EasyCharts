@@ -17,7 +17,8 @@ import {
   type NoteOnChart,
   type ZoneOnChart,
   type Port,
-  type Side
+  type Side,
+  type Bond
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -78,7 +79,7 @@ import { PortsEditorDialog } from "./PortsEditorDialog";
 import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
-import type { DeleteSets } from "./interfaces/DeleteSets.interfaces";
+import type { DeleteSets } from "./interfaces/deleteSets.interfaces";
 import type { EditLineDialogFormResponse } from "./interfaces/editLineDialogForm.interfaces";
 import type { CtxState } from "./interfaces/ctsMenu.interfaces";
 
@@ -381,7 +382,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const convertLineToEdge = useCallback((lineonChart: LineOnChart): Edge => {
       const edgeColor = lineonChart.color
-        ?? (lineonChart.cableType ? CABLE_COLORS[lineonChart.cableType] : undefined);
+        ?? (lineonChart.line.cableType ? CABLE_COLORS[lineonChart.line.cableType] : undefined);
       return {
         id: lineonChart.line.id,
         source: lineonChart.line.sourcePort.deviceId,
@@ -391,7 +392,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         label: lineonChart.label,
         type: lineonChart.type,
         animated: false,
-        style: edgeColor ? { stroke: edgeColor, strokeWidth: 2 } : undefined,
+        style: edgeColor ? { stroke: edgeColor, strokeWidth: 2,color:lineonChart.color } : undefined,
       };
     }, []);
 
@@ -1727,10 +1728,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             id: newId,
             sourcePort,
             targetPort,
+            cableType: sourcePort.type === "rj45" && targetPort.type === "rj45" ? "copper" : undefined,
           } as Line,
           type: "step",
           label: "",
-          cableType: sourcePort.type === "rj45" && targetPort.type === "rj45" ? "copper" : undefined,
+          
         };
         sourcePort.inUse = true;
         targetPort.inUse = true;
@@ -2317,7 +2319,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
           case EditorMenuListKeys.SET_LINE_COLOR: {
             const loc = chart.linesOnChart.find((l) => l.line.id === payload.edge.id);
-            const current = loc?.color ?? (loc?.cableType ? CABLE_COLORS[loc.cableType] : undefined) ?? "#ffffff";
+            const current = loc?.color ?? (loc?.line.cableType ? CABLE_COLORS[loc.line.cableType] : undefined) ?? "#ffffff";
             setColorPickerLineValue(current);
             setColorPickerLineId(payload.edge.id);
             break;

@@ -2,6 +2,7 @@ import { AuditableSchema } from "../../generic.schema.js";
 import { PortSchema } from "../../devices/index.js";
 import z from "zod";
 
+export const CableTypeEnum = z.enum(["single_mode", "multimode", "copper"]);
 
 export const LineCreateSchema = z.object({
   id: z.uuid().optional(),
@@ -15,5 +16,6 @@ export const LineSchema = z.object({
   id: z.uuid(),
   sourcePort: PortSchema,
   targetPort: PortSchema,
+  cableType: CableTypeEnum.optional(),
 
 }).extend(AuditableSchema.shape);
