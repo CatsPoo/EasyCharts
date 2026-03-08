@@ -4,27 +4,31 @@ import {
   HttpStatus,
   Injectable,
   NotFoundException,
-  OnModuleInit,
+  OnApplicationBootstrap,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { PortTypeEntity } from "./entities/portType.entity";
+import { UsersService } from "../auth/user.service";
 
 const DEFAULT_PORT_TYPES = ["rj45", "sfp", "qsfp"];
 
 @Injectable()
-export class PortTypesService implements OnModuleInit {
+export class PortTypesService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(PortTypeEntity)
     private readonly portTypeRepo: Repository<PortTypeEntity>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly usersService: UsersService,
   ) {}
 
-  async onModuleInit() {
+  async onApplicationBootstrap() {
     const count = await this.portTypeRepo.count();
     if (count === 0) {
+      const users = await this.usersService.getAllUsers();
+      const adminId = users[0]?.id ?? null;
       await this.portTypeRepo.save(
-        DEFAULT_PORT_TYPES.map((name) => this.portTypeRepo.create({ name, createdByUserId: null }))
+        DEFAULT_PORT_TYPES.map((name) => this.portTypeRepo.create({ name, createdByUserId: adminId }))
       );
     }
   }

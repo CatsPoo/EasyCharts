@@ -4,12 +4,13 @@ import {
   HttpStatus,
   Injectable,
   NotFoundException,
-  OnModuleInit,
+  OnApplicationBootstrap,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, In, Repository } from "typeorm";
 import { CableTypeEntity } from "./entities/cableType.entity";
 import { PortTypeEntity } from "./entities/portType.entity";
+import { UsersService } from "../auth/user.service";
 
 type SeedEntry = { name: string; defaultColor: string; portTypeNames: string[] };
 
@@ -20,25 +21,28 @@ const DEFAULT_CABLE_TYPES: SeedEntry[] = [
 ];
 
 @Injectable()
-export class CableTypesService implements OnModuleInit {
+export class CableTypesService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(CableTypeEntity)
     private readonly cableTypeRepo: Repository<CableTypeEntity>,
     @InjectRepository(PortTypeEntity)
     private readonly portTypeRepo: Repository<PortTypeEntity>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly usersService: UsersService,
   ) {}
 
-  async onModuleInit() {
+  async onApplicationBootstrap() {
     const count = await this.cableTypeRepo.count();
     if (count === 0) {
+      const users = await this.usersService.getAllUsers();
+      const adminId = users[0]?.id ?? null;
       for (const seed of DEFAULT_CABLE_TYPES) {
         const portTypes = await this.portTypeRepo.findBy({ name: In(seed.portTypeNames) });
         const entity = this.cableTypeRepo.create({
           name: seed.name,
           defaultColor: seed.defaultColor,
           compatiblePortTypes: portTypes,
-          createdByUserId: null,
+          createdByUserId: adminId,
         });
         await this.cableTypeRepo.save(entity);
       }

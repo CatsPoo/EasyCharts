@@ -4,6 +4,7 @@ import { getRepositoryToken } from "@nestjs/typeorm";
 import { DataSource } from "typeorm";
 import { PortTypeEntity } from "./entities/portType.entity";
 import { PortTypesService } from "./portTypes.service";
+import { UsersService } from "../auth/user.service";
 
 const makePortType = (overrides: Partial<PortTypeEntity> = {}): PortTypeEntity =>
   ({
@@ -11,7 +12,7 @@ const makePortType = (overrides: Partial<PortTypeEntity> = {}): PortTypeEntity =
     name: "rj45",
     createdAt: new Date("2025-01-01"),
     updatedAt: new Date("2025-01-01"),
-    createdByUserId: "system",
+    createdByUserId: "admin-uuid",
     updatedByUserId: null,
     ...overrides,
   } as PortTypeEntity);
@@ -32,14 +33,17 @@ describe("PortTypesService", () => {
   };
 
   const mockDataSource = { query: jest.fn() };
+  const mockUsersService = { getAllUsers: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockUsersService.getAllUsers.mockResolvedValue([{ id: "admin-uuid" }]);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PortTypesService,
         { provide: getRepositoryToken(PortTypeEntity), useValue: mockRepo },
         { provide: DataSource, useValue: mockDataSource },
+        { provide: UsersService, useValue: mockUsersService },
       ],
     }).compile();
 
@@ -48,15 +52,15 @@ describe("PortTypesService", () => {
     dataSource = module.get(DataSource);
   });
 
-  // ── onModuleInit ──────────────────────────────────────────────────────────
+  // ── onApplicationBootstrap ──────────────────────────────────────────────────────────
 
-  describe("onModuleInit", () => {
+  describe("onApplicationBootstrap", () => {
     it("seeds default port types when table is empty", async () => {
       repo.count.mockResolvedValue(0);
       repo.create.mockImplementation((dto: any) => dto);
       repo.save.mockResolvedValue([]);
 
-      await service.onModuleInit();
+      await service.onApplicationBootstrap();
 
       expect(repo.create).toHaveBeenCalledTimes(3);
       expect(repo.save).toHaveBeenCalledWith(
@@ -71,7 +75,7 @@ describe("PortTypesService", () => {
     it("skips seeding when table already has rows", async () => {
       repo.count.mockResolvedValue(3);
 
-      await service.onModuleInit();
+      await service.onApplicationBootstrap();
 
       expect(repo.save).not.toHaveBeenCalled();
     });

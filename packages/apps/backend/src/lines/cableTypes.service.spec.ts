@@ -5,9 +5,10 @@ import { DataSource } from "typeorm";
 import { CableTypeEntity } from "./entities/cableType.entity";
 import { PortTypeEntity } from "./entities/portType.entity";
 import { CableTypesService } from "./cableTypes.service";
+import { UsersService } from "../auth/user.service";
 
 const makePortType = (overrides: Partial<PortTypeEntity> = {}): PortTypeEntity =>
-  ({ id: "pt-1", name: "rj45", createdByUserId: "system", updatedByUserId: null, createdAt: new Date(), updatedAt: new Date(), ...overrides } as PortTypeEntity);
+  ({ id: "pt-1", name: "rj45", createdByUserId: "admin-uuid", updatedByUserId: null, createdAt: new Date(), updatedAt: new Date(), ...overrides } as PortTypeEntity);
 
 const makeCableType = (overrides: Partial<CableTypeEntity> = {}): CableTypeEntity =>
   ({
@@ -15,7 +16,7 @@ const makeCableType = (overrides: Partial<CableTypeEntity> = {}): CableTypeEntit
     name: "copper",
     defaultColor: "#F97316",
     compatiblePortTypes: [makePortType()],
-    createdByUserId: "system",
+    createdByUserId: "admin-uuid",
     updatedByUserId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -42,15 +43,18 @@ describe("CableTypesService", () => {
   };
 
   const mockDataSource = { query: jest.fn() };
+  const mockUsersService = { getAllUsers: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockUsersService.getAllUsers.mockResolvedValue([{ id: "admin-uuid" }]);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CableTypesService,
         { provide: getRepositoryToken(CableTypeEntity), useValue: mockCableRepo },
         { provide: getRepositoryToken(PortTypeEntity), useValue: mockPortTypeRepo },
         { provide: DataSource, useValue: mockDataSource },
+        { provide: UsersService, useValue: mockUsersService },
       ],
     }).compile();
 
@@ -60,16 +64,16 @@ describe("CableTypesService", () => {
     dataSource = module.get(DataSource);
   });
 
-  // ── onModuleInit ──────────────────────────────────────────────────────────
+  // ── onApplicationBootstrap ──────────────────────────────────────────────────────────
 
-  describe("onModuleInit", () => {
+  describe("onApplicationBootstrap", () => {
     it("seeds default cable types when table is empty", async () => {
       mockCableRepo.count.mockResolvedValue(0);
       mockPortTypeRepo.findBy.mockResolvedValue([makePortType()]);
       mockCableRepo.create.mockImplementation((dto: any) => dto);
       mockCableRepo.save.mockResolvedValue({});
 
-      await service.onModuleInit();
+      await service.onApplicationBootstrap();
 
       expect(mockCableRepo.save).toHaveBeenCalledTimes(3);
     });
@@ -81,7 +85,7 @@ describe("CableTypesService", () => {
       mockCableRepo.create.mockImplementation((dto: any) => dto);
       mockCableRepo.save.mockResolvedValue({});
 
-      await service.onModuleInit();
+      await service.onApplicationBootstrap();
 
       const firstCall = mockCableRepo.create.mock.calls[0][0];
       expect(firstCall.name).toBe("copper");
@@ -91,7 +95,7 @@ describe("CableTypesService", () => {
     it("skips seeding when table already has rows", async () => {
       mockCableRepo.count.mockResolvedValue(3);
 
-      await service.onModuleInit();
+      await service.onApplicationBootstrap();
 
       expect(mockCableRepo.save).not.toHaveBeenCalled();
     });
