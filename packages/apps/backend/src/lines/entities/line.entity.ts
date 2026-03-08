@@ -50,6 +50,9 @@ export class LineEntity extends AuditableEntity{
   @Column({ name: "bond_id", type: "uuid", nullable: true })
   bondId?: string | null;
 
+  @Column({ type: "varchar", length: 20, nullable: true, default: null })
+  cableType!: string | null;
+
   @ManyToOne(() => BondEntity, (bond) => bond.members, { onDelete: "SET NULL" })
   @JoinColumn({ name: "bond_id" })
   bond?: BondEntity | null;

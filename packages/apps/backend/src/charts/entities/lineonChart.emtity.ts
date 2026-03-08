@@ -43,9 +43,6 @@ export class LineOnChartEntity {
   @Column({ type: "varchar", length: 20 })
   type!: LineType;
 
-  @Column({ type: "varchar", length: 20, nullable: true, default: null })
-  fiberType!: string | null;
-
   @Column({ type: "varchar", length: 50, nullable: true, default: null })
   color!: string | null;
 

@@ -18,7 +18,8 @@ import {
   type ZoneOnChart,
   type Port,
   type Side,
-  type Bond
+  type Bond,
+  CableTypeEnum
 } from "@easy-charts/easycharts-types";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -74,7 +75,6 @@ import NoteNode, { type NoteNodeData } from "./NoteNode";
 import ZoneNode, { type ZoneNodeData } from "./ZoneNode";
 import { EditZoneStyleDialog, type ZoneStyleValues } from "./EditZoneStyleDialog";
 import CloudNode, { type CloudNodeData } from "./CloudNode";
-import CustomElementNode, { type CustomElementNodeData } from "./CustomElementNode";
 import { PortsEditorDialog } from "./PortsEditorDialog";
 import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
@@ -113,8 +113,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [editCloudTarget, setEditCloudTarget] = useState<Cloud | null>(null);
     const [createDeviceOpen, setCreateDeviceOpen] = useState(false);
     const [createCloudOpen, setCreateCloudOpen] = useState(false);
-    const [createCustomElementOpen, setCreateCustomElementOpen] = useState(false);
-    const [editCustomElementTextTarget, setEditCustomElementTextTarget] = useState<{ id: string; currentText: string } | null>(null);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
     const [portTypeMismatch, setPortTypeMismatch] = useState(false);
@@ -189,7 +187,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const createDeviceMut = useCreateAsset("devices");
     const createCloudMut = useCreateAsset("clouds");
     const deleteCloudMut = useDeleteAsset("clouds");
-    const createCustomElementMut = useCreateAsset("customElements");
     const { project, fitView } = useReactFlow();
     const {devicePos} = useDevices({chart})
     const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,applyChartChange})
@@ -205,7 +202,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         note: NoteNode,
         zone: ZoneNode,
         cloud: CloudNode,
-        customElement: CustomElementNode,
       } as any),
       []
     );
@@ -284,11 +280,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       if (node.type === "cloud") {
         const coc = (chart.cloudsOnChart ?? []).find((c) => c.cloudId === node.id);
         setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "cloud", payload: { cloudId: node.id, cloudName: coc?.cloud.name ?? "" } });
-        return;
-      }
-      if (node.type === "customElement") {
-        const ceoc = (chart.customElementsOnChart ?? []).find((c) => c.id === node.id);
-        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "customElement", payload: { instanceId: node.id, currentText: ceoc?.freeText ?? "" } });
         return;
       }
       if (node.type === "bridge") {
@@ -1375,20 +1366,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [editMode, onRemoveCloud, updateCloudSize]
     );
 
-    const convertCustomElementToNode = useCallback(
-      (item: CustomElementOnChart): Node => ({
-        id: item.id,
-        type: "customElement",
-        position: item.position,
-        style: { width: item.size?.width ?? 120, height: item.size?.height ?? 120 },
-        data: {
-          item,
-          editMode,
-        } as CustomElementNodeData,
-      }),
-      [editMode]
-    );
-
     const { data: availableDevicesResponse } = useListAssets("devices", {
       page: 0,
       pageSize: 100000,
@@ -1603,10 +1580,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         const noteNodes: Node[] = (chart.notesOnChart ?? []).map(convertNoteToNode);
         const zoneNodes: Node[] = (chart.zonesOnChart ?? []).map(convertZoneToNode);
         const cloudNodes: Node[] = (chart.cloudsOnChart ?? []).map(convertCloudToNode);
-        const customElementNodes: Node[] = (chart.customElementsOnChart ?? []).map(convertCustomElementToNode);
-        return [...zoneNodes, ...devicesNodes, ...bridgeNodes, ...noteNodes, ...cloudNodes, ...customElementNodes];
+        return [...zoneNodes, ...devicesNodes, ...bridgeNodes, ...noteNodes, ...cloudNodes];
       });
-    }, [buildBridgeView, chart.bondsOnChart, chart.cloudsOnChart, chart.customElementsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, chart.zonesOnChart, convertCloudToNode, convertCustomElementToNode, convertDeviceToNode, convertNoteToNode, convertZoneToNode, setNodes]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.cloudsOnChart, chart.customElementsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, chart.zonesOnChart, convertCloudToNode, convertDeviceToNode, convertNoteToNode, convertZoneToNode, setNodes]);
 
     useEffect(() => {
       const { displayEdges } = buildBridgeView(chart.bondsOnChart, chart.linesOnChart);
@@ -2276,13 +2252,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               ...prev,
               linesOnChart: prev.linesOnChart.map((loc) =>
                 loc.line.id === payload.edge.id
-                  ? { ...loc, cableType: "single_mode", color: undefined }
+                  ? {
+                     ...loc,
+                     line:{...loc.line,cableType: 'single_mode',},
+                      color: CABLE_COLORS.single_mode }
                   : loc
               ),
             } as Chart));
             setEdges((eds) => eds.map((e) =>
               e.id === payload.edge.id
-                ? { ...e, style: { stroke: CABLE_COLORS.single_mode, strokeWidth: 2 } }
+                ? { ...e, style: { color: CABLE_COLORS.single_mode, strokeWidth: 2 } }
                 : e
             ));
             break;
@@ -2292,13 +2271,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               ...prev,
               linesOnChart: prev.linesOnChart.map((loc) =>
                 loc.line.id === payload.edge.id
-                  ? { ...loc, cableType: "multimode", color: undefined }
+                  ? { ...loc,
+                    line:{...loc.line,cableType: "multimode"}, 
+                    color: CABLE_COLORS.multimode
+                  }
                   : loc
               ),
             } as Chart));
             setEdges((eds) => eds.map((e) =>
               e.id === payload.edge.id
-                ? { ...e, style: { stroke: CABLE_COLORS.multimode, strokeWidth: 2 } }
+                ? { ...e, style: { color: CABLE_COLORS.multimode, strokeWidth: 2 } }
                 : e
             ));
             break;
