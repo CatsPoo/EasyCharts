@@ -1,5 +1,6 @@
 import type { AssetKind, Device, Model } from "@easy-charts/easycharts-types";
-import type { GridColDef } from "@mui/x-data-grid";
+import type { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
+import { Box, Chip } from "@mui/material";
 
 export const columns: Record<AssetKind, GridColDef[]> = {
   clouds: [
@@ -46,6 +47,33 @@ export const columns: Record<AssetKind, GridColDef[]> = {
       headerName: "Vendor",
       width: 160,
       valueGetter: (_value, row: Model) => row.vendor?.name,
+    },
+  ],
+  portTypes: [{ field: "name", headerName: "Name", flex: 1 }],
+  cableTypes: [
+    { field: "name", headerName: "Name", flex: 1 },
+    {
+      field: "defaultColor",
+      headerName: "Color",
+      width: 100,
+      renderCell: (params: GridRenderCellParams) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ width: 18, height: 18, borderRadius: "50%", bgcolor: params.value, border: "1px solid #ccc" }} />
+          {params.value}
+        </Box>
+      ),
+    },
+    {
+      field: "compatiblePortTypes",
+      headerName: "Compatible Port Types",
+      flex: 1,
+      renderCell: (params: GridRenderCellParams) => (
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, py: 0.5 }}>
+          {(params.value ?? []).map((pt: any) => (
+            <Chip key={pt.id} label={pt.name} size="small" />
+          ))}
+        </Box>
+      ),
     },
   ],
 };

@@ -2,20 +2,80 @@
 import { type AssetKind, type AssetMap } from "@easy-charts/easycharts-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormHelperText,
+  InputLabel,
+  MenuItem,
+  OutlinedInput,
+  Select,
   Stack,
   TextField,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { useCreateAsset } from "../../hooks/assetsHooks";
+import { useCreateAsset, useListAssets } from "../../hooks/assetsHooks";
 import z from "zod";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
 import { DevicePortsTable } from "./DevicePortsTable";
+
+function CableTypeFields({ register, errors, control, setValue }: { register: any; errors: any; control: any; setValue: any }) {
+  const { data: portTypesData } = useListAssets("portTypes");
+  const portTypes = portTypesData?.rows ?? [];
+  const selected: string[] = useWatch({ control, name: "compatiblePortTypeIds" }) ?? [];
+
+  return (
+    <>
+      <TextField
+        label="Default Color"
+        type="color"
+        size="small"
+        {...register("defaultColor")}
+        helperText={(errors as any).defaultColor?.message as string}
+        error={!!(errors as any).defaultColor}
+        sx={{ width: 140 }}
+      />
+      <Box>
+        <InputLabel shrink>Compatible Port Types</InputLabel>
+        <Select
+          multiple
+          displayEmpty
+          value={selected}
+          onChange={(e) => setValue("compatiblePortTypeIds", e.target.value as string[], { shouldValidate: true })}
+          input={<OutlinedInput size="small" fullWidth />}
+          renderValue={(vals: string[]) =>
+            vals.length === 0 ? (
+              <span style={{ color: "#aaa" }}>Select port types...</span>
+            ) : (
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                {vals.map((id) => {
+                  const pt = portTypes.find((p: any) => p.id === id);
+                  return <Chip key={id} label={pt?.name ?? id} size="small" />;
+                })}
+              </Box>
+            )
+          }
+          size="small"
+          fullWidth
+        >
+          {portTypes.map((pt: any) => (
+            <MenuItem key={pt.id} value={pt.id}>
+              {pt.name}
+            </MenuItem>
+          ))}
+        </Select>
+        {(errors as any).compatiblePortTypeIds && (
+          <FormHelperText error>{(errors as any).compatiblePortTypeIds.message}</FormHelperText>
+        )}
+      </Box>
+    </>
+  );
+}
 
 const schemas = {
   clouds: z.object({
@@ -32,7 +92,7 @@ const schemas = {
     modelId: z.string().min(1),
     ipAddress: z.ipv4()
   }),
-    types: z.object({
+  types: z.object({
     name: z.string().min(1),
   }),
   models: z.object({
@@ -41,6 +101,14 @@ const schemas = {
   }),
   vendors: z.object({
     name: z.string().min(1),
+  }),
+  portTypes: z.object({
+    name: z.string().min(1).max(50),
+  }),
+  cableTypes: z.object({
+    name: z.string().min(1).max(50),
+    defaultColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color"),
+    compatiblePortTypeIds: z.array(z.string()).min(0),
   }),
 } as const;
 type Props<K extends AssetKind> = {
@@ -105,6 +173,10 @@ export function AssetForm<K extends AssetKind>({
       d.modelId = d.modelId ?? d.model?.id ?? "";
       d.vendorId = d.vendorId ?? d.model?.vendor?.id ?? "";
       delete d.model; // avoid sending nested object back
+    }
+    if (kind === "cableTypes") {
+      d.compatiblePortTypeIds = d.compatiblePortTypeIds ?? d.compatiblePortTypes?.map((pt: any) => pt.id) ?? [];
+      delete d.compatiblePortTypes;
     }
     return d;
   }
@@ -222,11 +294,19 @@ export function AssetForm<K extends AssetKind>({
             {kind === "models" && (
               <AssetsSelectionList
                 fetchKind="vendors"
-                name="vendorId" // field name in your models schema/DTO
+                name="vendorId"
                 label="Vendor"
                 control={control}
                 errors={errors}
                 onQuickCreate={() => setQuickKind("vendors")}
+              />
+            )}
+            {kind === "cableTypes" && (
+              <CableTypeFields
+                register={register}
+                errors={errors}
+                control={control}
+                setValue={setValue}
               />
             )}
           </Stack>

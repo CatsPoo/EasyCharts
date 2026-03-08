@@ -118,7 +118,7 @@ export default function AssetTab() {
       {
         field: "__actions",
         headerName: "",
-        width: kind === "devices" ? 270 : 210,
+        width: kind === "devices" ? 270 : kind === "cableTypes" ? 240 : 210,
         sortable: false,
         renderCell: (params: any) => (
           <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
@@ -182,6 +182,8 @@ export default function AssetTab() {
         <Tab label="Models" value="models" />
         <Tab label="Clouds" value="clouds" />
         <Tab label="Custom Elements" value="customElements" />
+        <Tab label="Port Types" value="portTypes" />
+        <Tab label="Cable Types" value="cableTypes" />
       </Tabs>
 
       <Toolbar sx={{ gap: 1 }}>
