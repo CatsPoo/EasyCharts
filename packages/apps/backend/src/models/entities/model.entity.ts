@@ -1,6 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, UpdateDateColumn, CreateDateColumn, type Relation } from 'typeorm';
-import { VendorEntity } from './vendor.entity';
-import { DeviceEntity } from './device.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, type Relation } from 'typeorm';
+import { VendorEntity } from '../../vendors/entities/vendor.entity';
+import { DeviceEntity } from '../../devices/entities/device.entity';
 import { AuditableEntity } from '../../auth/entities/auditableEntity.culumns';
 
 @Entity({ name: "models" })

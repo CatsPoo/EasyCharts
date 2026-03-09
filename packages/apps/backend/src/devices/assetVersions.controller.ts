@@ -21,8 +21,8 @@ import { RequirePermissions } from "../auth/decorators/permissions.decorator";
 import { AssetVersionsService } from "./assetVersions.service";
 import { DevicesService } from "./devices.service";
 import { OverlayElementsService } from "../overlayElements/overlayElements.service";
-import { ModelsService } from "./model.service";
-import { VendorsService } from "./vendors.service";
+import { ModelsService } from "../models/model.service";
+import { VendorsService } from "../vendors/vendors.service";
 import { DeviceTypeService } from "./deviceType.service";
 
 const ALLOWED_KINDS = ["devices", "types", "models", "vendors", "overlayElements"] as const;

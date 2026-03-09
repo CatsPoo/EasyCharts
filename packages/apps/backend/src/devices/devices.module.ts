@@ -3,13 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DevicesController } from './devices.controller';
 import { DevicesService } from './devices.service';
 import { DeviceEntity } from './entities/device.entity';
-import { ModelEntity } from './entities/model.entity';
-import { VendorEntity } from "./entities/vendor.entity";
-import { ModelsService } from './model.service';
-import { ModelsController } from './models.controller';
-import { VendorsController } from './vendors.controller';
-import { VendorsService } from './vendors.service';
 import { PortEntity } from './entities/port.entity';
+import { ModelEntity } from '../models/entities/model.entity';
 import { PortsController } from './ports.controller';
 import { PortsService } from './ports.service';
 import { AuthModule } from '../auth/auth.module';
@@ -20,12 +15,13 @@ import { AssetVersionEntity } from './entities/assetVersion.entity';
 import { AssetVersionsService } from './assetVersions.service';
 import { AssetVersionsController } from './assetVersions.controller';
 import { OverlayElementsModule } from '../overlayElements/overlayElements.module';
+import { ModelsModule } from '../models/models.module';
+import { VendorsModule } from '../vendors/vendors.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       DeviceEntity,
-      VendorEntity,
       ModelEntity,
       PortEntity,
       DeviceTypeEntity,
@@ -33,16 +29,16 @@ import { OverlayElementsModule } from '../overlayElements/overlayElements.module
     ]),
     AuthModule,
     OverlayElementsModule,
+    ModelsModule,
+    VendorsModule,
   ],
   controllers: [
     DevicesController,
-    VendorsController,
-    ModelsController,
     PortsController,
     DeviceTypeController,
     AssetVersionsController,
   ],
-  providers: [DevicesService, VendorsService, ModelsService, PortsService, DeviceTypeService, AssetVersionsService],
-  exports: [DevicesService, VendorsService, ModelsService, PortsService, DeviceTypeService, AssetVersionsService],
+  providers: [DevicesService, PortsService, DeviceTypeService, AssetVersionsService],
+  exports: [DevicesService, PortsService, DeviceTypeService, AssetVersionsService, ModelsModule, VendorsModule],
 })
 export class DevicesModule {}

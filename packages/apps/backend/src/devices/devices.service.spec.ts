@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { DeviceEntity } from './entities/device.entity';
-import { ModelEntity } from './entities/model.entity';
+import { ModelEntity } from '../models/entities/model.entity';
 import { DeviceTypeEntity } from './entities/deviceType.entity';
 import { DevicesService } from './devices.service';
 import { AssetVersionsService } from './assetVersions.service';
