@@ -31,7 +31,11 @@ export class AppConfigService {
       defaultAdminUser:{
         username:this.configService.get<string>("DEFAULT_ADMIN_USERNAME","admin"),
         password:this.configService.get<string>("DEFAULT_ADMIN_PASSWORD","admin"),
-      }
+      },
+      chartLock: {
+        expiryMinutes: this.configService.get<number>("LOCK_EXPIRY_MINUTES", 10),
+        checkIntervalSeconds: this.configService.get<number>("LOCK_CHECK_INTERVAL_SECONDS", 60),
+      },
     };
   }
 

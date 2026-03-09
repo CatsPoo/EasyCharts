@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppConfigModule } from '../appConfig/appConfig.module';
 import { AuthModule } from '../auth/auth.module';
 import { ChartInDirectoryEntity } from '../chartsDirectories/entities/chartsInDirectory.entity';
 import { DirectoryShareEntity } from '../chartsDirectories/entities/directoryShare.entity';
@@ -23,6 +24,7 @@ import { LineOnChartEntity } from './entities/lineonChart.emtity';
 import { NoteOnChartEntity } from './entities/noteOnChart.entity';
 import { PortOnChartEntity } from './entities/portOnChart.entity';
 import { ZoneOnChartEntity } from './entities/zoneOnChart.entity';
+import { ChartLockSchedulerService } from './chartLockScheduler.service';
 import { ChartShareGuard } from './guards/chartShare.guard';
 import { LinesOnChartService } from './lineOnChart.service';
 import { NotesOnChartService } from './noteOnChart.service';
@@ -54,10 +56,11 @@ import { OverlayElementOnChartEntity, OverlayEdgeOnChartEntity } from './entitie
         ]),
         DevicesModule,
         LinesModule,
-        AuthModule
+        AuthModule,
+        AppConfigModule,
     ],
     controllers: [ChartsController, ChartVersionsController],
-    providers: [ChartsService, LinesOnChartService, DevicesOnChartService, BondsOnChartService, NotesOnChartService, ZonesOnChartService, OverlayElementsOnChartService, PortsOnChartService, ChartVersionsService, ChartShareGuard],
+    providers: [ChartsService, LinesOnChartService, DevicesOnChartService, BondsOnChartService, NotesOnChartService, ZonesOnChartService, OverlayElementsOnChartService, PortsOnChartService, ChartVersionsService, ChartShareGuard, ChartLockSchedulerService],
     exports:[ChartsService]
 })
 export class ChartsModule {}
