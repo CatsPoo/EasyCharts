@@ -32,7 +32,7 @@ export default function DeviceNode({
   data,
   selected,
 }: NodeProps<DeviceNodeData>) {
-  const { deviceOnChart, editMode, updateDeviceOnChart, onRemoveNode, onHandleContextMenu, greenPortIds, onPortAdded } = data;
+  const { deviceOnChart, editMode, updateDeviceOnChart, onRemoveNode, onHandleContextMenu, greenPortIds, overlayPortIds, onPortAdded } = data;
   const { device, handles } = deviceOnChart;
   const { id: deviceId, name, ipAddress, model } = device;
   const { name: modelName, iconUrl, vendor } = model;
@@ -194,6 +194,7 @@ export default function DeviceNode({
         offset={offset}
         inUse={isPortInUse(port.id)}
         isPairedHere={greenPortIds.has(port.id)}
+        isOverlayConnected={overlayPortIds.has(port.id)}
         onHandleContextMenu={onHandleContextMenu}
         />;
   }

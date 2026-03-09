@@ -8,5 +8,6 @@ export interface DeviceNodeData{
     onRemoveNode:(deviceId:string) =>void,
     onHandleContextMenu?: onHandleContextMenuPayload,
     greenPortIds: Set<string>,
+    overlayPortIds: Set<string>,
     onPortAdded?: (portId: string, deviceId: string, side: Side) => void,
 }

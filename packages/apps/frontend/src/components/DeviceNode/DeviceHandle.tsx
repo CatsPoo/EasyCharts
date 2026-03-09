@@ -12,6 +12,7 @@ interface DeviceHandleProps {
   offset: number;
   inUse: boolean;
   isPairedHere: boolean;
+  isOverlayConnected: boolean;
   onHandleContextMenu: onHandleContextMenuPayload | undefined;
 }
 export default function DeviceHandle({
@@ -21,6 +22,7 @@ export default function DeviceHandle({
   offset,
   inUse,
   isPairedHere,
+  isOverlayConnected,
   onHandleContextMenu,
 }: DeviceHandleProps) {
 
@@ -41,6 +43,12 @@ export default function DeviceHandle({
     background: "#ef4444", // Tailwind's red-500
     borderColor: "#b91c1c", // red-700
     boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.25)",
+  };
+
+  const orangeHandleStyle = {
+    background: "#f97316", // Tailwind's orange-500
+    borderColor: "#c2410c", // orange-700
+    boxShadow: "0 0 0 2px rgba(249, 115, 22, 0.25)",
   };
 
   const greenHandleStyle = {
@@ -95,7 +103,7 @@ export default function DeviceHandle({
   };
 
   const handleStyle = (): CSSProperties => {
-    const colorStyle = isPairedHere ? greenHandleStyle : inUse ? redHandleStyle : {};
+    const colorStyle = isPairedHere ? greenHandleStyle : isOverlayConnected ? orangeHandleStyle : inUse ? redHandleStyle : {};
     if (side === "left" || side === "right")
       return { top: `${offset}%`, ...colorStyle };
     return { left: `${offset}%`, ...colorStyle };
@@ -103,23 +111,6 @@ export default function DeviceHandle({
 
   return (
     <Fragment key={`${side}-${pid}`}>
-      <Handle
-        key={`${pid}-s`}
-        id={pid}
-        type="source"
-        position={position}
-        style={handleStyle()}
-        isConnectableEnd={false}
-        isConnectableStart={true}
-        onContextMenu={(e) =>
-          onHandleContextMenu?.(e, {
-            deviceId,
-            portId: pid,
-            role: "source",
-            side: side,
-          })
-        }
-      />
       <Handle
         key={`${pid}-t`}
         id={pid}
@@ -133,6 +124,23 @@ export default function DeviceHandle({
             deviceId,
             portId: pid,
             role: "target",
+            side: side,
+          })
+        }
+      />
+      <Handle
+        key={`${pid}-s`}
+        id={pid}
+        type="source"
+        position={position}
+        style={handleStyle()}
+        isConnectableEnd={false}
+        isConnectableStart={true}
+        onContextMenu={(e) =>
+          onHandleContextMenu?.(e, {
+            deviceId,
+            portId: pid,
+            role: "source",
             side: side,
           })
         }

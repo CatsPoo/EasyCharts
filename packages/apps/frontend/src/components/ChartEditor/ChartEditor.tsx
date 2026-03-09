@@ -878,6 +878,21 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       return green;
     }, [chart.linesOnChart, chart.devicesOnChart]);
 
+    // Ports that are globally inUse but NOT wired device-to-device on THIS chart.
+    // These are still connectable to devices here — shown orange instead of red.
+    const overlayPortIds = useMemo(() => {
+      const linePortIds = new Set<string>(
+        chart.linesOnChart.flatMap((l) => [l.line.sourcePort.id, l.line.targetPort.id])
+      );
+      const result = new Set<string>();
+      for (const doc of chart.devicesOnChart) {
+        for (const port of doc.device.ports) {
+          if (port.inUse && !linePortIds.has(port.id)) result.add(port.id);
+        }
+      }
+      return result;
+    }, [chart.linesOnChart, chart.devicesOnChart]);
+
     greenPortIdsRef.current = greenPortIds;
 
     useEffect(() => {
@@ -1220,12 +1235,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             onRemoveNode,
             onHandleContextMenu,
             greenPortIds,
+            overlayPortIds,
             onPortAdded,
           } as DeviceNodeData,
         };
         return node;
       },
-      [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart, greenPortIds, onPortAdded]
+      [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart, greenPortIds, overlayPortIds, onPortAdded]
     );
 
     const updateNoteContent = useCallback(
