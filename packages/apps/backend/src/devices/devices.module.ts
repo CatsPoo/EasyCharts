@@ -11,6 +11,7 @@ import { AuthModule } from '../auth/auth.module';
 import { DeviceTypeEntity } from './entities/deviceType.entity';
 import { DeviceTypeController } from './deviceType.controller';
 import { DeviceTypeService } from './deviceType.service';
+import { DeviceTypeSeeder } from './deviceType.seeder';
 import { AssetVersionEntity } from './entities/assetVersion.entity';
 import { AssetVersionsService } from './assetVersions.service';
 import { AssetVersionsController } from './assetVersions.controller';
@@ -38,7 +39,7 @@ import { VendorsModule } from '../vendors/vendors.module';
     DeviceTypeController,
     AssetVersionsController,
   ],
-  providers: [DevicesService, PortsService, DeviceTypeService, AssetVersionsService],
+  providers: [DevicesService, PortsService, DeviceTypeService, DeviceTypeSeeder, AssetVersionsService],
   exports: [DevicesService, PortsService, DeviceTypeService, AssetVersionsService, ModelsModule, VendorsModule],
 })
 export class DevicesModule {}
