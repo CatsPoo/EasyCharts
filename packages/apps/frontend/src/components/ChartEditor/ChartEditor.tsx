@@ -3,12 +3,9 @@ import {
   type BondOnChart,
   type Chart,
   type ChartUpdate,
-  type Cloud,
-  type CloudConnectionOnChart,
-  type CloudOnChart,
-  type CustomElement,
-  type CustomElementOnChart,
-  type CustomElementEdgeOnChart,
+  type OverlayElement,
+  type OverlayElementOnChart,
+  type OverlayEdgeOnChart,
   type Device,
   type DeviceOnChart,
   type Handles,
@@ -59,9 +56,8 @@ import type { PortFormValues } from "../PortFormDialog";
 import { useBonds } from "../../hooks/bondsHooks";
 import { useUpdateChartMutation } from "../../hooks/chartsHooks";
 import { useDevices } from "../../hooks/devicesHook";
-import { useListCustomElements } from "../../hooks/customElementsHooks";
-import CustomElementNode from "./CustomElementNode";
-import { CustomElementTextDialog } from "./CustomElementTextDialog";
+import { useListOverlayElements } from "../../hooks/overlayElementsHooks";
+import OverlayElementNode, { type OverlayElementNodeData } from "./OverlayElementNode";
 import { fetchBondPortSiblings, fetchConnectedPortIds, fetchConnectedPortInfo, type BondPortSiblingsResponse } from "../../hooks/linesHooks";
 import { useCableTypes } from "../../hooks/cableTypesHooks";
 import { useQueryClient } from "@tanstack/react-query";
@@ -78,8 +74,8 @@ import type { CableTypeOption } from "./EditoroMenuList";
 import NoteNode, { type NoteNodeData } from "./NoteNode";
 import ZoneNode, { type ZoneNodeData } from "./ZoneNode";
 import { EditZoneStyleDialog, type ZoneStyleValues } from "./EditZoneStyleDialog";
-import CloudNode, { type CloudNodeData } from "./CloudNode";
 import { PortsEditorDialog } from "./PortsEditorDialog";
+import { OverlayElementTextDialog } from "./OverlayElementTextDialog";
 import { Orientation } from "./enums/BondBridgeNode.enum";
 import { EditorMenuListKeys } from "./enums/EditorMenuListKeys.enum";
 import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interfaces";
@@ -87,13 +83,21 @@ import type { DeleteSets } from "./interfaces/deleteSets.interfaces";
 import type { EditLineDialogFormResponse } from "./interfaces/editLineDialogForm.interfaces";
 import type { CtxState } from "./interfaces/ctsMenu.interfaces";
 
+/** Returns true if the given node ID is an overlay element (cloud or custom element). */
+function isFreeNode(
+  nodeId: string | null | undefined,
+  overlayElementsOnChart: OverlayElementOnChart[]
+): boolean {
+  if (!nodeId) return false;
+  return overlayElementsOnChart.some((oe) => oe.id === nodeId);
+}
+
 const NODE_TYPES = {
   device: DeviceNode,
   bridge: BondBridgeNode,
   note: NoteNode,
   zone: ZoneNode,
-  cloud: CloudNode,
-  customElement: CustomElementNode,
+  overlayElement: OverlayElementNode,
 } as any;
 
 const DEFAULT_EDGE_OPTIONS = { type: ConnectionLineType.Step };
@@ -120,9 +124,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     } | null>(null);
     const [editDeviceTarget, setEditDeviceTarget] =
       useState<DeviceOnChart | null>(null);
-    const [editCloudTarget, setEditCloudTarget] = useState<Cloud | null>(null);
+    const [editOverlayElementTarget, setEditOverlayElementTarget] = useState<OverlayElement | null>(null);
     const [createDeviceOpen, setCreateDeviceOpen] = useState(false);
-    const [createCloudOpen, setCreateCloudOpen] = useState(false);
+    const [createOverlayElementOpen, setCreateOverlayElementOpen] = useState<'cloud' | 'customElement' | null>(null);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
     const [portTypeMismatch, setPortTypeMismatch] = useState(false);
@@ -162,9 +166,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const createCableTypeMut = useCreateAsset("cableTypes");
     const queryClient = useQueryClient();
     const [editBondTarget, setEditBondTarget] = useState<{ bondId: string; bondName: string } | null>(null);
-    const [createCustomElementOpen, setCreateCustomElementOpen] = useState(false);
-    const createCustomElementMut = useCreateAsset("customElements");
-    const [editCustomElementTextTarget, setEditCustomElementTextTarget] = useState<{ id: string; currentText: string } | null>(null);
+    const [editOverlayElementTextTarget, setEditOverlayElementTextTarget] = useState<{ id: string; currentText: string } | null>(null);
 
     const { data: cableTypesData } = useCableTypes();
     const allCableTypes = useMemo(() => cableTypesData ?? [], [cableTypesData]);
@@ -204,10 +206,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const updateMut = useUpdateChartMutation();
     const updateDeviceMut = useUpdateAsset("devices");
-    const updateCloudMut = useUpdateAsset("clouds");
+    const updateOverlayElementMut = useUpdateAsset("overlayElements");
     const createDeviceMut = useCreateAsset("devices");
-    const createCloudMut = useCreateAsset("clouds");
-    const deleteCloudMut = useDeleteAsset("clouds");
+    const createOverlayElementMut = useCreateAsset("overlayElements");
+    const deleteOverlayElementMut = useDeleteAsset("overlayElements");
     const { project, fitView } = useReactFlow();
     const {devicePos} = useDevices({chart})
     const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,applyChartChange})
@@ -225,7 +227,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       devices: new Set(),
       ports: new Set(),
       lines: new Set(),
-      clouds: new Set(),
     });
     const applyChartChangeRef = useRef(applyChartChange);
     useEffect(() => { applyChartChangeRef.current = applyChartChange; }, [applyChartChange]);
@@ -288,20 +289,19 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "zone", payload: { zoneId: node.id } });
         return;
       }
-      if (node.type === "cloud") {
-        const coc = (chart.cloudsOnChart ?? []).find((c) => c.cloudId === node.id);
-        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "cloud", payload: { cloudId: node.id, cloudName: coc?.cloud.name ?? "" } });
+      if (node.type === "overlayElement") {
+        const oeOnChart = (chartRef.current.overlayElementsOnChart ?? []).find((oe) => oe.id === node.id);
+        if (oeOnChart?.overlayElement.type === "cloud") {
+          setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "cloud", payload: { cloudId: node.id, cloudName: oeOnChart.overlayElement.name } });
+        } else {
+          setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "customElement", payload: { instanceId: node.id, currentText: oeOnChart?.freeText ?? "" } });
+        }
         return;
       }
       if (node.type === "bridge") {
         const bondId = node.id.replace("bridge-", "");
         const bondOnChart = chart.bondsOnChart.find((b) => b.bond.id === bondId);
         setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "bond", payload: { bondId, bondName: bondOnChart?.bond.name ?? "" } });
-        return;
-      }
-      if (node.type === "customElement") {
-        const ceOnChart = (chartRef.current.customElementsOnChart ?? []).find((ce) => ce.id === node.id);
-        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "customElement", payload: { instanceId: node.id, currentText: ceOnChart?.freeText ?? "" } });
         return;
       }
       const doc = chart.devicesOnChart.find((d) => d.device.id === node.id);
@@ -314,7 +314,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         payload: { node },
         canConnectPaired,
       });
-    }, [chart.devicesOnChart, chart.cloudsOnChart, chart.bondsOnChart]);
+    }, [chart.devicesOnChart, chart.overlayElementsOnChart, chart.bondsOnChart]);
 
     const onEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
       e.preventDefault();
@@ -437,48 +437,31 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       (edgeToRemove: Edge) => {
         setEdges((es) => es.filter((e) => e.id !== edgeToRemove.id));
         applyChartChange((prev) => {
-          // Check if this edge is a cloud connection
-          const isCloudEdge = (prev.cloudsOnChart ?? []).some((coc) =>
-            coc.connections.some((conn) => conn.id === edgeToRemove.id)
-          );
-          if (isCloudEdge) {
-            return {
-              ...prev,
-              cloudsOnChart: (prev.cloudsOnChart ?? []).map((coc) => ({
-                ...coc,
-                connections: coc.connections.filter(
-                  (conn) => conn.id !== edgeToRemove.id
-                ),
-              })),
-            } as Chart;
-          }
-
-          const ceEdge = (prev.customElementEdgesOnChart ?? []).find(
+          const overlayEdge = (prev.overlayEdgesOnChart ?? []).find(
             (e) => e.id === edgeToRemove.id
           );
-          if (ceEdge) {
+          if (overlayEdge) {
             const releasedPortIds = new Set(
-              [ceEdge.sourcePortId, ceEdge.targetPortId].filter(Boolean) as string[]
+              [overlayEdge.sourcePortId, overlayEdge.targetPortId].filter(Boolean) as string[]
             );
-            // Only mark a port as free if no other CE edge still uses it
-            const remainingCeEdges = (prev.customElementEdgesOnChart ?? []).filter(
+            const remainingEdges = (prev.overlayEdgesOnChart ?? []).filter(
               (e) => e.id !== edgeToRemove.id
             );
-            const stillUsedByCe = new Set<string>();
-            for (const e of remainingCeEdges) {
-              if (e.sourcePortId) stillUsedByCe.add(e.sourcePortId);
-              if (e.targetPortId) stillUsedByCe.add(e.targetPortId);
+            const stillUsed = new Set<string>();
+            for (const e of remainingEdges) {
+              if (e.sourcePortId) stillUsed.add(e.sourcePortId);
+              if (e.targetPortId) stillUsed.add(e.targetPortId);
             }
             return {
               ...prev,
-              customElementEdgesOnChart: remainingCeEdges,
+              overlayEdgesOnChart: remainingEdges,
               devicesOnChart: releasedPortIds.size
                 ? prev.devicesOnChart.map((doc) => ({
                     ...doc,
                     device: {
                       ...doc.device,
                       ports: doc.device.ports.map((p) =>
-                        releasedPortIds.has(p.id) && !stillUsedByCe.has(p.id)
+                        releasedPortIds.has(p.id) && !stillUsed.has(p.id)
                           ? { ...p, inUse: false }
                           : p
                       ),
@@ -727,21 +710,24 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           const { portId, deviceId } = pandingDelete.value as unknown as { portId: string; deviceId: string };
           onDeletePort(portId, deviceId);
         }
-        if (pandingDelete.kind === "clouds") {
-          const { cloudId } = pandingDelete.value as unknown as { cloudId: string };
-          setEdges((eds) => eds.filter((e) => e.source !== cloudId && e.target !== cloudId));
+        if (pandingDelete.kind === "overlayElements") {
+          const { instanceId, overlayElementId } = pandingDelete.value as unknown as { instanceId: string; overlayElementId: string };
+          setEdges((eds) => eds.filter((e) => e.source !== instanceId && e.target !== instanceId));
           applyChartChange((prev) => ({
             ...prev,
-            cloudsOnChart: (prev.cloudsOnChart ?? []).filter((c) => c.cloudId !== cloudId),
+            overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).filter((oe) => oe.id !== instanceId),
+            overlayEdgesOnChart: (prev.overlayEdgesOnChart ?? []).filter(
+              (e) => e.sourceNodeId !== instanceId && e.targetNodeId !== instanceId
+            ),
           } as Chart));
-          deleteCloudMut.mutate(cloudId);
+          deleteOverlayElementMut.mutate(overlayElementId);
         }
       } catch (e) {
         console.log("Delete failed: ", e);
       }
       setPandingDelete({ value: null });
       setConfirmDeleteOpen(false);
-    }, [onDeleteDevice, onDeleteLine, onDeletePort, pandingDelete.kind, pandingDelete.value, setEdges, applyChartChange, deleteCloudMut]);
+    }, [onDeleteDevice, onDeleteLine, onDeletePort, pandingDelete.kind, pandingDelete.value, setEdges, applyChartChange, deleteOverlayElementMut]);
 
     const onconfigDialofClose = useCallback(() => {
       setPandingDelete({ value: null });
@@ -817,28 +803,28 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [editDeviceTarget, updateDeviceMut, updateDeviceOnChart]
     );
 
-    const onEditCloudSubmit = useCallback(
+    const onEditOverlayElementSubmit = useCallback(
       async (formData: any) => {
-        if (!editCloudTarget) return;
+        if (!editOverlayElementTarget) return;
         try {
-          const updated: Cloud = await updateCloudMut.mutateAsync({
+          const updated: OverlayElement = await updateOverlayElementMut.mutateAsync({
             ...formData,
-            id: editCloudTarget.id,
-          } as Cloud);
+            id: editOverlayElementTarget.id,
+          } as OverlayElement);
           applyChartChange((prev) => ({
             ...prev,
-            cloudsOnChart: (prev.cloudsOnChart ?? []).map((coc) =>
-              coc.cloudId === editCloudTarget.id
-                ? { ...coc, cloud: { ...coc.cloud, name: updated.name, description: updated.description } }
-                : coc
+            overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map((oe) =>
+              oe.overlayElementId === editOverlayElementTarget.id
+                ? { ...oe, overlayElement: { ...oe.overlayElement, name: updated.name, description: updated.description, imageUrl: updated.imageUrl } }
+                : oe
             ),
           } as Chart));
         } catch (e) {
-          console.error("Failed to update cloud:", e);
+          console.error("Failed to update overlay element:", e);
         }
-        setEditCloudTarget(null);
+        setEditOverlayElementTarget(null);
       },
-      [editCloudTarget, updateCloudMut, applyChartChange]
+      [editOverlayElementTarget, updateOverlayElementMut, applyChartChange]
     );
 
     const onCreateDeviceSubmit = useCallback(
@@ -853,16 +839,17 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [createDeviceMut]
     );
 
-    const onCreateCloudSubmit = useCallback(
+    const onCreateOverlayElementSubmit = useCallback(
       async (formData: any) => {
+        if (!createOverlayElementOpen) return;
         try {
-          await createCloudMut.mutateAsync(formData);
+          await createOverlayElementMut.mutateAsync({ ...formData, type: createOverlayElementOpen });
         } catch (e) {
-          console.error("Failed to create cloud:", e);
+          console.error("Failed to create overlay element:", e);
         }
-        setCreateCloudOpen(false);
+        setCreateOverlayElementOpen(null);
       },
-      [createCloudMut]
+      [createOverlayElementOpen, createOverlayElementMut]
     );
 
     const greenPortIds = useMemo(() => {
@@ -1362,62 +1349,52 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [editMode, updateZoneLabel, updateZoneSize]
     );
 
-    const onRemoveCloud = useCallback(
-      (cloudId: string) => {
-        // Remove all edges connected to this cloud node
-        setEdges((eds) =>
-          eds.filter((e) => e.source !== cloudId && e.target !== cloudId)
-        );
+    const onRemoveOverlayElement = useCallback(
+      (instanceId: string) => {
+        setEdges((eds) => eds.filter((e) => e.source !== instanceId && e.target !== instanceId));
         applyChartChange((prev) => ({
           ...prev,
-          cloudsOnChart: (prev.cloudsOnChart ?? []).filter(
-            (c) => c.cloudId !== cloudId
+          overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).filter((oe) => oe.id !== instanceId),
+          overlayEdgesOnChart: (prev.overlayEdgesOnChart ?? []).filter(
+            (e) => e.sourceNodeId !== instanceId && e.targetNodeId !== instanceId
           ),
         } as Chart));
       },
       [applyChartChange, setEdges]
     );
 
-    const updateCloudSize = useCallback(
-      (cloudId: string, width: number, height: number) => {
+    const updateOverlayElementSize = useCallback(
+      (instanceId: string, width: number, height: number) => {
         applyChartChange((prev) => ({
           ...prev,
-          cloudsOnChart: (prev.cloudsOnChart ?? []).map((c) =>
-            c.cloudId === cloudId ? { ...c, size: { width, height } } : c
+          overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map((oe) =>
+            oe.id === instanceId ? { ...oe, size: { width, height } } : oe
           ),
         } as Chart));
       },
       [applyChartChange]
     );
 
-    const convertCloudToNode = useCallback(
-      (cloudOnChart: CloudOnChart): Node => ({
-        id: cloudOnChart.cloudId,
-        type: "cloud",
-        position: cloudOnChart.position,
-        style: { width: cloudOnChart.size?.width ?? 180, height: cloudOnChart.size?.height ?? 90 },
-        data: {
-          cloudOnChart,
-          editMode,
-          onRemove: onRemoveCloud,
-          onSizeChange: updateCloudSize,
-        } as CloudNodeData,
-      }),
-      [editMode, onRemoveCloud, updateCloudSize]
-    );
-
-    const convertCustomElementToNode = useCallback(
-      (ceOnChart: CustomElementOnChart): Node => ({
-        id: ceOnChart.id,
-        type: "customElement",
-        position: ceOnChart.position,
-        style: { width: ceOnChart.size?.width ?? 120, height: ceOnChart.size?.height ?? 120 },
-        data: {
-          ceOnChart,
-          editMode,
-        },
-      }),
-      [editMode]
+    const convertOverlayElementToNode = useCallback(
+      (oeOnChart: OverlayElementOnChart): Node => {
+        const isCloud = oeOnChart.overlayElement.type === "cloud";
+        return {
+          id: oeOnChart.id,
+          type: "overlayElement",
+          position: oeOnChart.position,
+          style: {
+            width: oeOnChart.size?.width ?? (isCloud ? 180 : 120),
+            height: oeOnChart.size?.height ?? (isCloud ? 90 : 120),
+          },
+          data: {
+            overlayElementOnChart: oeOnChart,
+            editMode,
+            onRemove: onRemoveOverlayElement,
+            onSizeChange: updateOverlayElementSize,
+          } as OverlayElementNodeData,
+        };
+      },
+      [editMode, onRemoveOverlayElement, updateOverlayElementSize]
     );
 
     const { data: availableDevicesResponse } = useListAssets("devices", {
@@ -1425,27 +1402,21 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       pageSize: 100000,
     });
 
-    const { data: availableCloudsResponse } = useListAssets("clouds", {
-      page: 0,
-      pageSize: 100000,
-    });
-    const allClouds = useMemo<Cloud[]>(
-      () => (availableCloudsResponse?.rows ?? []) as Cloud[],
-      [availableCloudsResponse]
-    );
-    const cloudsById = useMemo<Map<string, Cloud>>(
-      () => new Map(allClouds.map((c) => [c.id, c])),
-      [allClouds]
+    const { data: cloudOverlayData } = useListOverlayElements("cloud");
+    const allClouds = useMemo<OverlayElement[]>(
+      () => (cloudOverlayData?.rows ?? []) as OverlayElement[],
+      [cloudOverlayData]
     );
 
-    const { data: customElementsData } = useListCustomElements();
-    const allCustomElements = useMemo<CustomElement[]>(
-      () => (customElementsData?.rows ?? []) as CustomElement[],
-      [customElementsData]
+    const { data: customElementOverlayData } = useListOverlayElements("customElement");
+    const allCustomElements = useMemo<OverlayElement[]>(
+      () => (customElementOverlayData?.rows ?? []) as OverlayElement[],
+      [customElementOverlayData]
     );
-    const customElementsById = useMemo<Map<string, CustomElement>>(
-      () => new Map(allCustomElements.map((ce) => [ce.id, ce])),
-      [allCustomElements]
+
+    const overlayElementsById = useMemo<Map<string, OverlayElement>>(
+      () => new Map([...allClouds, ...allCustomElements].map((oe) => [oe.id, oe])),
+      [allClouds, allCustomElements]
     );
 
     const usedIds = useMemo(
@@ -1633,27 +1604,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         const { bridgeNodes } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
         const noteNodes: Node[] = (chart.notesOnChart ?? []).map(convertNoteToNode);
         const zoneNodes: Node[] = (chart.zonesOnChart ?? []).map(convertZoneToNode);
-        const cloudNodes: Node[] = (chart.cloudsOnChart ?? []).map(convertCloudToNode);
-        const ceNodes: Node[] = (chart.customElementsOnChart ?? []).map(convertCustomElementToNode);
-        return [...zoneNodes, ...devicesNodes, ...bridgeNodes, ...noteNodes, ...cloudNodes, ...ceNodes];
+        const overlayNodes: Node[] = (chart.overlayElementsOnChart ?? []).map(convertOverlayElementToNode);
+        return [...zoneNodes, ...devicesNodes, ...bridgeNodes, ...noteNodes, ...overlayNodes];
       });
-    }, [buildBridgeView, chart.bondsOnChart, chart.cloudsOnChart, chart.customElementsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, chart.zonesOnChart, convertCloudToNode, convertCustomElementToNode, convertDeviceToNode, convertNoteToNode, convertZoneToNode, setNodes]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.overlayElementsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, chart.zonesOnChart, convertOverlayElementToNode, convertDeviceToNode, convertNoteToNode, convertZoneToNode, setNodes]);
 
     useEffect(() => {
       const { displayEdges } = buildBridgeView(chart.bondsOnChart, chart.linesOnChart);
 
-      const cloudEdges: Edge[] = (chart.cloudsOnChart ?? []).flatMap((coc) =>
-        coc.connections.map((conn) => ({
-          id: conn.id,
-          source: conn.deviceId,
-          sourceHandle: conn.portId,
-          target: coc.cloudId,
-          targetHandle: conn.cloudHandle,
-          type: "step",
-        } as Edge))
-      );
-
-      const ceEdges: Edge[] = (chart.customElementEdgesOnChart ?? []).map((e) => ({
+      const overlayEdges: Edge[] = (chart.overlayEdgesOnChart ?? []).map((e) => ({
         id: e.id,
         source: e.sourceNodeId,
         sourceHandle: e.sourceHandle,
@@ -1662,8 +1621,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         type: "step",
       } as Edge));
 
-      setEdges([...displayEdges, ...cloudEdges, ...ceEdges]);
-    }, [buildBridgeView, chart.bondsOnChart, chart.cloudsOnChart, chart.customElementEdgesOnChart, chart.linesOnChart, setEdges]);
+      setEdges([...displayEdges, ...overlayEdges]);
+    }, [buildBridgeView, chart.bondsOnChart, chart.overlayEdgesOnChart, chart.linesOnChart, setEdges]);
 
     const onNodesChange = useCallback(
       (changes: NodeChange[]) => {
@@ -1680,14 +1639,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onConnect = useCallback(
       (c: Connection) => {
-        // ── Custom element connection: any node → CE or CE → any node ──
-        const isSourceCE = (chart.customElementsOnChart ?? []).some((ce) => ce.id === c.source);
-        const isTargetCE = (chart.customElementsOnChart ?? []).some((ce) => ce.id === c.target);
-        if ((isSourceCE || isTargetCE) && c.source && c.target && c.sourceHandle && c.targetHandle) {
-          // If one side is a device, the handle is a port ID — track it for inUse computation
-          const sourcePortId = !isSourceCE ? c.sourceHandle : undefined;
-          const targetPortId = !isTargetCE ? c.targetHandle : undefined;
-          const newEdge: CustomElementEdgeOnChart = {
+        // ── Free-node connection: cloud or custom element on either/both sides ──
+        // This single branch handles: device↔cloud, device↔CE, cloud↔cloud, CE↔CE, cloud↔CE.
+        // Any logic change here automatically applies to all combinations.
+        const isSourceFree = isFreeNode(c.source, chart.overlayElementsOnChart ?? []);
+        const isTargetFree = isFreeNode(c.target, chart.overlayElementsOnChart ?? []);
+        if ((isSourceFree || isTargetFree) && c.source && c.target && c.sourceHandle && c.targetHandle) {
+          const sourcePortId = !isSourceFree ? c.sourceHandle : undefined;
+          const targetPortId = !isTargetFree ? c.targetHandle : undefined;
+          const newEdge: OverlayEdgeOnChart = {
             id: uuidv4(),
             sourceNodeId: c.source,
             sourceHandle: c.sourceHandle,
@@ -1696,63 +1656,29 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             sourcePortId,
             targetPortId,
           };
-          const rfEdge: Edge = {
+          setEdges((eds) => [...eds, {
             id: newEdge.id,
-            source: c.source,
+            source: c.source!,
             sourceHandle: c.sourceHandle,
-            target: c.target,
+            target: c.target!,
             targetHandle: c.targetHandle,
             type: "step",
-          };
-          setEdges((eds) => [...eds, rfEdge]);
-          const cePortIds = new Set([sourcePortId, targetPortId].filter(Boolean) as string[]);
+          } as Edge]);
+          const portIds = new Set([sourcePortId, targetPortId].filter(Boolean) as string[]);
           applyChartChange((prev) => ({
             ...prev,
-            customElementEdgesOnChart: [...(prev.customElementEdgesOnChart ?? []), newEdge],
-            devicesOnChart: cePortIds.size
+            overlayEdgesOnChart: [...(prev.overlayEdgesOnChart ?? []), newEdge],
+            devicesOnChart: portIds.size
               ? prev.devicesOnChart.map((doc) => ({
                   ...doc,
                   device: {
                     ...doc.device,
                     ports: doc.device.ports.map((p) =>
-                      cePortIds.has(p.id) ? { ...p, inUse: true } : p
+                      portIds.has(p.id) ? { ...p, inUse: true } : p
                     ),
                   },
                 } as DeviceOnChart))
               : prev.devicesOnChart,
-          } as Chart));
-          setMadeChanges(true);
-          return;
-        }
-
-        // ── Cloud connection: device port → cloud handle ──
-        const cloudTarget = (chart.cloudsOnChart ?? []).find(
-          (coc) => coc.cloudId === c.target
-        );
-        if (cloudTarget) {
-          if (!c.source || !c.sourceHandle || !c.targetHandle) return;
-          const newConnection: CloudConnectionOnChart = {
-            id: uuidv4(),
-            deviceId: c.source,
-            portId: c.sourceHandle,
-            cloudHandle: c.targetHandle,
-          };
-          const cloudEdge: Edge = {
-            id: newConnection.id,
-            source: newConnection.deviceId,
-            sourceHandle: newConnection.portId,
-            target: cloudTarget.cloudId,
-            targetHandle: newConnection.cloudHandle,
-            type: "step",
-          };
-          setEdges((eds) => [...eds, cloudEdge]);
-          applyChartChange((prev) => ({
-            ...prev,
-            cloudsOnChart: (prev.cloudsOnChart ?? []).map((coc) =>
-              coc.cloudId === cloudTarget.cloudId
-                ? { ...coc, connections: [...coc.connections, newConnection] }
-                : coc
-            ),
           } as Chart));
           setMadeChanges(true);
           return;
@@ -1815,8 +1741,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         });
       },
       [
-        chart.cloudsOnChart,
-        chart.customElementsOnChart,
+        chart.overlayElementsOnChart,
         chart.devicesOnChart,
         chart.id,
         convertLineToEdge,
@@ -1951,18 +1876,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               z.id === node.id ? { ...z, position: node.position } : z
             ),
           } as Chart));
-        } else if (node.type === "cloud") {
+        } else if (node.type === "overlayElement") {
           applyChartChange((prev) => ({
             ...prev,
-            cloudsOnChart: (prev.cloudsOnChart ?? []).map((c) =>
-              c.cloudId === node.id ? { ...c, position: node.position } : c
-            ),
-          } as Chart));
-        } else if (node.type === "customElement") {
-          applyChartChange((prev) => ({
-            ...prev,
-            customElementsOnChart: (prev.customElementsOnChart ?? []).map((ce) =>
-              ce.id === node.id ? { ...ce, position: node.position } : ce
+            overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map((oe) =>
+              oe.id === node.id ? { ...oe, position: node.position } : oe
             ),
           } as Chart));
         }
@@ -2026,47 +1944,27 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           return;
         }
 
-        // ── Cloud drop ──
-        const cloudRaw = e.dataTransfer.getData("application/reactflow-cloud");
-        if (cloudRaw) {
+        // ── Overlay element drop (cloud or custom element) ──
+        const overlayRaw = e.dataTransfer.getData("application/reactflow-overlay-element");
+        if (overlayRaw) {
           try {
-            const { cloudId } = JSON.parse(cloudRaw) as { cloudId: string };
-            const cloud = cloudsById.get(cloudId);
-            if (!cloud) return;
-            if ((chart.cloudsOnChart ?? []).some((c) => c.cloudId === cloudId)) return;
+            const { overlayElementId } = JSON.parse(overlayRaw) as { overlayElementId: string };
+            const oe = overlayElementsById.get(overlayElementId);
+            if (!oe) return;
             const bounds = reactFlowWrapper.current.getBoundingClientRect();
             const position = project({ x: e.clientX - bounds.left, y: e.clientY - bounds.top });
-            const newCloudOnChart: CloudOnChart = { cloudId, cloud: cloud as any, position, connections: [], size: { width: 180, height: 90 } };
-            applyChartChange((prev) => ({
-              ...prev,
-              cloudsOnChart: [...(prev.cloudsOnChart ?? []), newCloudOnChart],
-            } as Chart));
-          } catch {
-            // ignore malformed cloud data
-          }
-          return;
-        }
-
-        // ── Custom Element drop ──
-        const ceRaw = e.dataTransfer.getData("application/reactflow-customelement");
-        if (ceRaw) {
-          try {
-            const { customElementId } = JSON.parse(ceRaw) as { customElementId: string };
-            const ce = customElementsById.get(customElementId);
-            if (!ce) return;
-            const bounds = reactFlowWrapper.current!.getBoundingClientRect();
-            const position = project({ x: e.clientX - bounds.left, y: e.clientY - bounds.top });
-            const newCeOnChart: CustomElementOnChart = {
+            const isCloud = oe.type === "cloud";
+            const newOeOnChart: OverlayElementOnChart = {
               id: uuidv4(),
-              customElementId,
-              customElement: ce as any,
+              overlayElementId,
+              overlayElement: oe as any,
               position,
               freeText: "",
-              size: { width: 120, height: 120 },
+              size: { width: isCloud ? 180 : 120, height: isCloud ? 90 : 120 },
             };
             applyChartChange((prev) => ({
               ...prev,
-              customElementsOnChart: [...(prev.customElementsOnChart ?? []), newCeOnChart],
+              overlayElementsOnChart: [...(prev.overlayElementsOnChart ?? []), newOeOnChart],
             } as Chart));
           } catch {
             // ignore malformed data
@@ -2153,7 +2051,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [
         editMode,
         devicesById,
-        cloudsById,
+        overlayElementsById,
         project,
         convertDeviceToNode,
         setNodes,
@@ -2352,42 +2250,36 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           }
 
           case EditorMenuListKeys.EDIT_CLOUD: {
-            const coc = (chart.cloudsOnChart ?? []).find((c) => c.cloudId === payload.cloudId);
-            if (coc) setEditCloudTarget(coc.cloud as Cloud);
+            const oe = (chart.overlayElementsOnChart ?? []).find((o) => o.id === payload.cloudId);
+            if (oe) setEditOverlayElementTarget(oe.overlayElement as OverlayElement);
             break;
           }
 
           case EditorMenuListKeys.REMOVE_CLOUD_FROM_CHART:
-            onRemoveCloud(payload.cloudId);
+            onRemoveOverlayElement(payload.cloudId);
             break;
 
-          case EditorMenuListKeys.DELETE_CLOUD:
-            setPandingDelete({ value: { cloudId: payload.cloudId } as unknown as Node, kind: "clouds" });
+          case EditorMenuListKeys.DELETE_CLOUD: {
+            const oe = (chart.overlayElementsOnChart ?? []).find((o) => o.id === payload.cloudId);
+            setPandingDelete({ value: { instanceId: payload.cloudId, overlayElementId: oe?.overlayElementId } as unknown as Node, kind: "overlayElements" as any });
             setConfirmDialogTitle("Delete Cloud?");
             setConfirmDialogDescription(`Permanently delete cloud "${payload.cloudName}"?`);
             setConfirmDeleteOpen(true);
             break;
+          }
 
           case EditorMenuListKeys.EDIT_CUSTOM_ELEMENT_TEXT:
-            setEditCustomElementTextTarget({ id: payload.instanceId, currentText: payload.currentText });
+            setEditOverlayElementTextTarget({ id: payload.instanceId, currentText: payload.currentText });
             break;
 
           case EditorMenuListKeys.REMOVE_CUSTOM_ELEMENT_FROM_CHART:
-            applyChartChange((prev) => ({
-              ...prev,
-              customElementsOnChart: (prev.customElementsOnChart ?? []).filter((c) => c.id !== payload.instanceId),
-              customElementEdgesOnChart: (prev.customElementEdgesOnChart ?? []).filter(
-                (e) => e.sourceNodeId !== payload.instanceId && e.targetNodeId !== payload.instanceId
-              ),
-            } as Chart));
-            setNodes((ns) => ns.filter((n) => n.id !== payload.instanceId));
-            setEdges((es) => es.filter((e) => e.source !== payload.instanceId && e.target !== payload.instanceId));
+            onRemoveOverlayElement(payload.instanceId);
             break;
         }
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.cloudsOnChart, chart.customElementsOnChart, chart.customElementEdgesOnChart, chart.linesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditCloudTarget, applyChartChange, setNodes, setEdges, setColorPickerNoteId, setColorPickerValue, setColorPickerLineId, setColorPickerLineValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveCloud, allCableTypes]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.overlayElementsOnChart, chart.linesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditOverlayElementTarget, applyChartChange, setNodes, setEdges, setColorPickerNoteId, setColorPickerValue, setColorPickerLineId, setColorPickerLineValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveOverlayElement, allCableTypes]
     );
 
     const onCableTypeSelect = useCallback(
@@ -2490,8 +2382,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 cloudsList={allClouds}
                 customElementsList={allCustomElements}
                 onCreateDevice={() => setCreateDeviceOpen(true)}
-                onCreateCloud={() => setCreateCloudOpen(true)}
-                onCreateCustomElement={() => setCreateCustomElementOpen(true)}
+                onCreateCloud={() => setCreateOverlayElementOpen('cloud')}
+                onCreateCustomElement={() => setCreateOverlayElementOpen('customElement')}
               />
             </motion.div>
           )}
@@ -2856,11 +2748,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           onSubmit={onEditDeviceSubmit}
         />
         <AssetForm
-          kind="clouds"
-          open={editCloudTarget !== null}
-          initial={editCloudTarget ?? undefined}
-          onClose={() => setEditCloudTarget(null)}
-          onSubmit={onEditCloudSubmit}
+          kind="overlayElements"
+          open={editOverlayElementTarget !== null}
+          initial={editOverlayElementTarget ?? undefined}
+          onClose={() => setEditOverlayElementTarget(null)}
+          onSubmit={onEditOverlayElementSubmit}
         />
         <AssetForm
           kind="devices"
@@ -2869,33 +2761,24 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           onSubmit={onCreateDeviceSubmit}
         />
         <AssetForm
-          kind="clouds"
-          open={createCloudOpen}
-          onClose={() => setCreateCloudOpen(false)}
-          onSubmit={onCreateCloudSubmit}
+          kind="overlayElements"
+          open={createOverlayElementOpen !== null}
+          onClose={() => setCreateOverlayElementOpen(null)}
+          onSubmit={onCreateOverlayElementSubmit}
         />
-        <AssetForm
-          kind="customElements"
-          open={createCustomElementOpen}
-          onClose={() => setCreateCustomElementOpen(false)}
-          onSubmit={async (data) => {
-            await createCustomElementMut.mutateAsync(data);
-            setCreateCustomElementOpen(false);
-          }}
-        />
-        <CustomElementTextDialog
-          open={editCustomElementTextTarget !== null}
-          currentText={editCustomElementTextTarget?.currentText ?? ""}
-          onClose={() => setEditCustomElementTextTarget(null)}
+        <OverlayElementTextDialog
+          open={editOverlayElementTextTarget !== null}
+          currentText={editOverlayElementTextTarget?.currentText ?? ""}
+          onClose={() => setEditOverlayElementTextTarget(null)}
           onSave={(text) => {
-            if (!editCustomElementTextTarget) return;
+            if (!editOverlayElementTextTarget) return;
             applyChartChange((prev) => ({
               ...prev,
-              customElementsOnChart: (prev.customElementsOnChart ?? []).map((ce) =>
-                ce.id === editCustomElementTextTarget.id ? { ...ce, freeText: text } : ce
+              overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map((oe) =>
+                oe.id === editOverlayElementTextTarget.id ? { ...oe, freeText: text } : oe
               ),
             } as Chart));
-            setEditCustomElementTextTarget(null);
+            setEditOverlayElementTextTarget(null);
           }}
         />
         <ConfirmDialog

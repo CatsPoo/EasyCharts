@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Device, Cloud, CustomElement } from "@easy-charts/easycharts-types";
+import type { Device, OverlayElement } from "@easy-charts/easycharts-types";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 
 function initials(text?: string) {
@@ -12,8 +12,8 @@ function initials(text?: string) {
 
 interface DevicesSideListProps {
   devicesList: Device[];
-  cloudsList: Cloud[];
-  customElementsList?: CustomElement[];
+  cloudsList: OverlayElement[];
+  customElementsList?: OverlayElement[];
   onCreateDevice?: () => void;
   onCreateCloud?: () => void;
   onCreateCustomElement?: () => void;
@@ -196,7 +196,7 @@ export function DevicesSidebar({ devicesList, cloudsList, customElementsList = [
                 key={cloud.id}
                 draggable
                 onDragStart={(event) => {
-                  event.dataTransfer.setData("application/reactflow-cloud", JSON.stringify({ cloudId: cloud.id }));
+                  event.dataTransfer.setData("application/reactflow-overlay-element", JSON.stringify({ overlayElementId: cloud.id }));
                   event.dataTransfer.effectAllowed = "move";
                 }}
                 className={[
@@ -298,12 +298,12 @@ export function DevicesSidebar({ devicesList, cloudsList, customElementsList = [
             {customElementsList.length === 0 && (
               <li className={["text-xs text-center py-4", isDark ? "text-slate-600" : "text-slate-400"].join(" ")}>No custom elements yet</li>
             )}
-            {customElementsList.map((ce: CustomElement) => (
+            {customElementsList.map((ce) => (
               <li
                 key={ce.id}
                 draggable
                 onDragStart={(event) => {
-                  event.dataTransfer.setData("application/reactflow-customelement", JSON.stringify({ customElementId: ce.id }));
+                  event.dataTransfer.setData("application/reactflow-overlay-element", JSON.stringify({ overlayElementId: ce.id }));
                   event.dataTransfer.effectAllowed = "move";
                 }}
                 className={[

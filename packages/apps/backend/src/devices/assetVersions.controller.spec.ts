@@ -5,7 +5,7 @@ import { JwdAuthGuard } from '../auth/guards/jwtAuth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { AssetVersionsService } from './assetVersions.service';
 import { DevicesService } from './devices.service';
-import { CloudsService } from './clouds.service';
+import { OverlayElementsService } from '../overlayElements/overlayElements.service';
 import { ModelsService } from './model.service';
 import { VendorsService } from './vendors.service';
 import { DeviceTypeService } from './deviceType.service';
@@ -15,7 +15,7 @@ const mockAssetVersionsService = {
   getVersion: jest.fn(),
 };
 const mockDevicesService = { updateDevice: jest.fn() };
-const mockCloudsService = { updateCloud: jest.fn() };
+const mockOverlayElementsService = { update: jest.fn() };
 const mockModelsService = { updateModel: jest.fn() };
 const mockVendorsService = { updateVendor: jest.fn() };
 const mockDeviceTypeService = { updateDeviceType: jest.fn() };
@@ -30,7 +30,7 @@ describe('AssetVersionsController', () => {
       providers: [
         { provide: AssetVersionsService, useValue: mockAssetVersionsService },
         { provide: DevicesService, useValue: mockDevicesService },
-        { provide: CloudsService, useValue: mockCloudsService },
+        { provide: OverlayElementsService, useValue: mockOverlayElementsService },
         { provide: ModelsService, useValue: mockModelsService },
         { provide: VendorsService, useValue: mockVendorsService },
         { provide: DeviceTypeService, useValue: mockDeviceTypeService },
@@ -88,16 +88,16 @@ describe('AssetVersionsController', () => {
       );
     });
 
-    it('clouds — calls cloudsService.updateCloud with snapshot fields', async () => {
-      const snap = { name: 'AWS', description: 'Cloud infra' };
+    it('overlayElements — calls overlayElementsService.update with snapshot fields', async () => {
+      const snap = { name: 'AWS', description: 'Cloud infra', imageUrl: null };
       mockAssetVersionsService.getVersion.mockResolvedValue({ snapshot: snap });
-      mockCloudsService.updateCloud.mockResolvedValue({ id: 'asset-1' });
+      mockOverlayElementsService.update.mockResolvedValue({ id: 'asset-1' });
 
-      await controller.rollback('clouds', 'asset-1', 'ver-1', req);
+      await controller.rollback('overlayElements', 'asset-1', 'ver-1', req);
 
-      expect(mockCloudsService.updateCloud).toHaveBeenCalledWith(
+      expect(mockOverlayElementsService.update).toHaveBeenCalledWith(
         'asset-1',
-        { name: 'AWS', description: 'Cloud infra' },
+        { name: 'AWS', description: 'Cloud infra', imageUrl: null },
         'user-1',
       );
     });

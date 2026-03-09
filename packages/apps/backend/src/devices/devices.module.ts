@@ -19,6 +19,7 @@ import { DeviceTypeService } from './deviceType.service';
 import { AssetVersionEntity } from './entities/assetVersion.entity';
 import { AssetVersionsService } from './assetVersions.service';
 import { AssetVersionsController } from './assetVersions.controller';
+import { OverlayElementsModule } from '../overlayElements/overlayElements.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AssetVersionsController } from './assetVersions.controller';
       AssetVersionEntity,
     ]),
     AuthModule,
+    OverlayElementsModule,
   ],
   controllers: [
     DevicesController,

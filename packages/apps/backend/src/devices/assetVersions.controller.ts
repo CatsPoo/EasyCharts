@@ -20,12 +20,12 @@ import { PermissionsGuard } from "../auth/guards/permissions.guard";
 import { RequirePermissions } from "../auth/decorators/permissions.decorator";
 import { AssetVersionsService } from "./assetVersions.service";
 import { DevicesService } from "./devices.service";
-import { CloudsService } from "./clouds.service";
+import { OverlayElementsService } from "../overlayElements/overlayElements.service";
 import { ModelsService } from "./model.service";
 import { VendorsService } from "./vendors.service";
 import { DeviceTypeService } from "./deviceType.service";
 
-const ALLOWED_KINDS = ["devices", "types", "models", "vendors", "clouds"] as const;
+const ALLOWED_KINDS = ["devices", "types", "models", "vendors", "overlayElements"] as const;
 type AllowedKind = (typeof ALLOWED_KINDS)[number];
 
 function assertKind(kind: string): asserts kind is AllowedKind {
@@ -40,7 +40,7 @@ export class AssetVersionsController {
   constructor(
     private readonly assetVersionsService: AssetVersionsService,
     private readonly devicesService: DevicesService,
-    private readonly cloudsService: CloudsService,
+    private readonly overlayElementsService: OverlayElementsService,
     private readonly modelsService: ModelsService,
     private readonly vendorsService: VendorsService,
     private readonly deviceTypeService: DeviceTypeService,
@@ -94,10 +94,10 @@ export class AssetVersionsController {
           userId,
         );
 
-      case "clouds":
-        return this.cloudsService.updateCloud(
+      case "overlayElements":
+        return this.overlayElementsService.update(
           assetId,
-          { name: snap.name, description: snap.description },
+          { name: snap.name, description: snap.description, imageUrl: snap.imageUrl },
           userId,
         );
 

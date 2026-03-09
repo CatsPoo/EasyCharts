@@ -8,7 +8,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, EntityManager, In, Repository } from "typeorm";
 import { LineEntity } from "../lines/entities/line.entity";
-import { CustomElementEdgeOnChartEntity } from "../charts/entities/customElementOnChart.entity";
+import { OverlayEdgeOnChartEntity } from "../charts/entities/overlayElementOnChart.entity";
 import { QueryDto } from "../query/dto/query.dto";
 import { PortEntity } from "./entities/port.entity";
 import { updatePortPayload } from "./interfaces/ports.interfaces";
@@ -114,14 +114,14 @@ export class PortsService {
       const usedByCeSource = qb
         .subQuery()
         .select("ce.source_port_id")
-        .from(CustomElementEdgeOnChartEntity, "ce")
+        .from(OverlayEdgeOnChartEntity, "ce")
         .where("ce.source_port_id IS NOT NULL")
         .getQuery();
 
       const usedByCeTarget = qb
         .subQuery()
         .select("ce2.target_port_id")
-        .from(CustomElementEdgeOnChartEntity, "ce2")
+        .from(OverlayEdgeOnChartEntity, "ce2")
         .where("ce2.target_port_id IS NOT NULL")
         .getQuery();
 

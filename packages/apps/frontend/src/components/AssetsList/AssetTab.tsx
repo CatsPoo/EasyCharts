@@ -180,8 +180,7 @@ export default function AssetTab() {
         <Tab label="Device Types" value="types"/>
         <Tab label="Vendors" value="vendors" />
         <Tab label="Models" value="models" />
-        <Tab label="Clouds" value="clouds" />
-        <Tab label="Custom Elements" value="customElements" />
+        <Tab label="Overlay Elements" value="overlayElements" />
         <Tab label="Port Types" value="portTypes" />
         <Tab label="Cable Types" value="cableTypes" />
       </Tabs>

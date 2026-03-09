@@ -3,12 +3,10 @@ import type { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { Box, Chip } from "@mui/material";
 
 export const columns: Record<AssetKind, GridColDef[]> = {
-  clouds: [
+  overlayElements: [
     { field: "name", headerName: "Name", flex: 1 },
+    { field: "type", headerName: "Type", width: 130 },
     { field: "description", headerName: "Description", flex: 2 },
-  ],
-  customElements: [
-    { field: "name", headerName: "Name", flex: 1 },
     {
       field: "imageUrl",
       headerName: "Image",

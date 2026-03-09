@@ -9,7 +9,7 @@ import { LinessService } from '../lines/lines.service';
 import { BondsOnChartService } from './bondOnChart.service';
 import { ChartVersionsService } from './chartVersions.service';
 import { ChartsService } from './charts.service';
-import { CloudsOnChartService } from './cloudOnChart.service';
+import { OverlayElementsOnChartService } from './overlayElementOnChart.service';
 import { DevicesOnChartService } from './deviceOnChart.service';
 import { ChartEntity } from './entities/chart.entity';
 import { ChartShareEntity } from './entities/chartShare.entity';
@@ -34,7 +34,8 @@ const baseChart = (overrides: Partial<ChartEntity> = {}): ChartEntity =>
     bondOnChart: [],
     notesOnChart: [],
     zonesOnChart: [],
-    cloudsOnChart: [],
+    overlayElementsOnChart: [],
+    overlayEdgesOnChart: [],
     ...overrides,
   } as any);
 
@@ -128,10 +129,10 @@ describe('ChartsService', () => {
           },
         },
         {
-          provide: CloudsOnChartService,
+          provide: OverlayElementsOnChartService,
           useValue: {
-            convertCloudOnChartEntity: jest.fn(),
-            syncCloudsOnChart: jest.fn(),
+            convertEntity: jest.fn(),
+            syncOverlayElementsOnChart: jest.fn(),
           },
         },
         { provide: PortsOnChartService, useValue: {} },
