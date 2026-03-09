@@ -154,7 +154,6 @@ function ImageUploadField({
 const schemas = {
   overlayElements: z.object({
     name: z.string().min(1),
-    description: z.string().optional(),
     imageUrl: z.string().optional(),
   }),
   devices: z.object({
@@ -297,20 +296,10 @@ export function AssetForm<K extends AssetKind>({
               error={!!errors.name}
             />
             {kind === "overlayElements" && (
-              <>
-                <TextField
-                  label="Description"
-                  multiline
-                  rows={3}
-                  {...register("description")}
-                  helperText={errors.description?.message as string}
-                  error={!!errors.description}
-                />
-                <ImageUploadField
-                  currentUrl={(initial as any)?.imageUrl}
-                  onUploaded={(url) => setValue("imageUrl", url)}
-                />
-              </>
+              <ImageUploadField
+                currentUrl={(initial as any)?.imageUrl}
+                onUploaded={(url) => setValue("imageUrl", url)}
+              />
             )}
             {kind === "devices" && (
               <>

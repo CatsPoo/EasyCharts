@@ -9,11 +9,8 @@ export class OverlayElementEntity extends AuditableEntity {
   @Column({ unique: true })
   name!: string;
 
-  @Column({ type: 'varchar', default: 'cloud' })
-  type!: 'cloud' | 'customElement';
-
-  @Column({ nullable: true, type: 'text' })
-  description?: string;
+  @Column({ default: false })
+  isSystem!: boolean;
 
   @Column({ nullable: true, type: 'text' })
   imageUrl?: string;

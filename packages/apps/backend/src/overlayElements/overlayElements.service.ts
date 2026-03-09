@@ -2,7 +2,6 @@ import type {
   OverlayElement,
   OverlayElementCreate,
   OverlayElementUpdate,
-  OverlayElementType,
 } from '@easy-charts/easycharts-types';
 import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -24,16 +23,11 @@ export class OverlayElementsService {
     return this.repo.save(entity) as unknown as OverlayElement;
   }
 
-  async list(
-    q: QueryDto & { type?: OverlayElementType },
-  ): Promise<{ rows: OverlayElement[]; total: number }> {
+  async list(q: QueryDto): Promise<{ rows: OverlayElement[]; total: number }> {
     const take = q.pageSize ?? 25;
     const skip = (q.page ?? 0) * take;
     const qb = this.repo.createQueryBuilder('oe');
 
-    if (q.type) {
-      qb.andWhere('oe.type = :type', { type: q.type });
-    }
     if (q.search?.trim()) {
       qb.andWhere('LOWER(oe.name) LIKE :s', { s: `%${q.search.toLowerCase()}%` });
     }
@@ -54,7 +48,9 @@ export class OverlayElementsService {
   }
 
   async update(id: string, dto: OverlayElementUpdate, updatedByUserId: string): Promise<OverlayElement> {
-    await this.repo.update(id, { ...dto, updatedByUserId });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { isSystem: _ignored, ...safe } = dto as any;
+    await this.repo.update(id, { ...safe, updatedByUserId });
     return this.getById(id);
   }
 

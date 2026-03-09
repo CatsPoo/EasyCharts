@@ -30,20 +30,20 @@ function OverlayElementNode({ data, selected }: NodeProps<OverlayElementNodeData
     [overlayElementOnChart.id, onSizeChange]
   );
 
-  const isCloud = overlayElement.type === "cloud";
+  // System elements (e.g. Cloud) render as cloud shape; user elements render as image cards
+  const isSystem = overlayElement.isSystem;
 
   // Cloud colours
   const fill   = isDark ? "#0c2340" : "#eef2ff";
   const stroke = selected ? "#a78bfa" : isDark ? "#38bdf8" : "#6366f1";
   const textColor = isDark ? "#93c5fd" : "#4338ca";
-  const subColor  = isDark ? "#7dd3fc" : "#6366f1";
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       {editMode && (
         <NodeResizer
-          minWidth={isCloud ? 140 : 60}
-          minHeight={isCloud ? 80 : 60}
+          minWidth={isSystem ? 140 : 60}
+          minHeight={isSystem ? 80 : 60}
           onResizeEnd={handleResizeEnd}
           lineStyle={{ borderColor: stroke }}
           handleStyle={{
@@ -56,8 +56,8 @@ function OverlayElementNode({ data, selected }: NodeProps<OverlayElementNodeData
         />
       )}
 
-      {/* ── Cloud rendering ── */}
-      {isCloud && (
+      {/* ── Cloud (system element) rendering ── */}
+      {isSystem && (
         <>
           <svg
             viewBox="0 0 24 16"
@@ -92,8 +92,9 @@ function OverlayElementNode({ data, selected }: NodeProps<OverlayElementNodeData
               <svg width="11" height="11" viewBox="0 0 24 24" fill={textColor} style={{ flexShrink: 0 }}>
                 <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
               </svg>
+              {/* freeText holds the user-given instance name; fall back to template name */}
               <span style={{ color: textColor, fontWeight: 700, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {overlayElement.name}
+                {freeText || overlayElement.name}
               </span>
               {editMode && (
                 <button
@@ -105,17 +106,12 @@ function OverlayElementNode({ data, selected }: NodeProps<OverlayElementNodeData
                 </button>
               )}
             </div>
-            {overlayElement.description && (
-              <span style={{ color: subColor, fontSize: 9, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "80%", pointerEvents: "auto" }}>
-                {overlayElement.description}
-              </span>
-            )}
           </div>
         </>
       )}
 
-      {/* ── Custom Element rendering ── */}
-      {!isCloud && (
+      {/* ── Custom element (user-created) rendering ── */}
+      {!isSystem && (
         <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", userSelect: "none", gap: 2 }}>
           <div style={{ fontSize: 11, fontWeight: 600, maxWidth: "100%", textAlign: "center", wordBreak: "break-word", paddingInline: 4 }}>
             {overlayElement.name}

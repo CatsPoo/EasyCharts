@@ -4,7 +4,6 @@ import {
   OverlayElementCreateSchema,
   type OverlayElementUpdate,
   OverlayElementUpdateSchema,
-  type OverlayElementType,
 } from '@easy-charts/easycharts-types';
 import {
   Body,
@@ -45,7 +44,7 @@ export class OverlayElementsController {
 
   @RequirePermissions(Permission.ASSET_READ)
   @Get()
-  list(@Query() q: QueryDto & { type?: OverlayElementType }) {
+  list(@Query() q: QueryDto) {
     return this.overlayElementsService.list(q);
   }
 

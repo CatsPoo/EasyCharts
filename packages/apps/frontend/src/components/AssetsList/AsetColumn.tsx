@@ -5,8 +5,7 @@ import { Box, Chip } from "@mui/material";
 export const columns: Record<AssetKind, GridColDef[]> = {
   overlayElements: [
     { field: "name", headerName: "Name", flex: 1 },
-    { field: "type", headerName: "Type", width: 130 },
-    { field: "description", headerName: "Description", flex: 2 },
+    { field: "isSystem", headerName: "System", width: 100, type: "boolean" },
     {
       field: "imageUrl",
       headerName: "Image",

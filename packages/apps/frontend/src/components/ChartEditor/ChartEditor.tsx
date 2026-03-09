@@ -126,7 +126,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       useState<DeviceOnChart | null>(null);
     const [editOverlayElementTarget, setEditOverlayElementTarget] = useState<OverlayElement | null>(null);
     const [createDeviceOpen, setCreateDeviceOpen] = useState(false);
-    const [createOverlayElementOpen, setCreateOverlayElementOpen] = useState<'cloud' | 'customElement' | null>(null);
+    const [createOverlayElementOpen, setCreateOverlayElementOpen] = useState(false);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
     const [portTypeMismatch, setPortTypeMismatch] = useState(false);
@@ -291,8 +291,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       }
       if (node.type === "overlayElement") {
         const oeOnChart = (chartRef.current.overlayElementsOnChart ?? []).find((oe) => oe.id === node.id);
-        if (oeOnChart?.overlayElement.type === "cloud") {
-          setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "cloud", payload: { cloudId: node.id, cloudName: oeOnChart.overlayElement.name } });
+        if (oeOnChart?.overlayElement.isSystem) {
+          setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "cloud", payload: { cloudId: node.id, cloudName: oeOnChart.freeText || oeOnChart.overlayElement.name } });
         } else {
           setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "customElement", payload: { instanceId: node.id, currentText: oeOnChart?.freeText ?? "" } });
         }
@@ -815,7 +815,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             ...prev,
             overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map((oe) =>
               oe.overlayElementId === editOverlayElementTarget.id
-                ? { ...oe, overlayElement: { ...oe.overlayElement, name: updated.name, description: updated.description, imageUrl: updated.imageUrl } }
+                ? { ...oe, overlayElement: { ...oe.overlayElement, name: updated.name, imageUrl: updated.imageUrl } }
                 : oe
             ),
           } as Chart));
@@ -841,15 +841,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onCreateOverlayElementSubmit = useCallback(
       async (formData: any) => {
-        if (!createOverlayElementOpen) return;
         try {
-          await createOverlayElementMut.mutateAsync({ ...formData, type: createOverlayElementOpen });
+          await createOverlayElementMut.mutateAsync({ ...formData, isSystem: false });
         } catch (e) {
           console.error("Failed to create overlay element:", e);
         }
-        setCreateOverlayElementOpen(null);
+        setCreateOverlayElementOpen(false);
       },
-      [createOverlayElementOpen, createOverlayElementMut]
+      [createOverlayElementMut]
     );
 
     const greenPortIds = useMemo(() => {
@@ -1377,14 +1376,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const convertOverlayElementToNode = useCallback(
       (oeOnChart: OverlayElementOnChart): Node => {
-        const isCloud = oeOnChart.overlayElement.type === "cloud";
+        const isSystem = oeOnChart.overlayElement.isSystem;
         return {
           id: oeOnChart.id,
           type: "overlayElement",
           position: oeOnChart.position,
           style: {
-            width: oeOnChart.size?.width ?? (isCloud ? 180 : 120),
-            height: oeOnChart.size?.height ?? (isCloud ? 90 : 120),
+            width: oeOnChart.size?.width ?? (isSystem ? 180 : 120),
+            height: oeOnChart.size?.height ?? (isSystem ? 90 : 120),
           },
           data: {
             overlayElementOnChart: oeOnChart,
@@ -1402,21 +1401,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       pageSize: 100000,
     });
 
-    const { data: cloudOverlayData } = useListOverlayElements("cloud");
-    const allClouds = useMemo<OverlayElement[]>(
-      () => (cloudOverlayData?.rows ?? []) as OverlayElement[],
-      [cloudOverlayData]
-    );
-
-    const { data: customElementOverlayData } = useListOverlayElements("customElement");
-    const allCustomElements = useMemo<OverlayElement[]>(
-      () => (customElementOverlayData?.rows ?? []) as OverlayElement[],
-      [customElementOverlayData]
+    const { data: overlayElementsData } = useListOverlayElements();
+    const allOverlayElements = useMemo<OverlayElement[]>(
+      () => (overlayElementsData?.rows ?? []) as OverlayElement[],
+      [overlayElementsData]
     );
 
     const overlayElementsById = useMemo<Map<string, OverlayElement>>(
-      () => new Map([...allClouds, ...allCustomElements].map((oe) => [oe.id, oe])),
-      [allClouds, allCustomElements]
+      () => new Map(allOverlayElements.map((oe) => [oe.id, oe])),
+      [allOverlayElements]
     );
 
     const usedIds = useMemo(
@@ -1953,14 +1946,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             if (!oe) return;
             const bounds = reactFlowWrapper.current.getBoundingClientRect();
             const position = project({ x: e.clientX - bounds.left, y: e.clientY - bounds.top });
-            const isCloud = oe.type === "cloud";
             const newOeOnChart: OverlayElementOnChart = {
               id: uuidv4(),
               overlayElementId,
               overlayElement: oe as any,
               position,
               freeText: "",
-              size: { width: isCloud ? 180 : 120, height: isCloud ? 90 : 120 },
+              size: { width: oe.isSystem ? 180 : 120, height: oe.isSystem ? 90 : 120 },
             };
             applyChartChange((prev) => ({
               ...prev,
@@ -2379,11 +2371,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             >
               <DevicesSidebar
                 devicesList={unusedDevices}
-                cloudsList={allClouds}
-                customElementsList={allCustomElements}
+                systemElementsList={allOverlayElements.filter((oe) => oe.isSystem)}
+                customElementsList={allOverlayElements.filter((oe) => !oe.isSystem)}
                 onCreateDevice={() => setCreateDeviceOpen(true)}
-                onCreateCloud={() => setCreateOverlayElementOpen('cloud')}
-                onCreateCustomElement={() => setCreateOverlayElementOpen('customElement')}
+                onCreateCustomElement={() => setCreateOverlayElementOpen(true)}
               />
             </motion.div>
           )}
@@ -2762,8 +2753,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         />
         <AssetForm
           kind="overlayElements"
-          open={createOverlayElementOpen !== null}
-          onClose={() => setCreateOverlayElementOpen(null)}
+          open={createOverlayElementOpen}
+          onClose={() => setCreateOverlayElementOpen(false)}
           onSubmit={onCreateOverlayElementSubmit}
         />
         <OverlayElementTextDialog

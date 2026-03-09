@@ -5,6 +5,7 @@ import { OverlayElementEntity } from '../devices/entities/overlayElement.entity'
 import { OverlayElementOnChartEntity } from '../charts/entities/overlayElementOnChart.entity';
 import { OverlayElementsController } from './overlayElements.controller';
 import { OverlayElementsService } from './overlayElements.service';
+import { OverlayElementsSeeder } from './overlayElements.seeder';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { OverlayElementsService } from './overlayElements.service';
     AuthModule,
   ],
   controllers: [OverlayElementsController],
-  providers: [OverlayElementsService],
+  providers: [OverlayElementsService, OverlayElementsSeeder],
   exports: [OverlayElementsService],
 })
 export class OverlayElementsModule {}
