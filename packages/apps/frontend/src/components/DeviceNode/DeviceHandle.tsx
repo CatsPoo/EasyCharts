@@ -110,7 +110,7 @@ export default function DeviceHandle({
         position={position}
         style={handleStyle()}
         isConnectableEnd={false}
-        isConnectableStart={!inUse}
+        isConnectableStart={true}
         onContextMenu={(e) =>
           onHandleContextMenu?.(e, {
             deviceId,
@@ -127,7 +127,7 @@ export default function DeviceHandle({
         position={position}
         style={handleStyle()}
         isConnectableStart={false}
-        isConnectableEnd={!inUse}
+        isConnectableEnd={true}
         onContextMenu={(e) =>
           onHandleContextMenu?.(e, {
             deviceId,

@@ -39,6 +39,7 @@ import { v4 as uuidv4 } from "uuid";
 import ReactFlow, {
   Background,
   ConnectionLineType,
+  ConnectionMode,
   Controls,
   MiniMap,
   reconnectEdge,
@@ -130,6 +131,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
     const [portTypeMismatch, setPortTypeMismatch] = useState(false);
+    const [portChartUsed, setPortChartUsed] = useState(false);
     const [pairedToastOpen, setPairedToastOpen] = useState(false);
     const [bondSiblingToast, setBondSiblingToast] = useState<{
       result: BondPortSiblingsResponse;
@@ -1632,29 +1634,45 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onConnect = useCallback(
       (c: Connection) => {
-        // ── Free-node connection: cloud or custom element on either/both sides ──
-        // This single branch handles: device↔cloud, device↔CE, cloud↔cloud, CE↔CE, cloud↔CE.
-        // Any logic change here automatically applies to all combinations.
+        // Build set of port IDs already wired on THIS chart (device↔device or overlay↔device).
+        const chartUsedPortIds = new Set<string>([
+          ...(chart.linesOnChart ?? []).flatMap((l) => [l.line.sourcePort.id, l.line.targetPort.id]),
+          ...(chart.overlayEdgesOnChart ?? []).flatMap((e) =>
+            [e.sourcePortId, e.targetPortId].filter(Boolean) as string[]
+          ),
+        ]);
+
+        // ── Free-node connection: overlay element on either/both sides ──
         const isSourceFree = isFreeNode(c.source, chart.overlayElementsOnChart ?? []);
         const isTargetFree = isFreeNode(c.target, chart.overlayElementsOnChart ?? []);
-        if ((isSourceFree || isTargetFree) && c.source && c.target && c.sourceHandle && c.targetHandle) {
-          const sourcePortId = !isSourceFree ? c.sourceHandle : undefined;
-          const targetPortId = !isTargetFree ? c.targetHandle : undefined;
+        if ((isSourceFree || isTargetFree) && c.source && c.target) {
+          // In ConnectionMode.Loose, targetHandle may be null when connecting source→source.
+          // Use the overlay node's default target handle as fallback so the edge renders correctly.
+          const sourceHandle = c.sourceHandle ?? "src-left";
+          const targetHandle = c.targetHandle ?? (isTargetFree ? "left" : c.sourceHandle ?? "src-left");
+          const sourcePortId = !isSourceFree ? c.sourceHandle ?? undefined : undefined;
+          const targetPortId = !isTargetFree ? c.targetHandle ?? undefined : undefined;
+          // Block if the device port is already connected on this chart.
+          const devicePortId = sourcePortId ?? targetPortId;
+          if (devicePortId && chartUsedPortIds.has(devicePortId)) {
+            setPortChartUsed(true);
+            return;
+          }
           const newEdge: OverlayEdgeOnChart = {
             id: uuidv4(),
             sourceNodeId: c.source,
-            sourceHandle: c.sourceHandle,
+            sourceHandle,
             targetNodeId: c.target,
-            targetHandle: c.targetHandle,
+            targetHandle,
             sourcePortId,
             targetPortId,
           };
           setEdges((eds) => [...eds, {
             id: newEdge.id,
             source: c.source!,
-            sourceHandle: c.sourceHandle,
+            sourceHandle,
             target: c.target!,
-            targetHandle: c.targetHandle,
+            targetHandle,
             type: "step",
           } as Edge]);
           const portIds = new Set([sourcePortId, targetPortId].filter(Boolean) as string[]);
@@ -1685,6 +1703,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         const targetPort: Port = chart.devicesOnChart
           .find((d) => d.device.id === c.target)!
           .device.ports.find((p) => p.id === c.targetHandle)!;
+        // Block if either port is already wired on this chart.
+        if (chartUsedPortIds.has(sourcePort?.id) || chartUsedPortIds.has(targetPort?.id)) {
+          setPortChartUsed(true);
+          return;
+        }
         if (sourcePort.type !== targetPort.type) {
           setPortTypeMismatch(true);
           return;
@@ -1735,11 +1758,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       },
       [
         chart.overlayElementsOnChart,
+        chart.linesOnChart,
+        chart.overlayEdgesOnChart,
         chart.devicesOnChart,
         chart.id,
         convertLineToEdge,
         setEdges,
         setMadeChanges,
+        setPortChartUsed,
         applyChartChange,
       ]
     );
@@ -2674,6 +2700,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             nodesConnectable={editMode}
             defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
             connectionLineType={ConnectionLineType.Step}
+            connectionMode={ConnectionMode.Loose}
             onPaneContextMenu={editMode ? onPaneContextMenu : undefined}
             onNodeContextMenu={editMode ? onNodeContextMenu : undefined}
             onEdgeContextMenu={editMode ? onEdgeContextMenu : undefined}
@@ -2788,11 +2815,18 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           onClose={() => setPortTypeMismatch(false)}
           anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
-          <Alert
-            severity="error"
-            onClose={() => setPortTypeMismatch(false)}
-          >
+          <Alert severity="error" onClose={() => setPortTypeMismatch(false)}>
             Cannot connect ports of different types.
+          </Alert>
+        </Snackbar>
+        <Snackbar
+          open={portChartUsed}
+          autoHideDuration={4000}
+          onClose={() => setPortChartUsed(false)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert severity="error" onClose={() => setPortChartUsed(false)}>
+            Port is already connected on this chart.
           </Alert>
         </Snackbar>
         <Snackbar
