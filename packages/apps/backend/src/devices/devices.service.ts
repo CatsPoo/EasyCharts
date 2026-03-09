@@ -9,9 +9,9 @@ import { DataSource, Repository } from "typeorm";
 import { DeviceOnChartEntity } from "../charts/entities/deviceOnChart.entity";
 import { QueryDto } from "../query/dto/query.dto";
 import { DeviceEntity } from "./entities/device.entity";
-import { ModelEntity } from "./entities/model.entity";
+import { ModelEntity } from "../models/entities/model.entity";
 import { DeviceTypeEntity } from "./entities/deviceType.entity";
-import { AssetVersionsService } from "./assetVersions.service";
+import { AssetVersionsService } from "../assetVersions/assetVersions.service";
 
 @Injectable()
 export class DevicesService {

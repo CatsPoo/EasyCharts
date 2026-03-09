@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, type Relation, UpdateDateColumn } from 'typeorm';
 import { DeviceOnChartEntity } from '../../charts/entities/deviceOnChart.entity';
-import { ModelEntity } from './model.entity';
+import { ModelEntity } from '../../models/entities/model.entity';
 import { PortEntity } from './port.entity';
 import { DeviceTypeEntity } from './deviceType.entity';
 import { AuditableEntity } from '../../auth/entities/auditableEntity.culumns';

@@ -83,9 +83,11 @@ function CableTypeFields({ register, errors, control, setValue }: { register: an
 function ImageUploadField({
   currentUrl,
   onUploaded,
+  folder = "custom-elements",
 }: {
   currentUrl?: string;
   onUploaded: (url: string) => void;
+  folder?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | undefined>(currentUrl);
@@ -103,7 +105,7 @@ function ImageUploadField({
       const formData = new FormData();
       formData.append("file", file);
       const { data } = await http.post<{ url: string }>(
-        "/customElements/upload",
+        `/upload?folder=${folder}`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -152,11 +154,7 @@ function ImageUploadField({
 }
 
 const schemas = {
-  clouds: z.object({
-    name: z.string().min(1),
-    description: z.string().optional(),
-  }),
-  customElements: z.object({
+  overlayElements: z.object({
     name: z.string().min(1),
     imageUrl: z.string().optional(),
   }),
@@ -172,6 +170,7 @@ const schemas = {
   models: z.object({
     name: z.string().min(1),
     vendorId: z.string().min(1),
+    iconUrl: z.string().optional(),
   }),
   vendors: z.object({
     name: z.string().min(1),
@@ -280,7 +279,7 @@ export function AssetForm<K extends AssetKind>({
   return (
     <Dialog open={open} onClose={onClose} maxWidth={kind === "devices" ? "md" : "sm"} fullWidth>
       <DialogTitle>
-        {initial?.id
+        {(initial as any)?.id
           ? `Edit ${kind.slice(0, -1)}`
           : `Create ${kind.slice(0, -1)}`}
       </DialogTitle>
@@ -292,27 +291,18 @@ export function AssetForm<K extends AssetKind>({
       >
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            {initial?.id && <input type="hidden" {...register("id")} />}
+            {(initial as any)?.id && <input type="hidden" {...register("id")} />}
             <TextField
               label="Name"
               {...register("name")}
               helperText={errors.name?.message as string}
               error={!!errors.name}
             />
-            {kind === "clouds" && (
-              <TextField
-                label="Description"
-                multiline
-                rows={3}
-                {...register("description")}
-                helperText={errors.description?.message as string}
-                error={!!errors.description}
-              />
-            )}
-            {kind === "customElements" && (
+            {kind === "overlayElements" && (
               <ImageUploadField
                 currentUrl={(initial as any)?.imageUrl}
                 onUploaded={(url) => setValue("imageUrl", url)}
+                folder="custom-elements"
               />
             )}
             {kind === "devices" && (
@@ -364,14 +354,21 @@ export function AssetForm<K extends AssetKind>({
               </>
             )}
             {kind === "models" && (
-              <AssetsSelectionList
-                fetchKind="vendors"
-                name="vendorId"
-                label="Vendor"
-                control={control}
-                errors={errors}
-                onQuickCreate={() => setQuickKind("vendors")}
-              />
+              <>
+                <AssetsSelectionList
+                  fetchKind="vendors"
+                  name="vendorId"
+                  label="Vendor"
+                  control={control}
+                  errors={errors}
+                  onQuickCreate={() => setQuickKind("vendors")}
+                />
+                <ImageUploadField
+                  currentUrl={(initial as any)?.iconUrl}
+                  onUploaded={(url) => setValue("iconUrl", url)}
+                  folder="models"
+                />
+              </>
             )}
             {kind === "cableTypes" && (
               <CableTypeFields

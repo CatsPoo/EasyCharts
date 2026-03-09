@@ -13,7 +13,7 @@ import { DeviceOnChartEntity } from "./deviceOnChart.entity";
 import { LineOnChartEntity } from "./lineonChart.emtity";
 import { NoteOnChartEntity } from "./noteOnChart.entity";
 import { ZoneOnChartEntity } from "./zoneOnChart.entity";
-import { CloudOnChartEntity } from "./cloudOnChart.entity";
+import { OverlayElementOnChartEntity, OverlayEdgeOnChartEntity } from "./overlayElementOnChart.entity";
 import { AuditableEntity } from "../../auth/entities/auditableEntity.culumns";
 
 @Entity({ name: "charts" })
@@ -76,21 +76,15 @@ export class ChartEntity extends AuditableEntity {
   })
   zonesOnChart!: Relation<ZoneOnChartEntity[]>;
 
-  @OneToMany(() => CloudOnChartEntity, (coc) => coc.chart, {
+  @OneToMany(() => OverlayElementOnChartEntity, (oe) => oe.chart, {
     cascade: ["insert", "update"],
     orphanedRowAction: "delete",
   })
-  cloudsOnChart!: Relation<CloudOnChartEntity[]>;
+  overlayElementsOnChart!: Relation<OverlayElementOnChartEntity[]>;
 
-//   @OneToMany(() => CustomElementOnChartEntity, (cec) => cec.chart, {
-//     cascade: ["insert", "update"],
-//     orphanedRowAction: "delete",
-//   })
-//   customElementsOnChart!: Relation<CustomElementOnChartEntity[]>;
-
-//   @OneToMany(() => CustomElementEdgeOnChartEntity, (e) => e.chart, {
-//     cascade: ["insert", "update"],
-//     orphanedRowAction: "delete",
-//   })
-//   customElementEdgesOnChart!: Relation<CustomElementEdgeOnChartEntity[]>;
- }
+  @OneToMany(() => OverlayEdgeOnChartEntity, (e) => e.chart, {
+    cascade: ["insert", "update"],
+    orphanedRowAction: "delete",
+  })
+  overlayEdgesOnChart!: Relation<OverlayEdgeOnChartEntity[]>;
+}

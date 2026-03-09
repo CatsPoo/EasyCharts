@@ -7,7 +7,7 @@ import {
   type ChartCreate,
   type ChartMetadata,
   type ChartUpdate,
-  type CloudOnChart,
+  type OverlayElementOnChart,
   type DeviceOnChart,
   type ZoneOnChart
 } from "@easy-charts/easycharts-types";
@@ -28,7 +28,6 @@ import { LinessService } from "../lines/lines.service";
 import { BondsOnChartService } from "./bondOnChart.service";
 import { ChartLockFeilds } from "./chartLockes.types";
 import { ChartVersionsService } from "./chartVersions.service";
-import { CloudsOnChartService } from "./cloudOnChart.service";
 import { DevicesOnChartService } from "./deviceOnChart.service";
 import { ChartEntity } from "./entities/chart.entity";
 import { ChartShareEntity } from "./entities/chartShare.entity";
@@ -37,6 +36,7 @@ import { ChartNotFoundExeption } from "./exeptions/chartNotFound.exeption";
 import { LinesOnChartService } from "./lineOnChart.service";
 import { NotesOnChartService } from "./noteOnChart.service";
 import { ZonesOnChartService } from "./zoneOnChart.service";
+import { OverlayElementsOnChartService } from "./overlayElementOnChart.service";
 
 @Injectable()
 export class ChartsService {
@@ -65,7 +65,7 @@ export class ChartsService {
     private readonly bondsOnChartService: BondsOnChartService,
     private readonly notesOnChartService: NotesOnChartService,
     private readonly zonesOnChartService: ZonesOnChartService,
-    private readonly cloudsOnChartService: CloudsOnChartService,
+    private readonly overlayElementsOnChartService: OverlayElementsOnChartService,
     private readonly chartVersionsService: ChartVersionsService,
   ) {}
 
@@ -103,7 +103,7 @@ export class ChartsService {
   convertChartEntityToChart = async (
     chartEnrity: ChartEntity
   ): Promise<Chart> => {
-    const { devicesOnChart, linesOnChart, bondOnChart, notesOnChart, zonesOnChart, cloudsOnChart, createdAt, createdByUserId, updatedAt, updatedByUserId, ...chartData } = chartEnrity;
+    const { devicesOnChart, linesOnChart, bondOnChart, notesOnChart, zonesOnChart, overlayElementsOnChart, overlayEdgesOnChart, createdAt, createdByUserId, updatedAt, updatedByUserId, ...chartData } = chartEnrity;
     const convertedDeviceOnCharts: DeviceOnChart[] = [];
     for (const dl of devicesOnChart) convertedDeviceOnCharts.push(await this.devicesOnChartService.convertDeviceOnChartEntity(dl));
 
@@ -121,9 +121,19 @@ export class ChartsService {
       this.zonesOnChartService.convertZoneOnChartEntity(z)
     );
 
-    const convertedCloudsOnChart: CloudOnChart[] = (cloudsOnChart ?? []).map((c) =>
-      this.cloudsOnChartService.convertCloudOnChartEntity(c)
+    const convertedOverlayElementsOnChart: OverlayElementOnChart[] = (overlayElementsOnChart ?? []).map((oe) =>
+      this.overlayElementsOnChartService.convertEntity(oe)
     );
+
+    const convertedOverlayEdgesOnChart = (overlayEdgesOnChart ?? []).map((e) => ({
+      id: e.id,
+      sourceNodeId: e.sourceNodeId,
+      sourceHandle: e.sourceHandle,
+      targetNodeId: e.targetNodeId,
+      targetHandle: e.targetHandle,
+      sourcePortId: e.sourcePortId ?? undefined,
+      targetPortId: e.targetPortId ?? undefined,
+    }));
 
     return {
       devicesOnChart: convertedDeviceOnCharts,
@@ -131,7 +141,8 @@ export class ChartsService {
       bondsOnChart: convertedBondOnChart,
       notesOnChart: convertedNotesOnChart,
       zonesOnChart: convertedZonesOnChart,
-      cloudsOnChart: convertedCloudsOnChart,
+      overlayElementsOnChart: convertedOverlayElementsOnChart,
+      overlayEdgesOnChart: convertedOverlayEdgesOnChart,
       lock: this.getLockFromChartEntity(chartEnrity),
       createdAt,
       createdByUserId,
@@ -154,7 +165,7 @@ export class ChartsService {
       where: { id },
       relations: {
         devicesOnChart: {
-          device: { model: { vendor: true }, ports: true },
+          device: { type: true, model: { vendor: true }, ports: true },
           portPlacements: { port: true },
           position: true,
         },
@@ -162,7 +173,8 @@ export class ChartsService {
         bondOnChart: { bond: { members: true } },
         notesOnChart: true,
         zonesOnChart: true,
-        cloudsOnChart: { cloud: true, connections: true },
+        overlayElementsOnChart: { overlayElement: true },
+        overlayEdgesOnChart: true,
       },
     });
     if (!chart) throw new NotFoundException("chart not found");
@@ -369,9 +381,14 @@ export class ChartsService {
         await this.zonesOnChartService.syncZones(manager, chartId, dto.zonesOnChart);
       }
 
-      // 5c) Clouds on chart (instance only — references global clouds)
-      if (dto.cloudsOnChart !== undefined) {
-        await this.cloudsOnChartService.syncCloudsOnChart(manager, chartId, dto.cloudsOnChart);
+      // 5c) Overlay elements on chart (clouds + custom elements — unified)
+      if (dto.overlayElementsOnChart !== undefined || dto.overlayEdgesOnChart !== undefined) {
+        await this.overlayElementsOnChartService.syncOverlayElementsOnChart(
+          manager,
+          chartId,
+          dto.overlayElementsOnChart ?? [],
+          dto.overlayEdgesOnChart ?? [],
+        );
       }
 
       // 6) Hard deletes (global)
@@ -387,13 +404,14 @@ export class ChartsService {
         where: { id: chartId },
         relations: {
           devicesOnChart: {
-            device: { model: { vendor: true }, ports: true },
+            device: { type: true, model: { vendor: true }, ports: true },
             portPlacements: { port: true },
           },
           linesOnChart: { line: { sourcePort: true, targetPort: true } },
           bondOnChart: { bond: { members: true } },
           notesOnChart: true,
-          cloudsOnChart: { cloud: true, connections: true },
+          overlayElementsOnChart: { overlayElement: true },
+          overlayEdgesOnChart: true,
         },
       });
     });

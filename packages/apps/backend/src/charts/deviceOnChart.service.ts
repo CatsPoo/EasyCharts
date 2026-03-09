@@ -9,7 +9,7 @@ import { PortEntity } from "../devices/entities/port.entity";
 import { DevicesService } from "../devices/devices.service";
 import { PortsOnChartService } from "./portsOnChart.service";
 import { PortsService } from "../devices/ports.service";
-import { AssetVersionsService } from "../devices/assetVersions.service";
+import { AssetVersionsService } from "../assetVersions/assetVersions.service";
 
 @Injectable()
 export class DevicesOnChartService {

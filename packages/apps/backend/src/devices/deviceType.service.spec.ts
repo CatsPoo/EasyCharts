@@ -4,7 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { DeviceTypeEntity } from './entities/deviceType.entity';
 import { DeviceTypeService } from './deviceType.service';
-import { AssetVersionsService } from './assetVersions.service';
+import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 
 const makeType = (overrides: Partial<DeviceTypeEntity> = {}): DeviceTypeEntity =>
   ({

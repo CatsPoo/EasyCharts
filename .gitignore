@@ -52,4 +52,5 @@ test-output
 !**/.env.example
 !**/.env.*.example
 
+/public
 TODO
