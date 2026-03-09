@@ -165,7 +165,7 @@ export class ChartsService {
       where: { id },
       relations: {
         devicesOnChart: {
-          device: { model: { vendor: true }, ports: true },
+          device: { type: true, model: { vendor: true }, ports: true },
           portPlacements: { port: true },
           position: true,
         },
@@ -404,7 +404,7 @@ export class ChartsService {
         where: { id: chartId },
         relations: {
           devicesOnChart: {
-            device: { model: { vendor: true }, ports: true },
+            device: { type: true, model: { vendor: true }, ports: true },
             portPlacements: { port: true },
           },
           linesOnChart: { line: { sourcePort: true, targetPort: true } },
