@@ -142,6 +142,7 @@ export class ModelsService implements OnApplicationBootstrap {
   async createModel(dto: ModelCreate,createdByUserId:string): Promise<Model> {
     const model = this.modelsRepo.create({
       name: dto.name,
+      iconUrl: dto.iconUrl,
       createdByUserId
     });
 
@@ -166,6 +167,7 @@ export class ModelsService implements OnApplicationBootstrap {
     if (!model) throw new NotFoundException("Model not found");
 
     if (dto.name) model.name = dto.name;
+    if (dto.iconUrl !== undefined) model.iconUrl = dto.iconUrl;
 
     if (dto.vendorId !== undefined) {
       const vendor = await this.vendorRepo.findOne({

@@ -11,6 +11,9 @@ export class ModelEntity extends AuditableEntity{
   @Column({ unique: true })
   name!: string;
 
+  @Column({ name: "icon_url", nullable: true, type: "text" })
+  iconUrl?: string;
+
   @ManyToOne(() => VendorEntity, { onDelete: "RESTRICT", nullable: true })
   @JoinColumn({ name: "vendor_id" })
   vendor: Relation<VendorEntity>;

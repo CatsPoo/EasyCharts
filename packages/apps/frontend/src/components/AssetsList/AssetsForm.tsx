@@ -83,9 +83,11 @@ function CableTypeFields({ register, errors, control, setValue }: { register: an
 function ImageUploadField({
   currentUrl,
   onUploaded,
+  folder = "custom-elements",
 }: {
   currentUrl?: string;
   onUploaded: (url: string) => void;
+  folder?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | undefined>(currentUrl);
@@ -103,7 +105,7 @@ function ImageUploadField({
       const formData = new FormData();
       formData.append("file", file);
       const { data } = await http.post<{ url: string }>(
-        "/upload?folder=custom-elements",
+        `/upload?folder=${folder}`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -168,6 +170,7 @@ const schemas = {
   models: z.object({
     name: z.string().min(1),
     vendorId: z.string().min(1),
+    iconUrl: z.string().optional(),
   }),
   vendors: z.object({
     name: z.string().min(1),
@@ -299,6 +302,7 @@ export function AssetForm<K extends AssetKind>({
               <ImageUploadField
                 currentUrl={(initial as any)?.imageUrl}
                 onUploaded={(url) => setValue("imageUrl", url)}
+                folder="custom-elements"
               />
             )}
             {kind === "devices" && (
@@ -350,14 +354,21 @@ export function AssetForm<K extends AssetKind>({
               </>
             )}
             {kind === "models" && (
-              <AssetsSelectionList
-                fetchKind="vendors"
-                name="vendorId"
-                label="Vendor"
-                control={control}
-                errors={errors}
-                onQuickCreate={() => setQuickKind("vendors")}
-              />
+              <>
+                <AssetsSelectionList
+                  fetchKind="vendors"
+                  name="vendorId"
+                  label="Vendor"
+                  control={control}
+                  errors={errors}
+                  onQuickCreate={() => setQuickKind("vendors")}
+                />
+                <ImageUploadField
+                  currentUrl={(initial as any)?.iconUrl}
+                  onUploaded={(url) => setValue("iconUrl", url)}
+                  folder="models"
+                />
+              </>
             )}
             {kind === "cableTypes" && (
               <CableTypeFields
