@@ -66,6 +66,12 @@ export function ChartsPage() {
 
   const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,isLoading} = useChartLock(user!.id,selectedId || undefined)
 
+  const {
+    data: selectedChart,
+    isLoading: isSelectedChartLoading,
+    error: selectedChartError,
+  } = useChartById(selectedId ?? "");
+
   const prevLockStateRef = useRef<LockState | undefined>(undefined);
   useEffect(() => {
     const prev = prevLockStateRef.current;
@@ -106,12 +112,6 @@ export function ChartsPage() {
   useEffect(() => {
     setSelectedId("");
   }, [tab]);
-
-  const {
-    data: selectedChart,
-    isLoading: isSelectedChartLoading,
-    error: selectedChartError,
-  } = useChartById(selectedId ?? "");
 
   const onEditSwitchToggle = useCallback(async (checked:boolean)=>{
     try {
