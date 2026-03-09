@@ -1365,13 +1365,42 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const onRemoveOverlayElement = useCallback(
       (instanceId: string) => {
         setEdges((eds) => eds.filter((e) => e.source !== instanceId && e.target !== instanceId));
-        applyChartChange((prev) => ({
-          ...prev,
-          overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).filter((oe) => oe.id !== instanceId),
-          overlayEdgesOnChart: (prev.overlayEdgesOnChart ?? []).filter(
+        applyChartChange((prev) => {
+          // Collect port IDs that are being freed by removing this instance's edges.
+          const removedEdges = (prev.overlayEdgesOnChart ?? []).filter(
+            (e) => e.sourceNodeId === instanceId || e.targetNodeId === instanceId
+          );
+          const removedPortIds = new Set<string>(
+            removedEdges.flatMap((e) => [e.sourcePortId, e.targetPortId].filter(Boolean) as string[])
+          );
+          // A port can be reset only if it won't appear in any remaining connection.
+          const remainingOverlayEdges = (prev.overlayEdgesOnChart ?? []).filter(
             (e) => e.sourceNodeId !== instanceId && e.targetNodeId !== instanceId
-          ),
-        } as Chart));
+          );
+          const stillUsedPortIds = new Set<string>([
+            ...prev.linesOnChart.flatMap((l) => [l.line.sourcePort.id, l.line.targetPort.id]),
+            ...remainingOverlayEdges.flatMap((e) =>
+              [e.sourcePortId, e.targetPortId].filter(Boolean) as string[]
+            ),
+          ]);
+          const portsToFree = new Set([...removedPortIds].filter((id) => !stillUsedPortIds.has(id)));
+          return {
+            ...prev,
+            overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).filter((oe) => oe.id !== instanceId),
+            overlayEdgesOnChart: remainingOverlayEdges,
+            devicesOnChart: portsToFree.size
+              ? prev.devicesOnChart.map((doc) => ({
+                  ...doc,
+                  device: {
+                    ...doc.device,
+                    ports: doc.device.ports.map((p) =>
+                      portsToFree.has(p.id) ? { ...p, inUse: false } : p
+                    ),
+                  },
+                } as DeviceOnChart))
+              : prev.devicesOnChart,
+          } as Chart;
+        });
       },
       [applyChartChange, setEdges]
     );
@@ -1398,6 +1427,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           style: {
             width: oeOnChart.size?.width ?? (isSystem ? 180 : 120),
             height: oeOnChart.size?.height ?? (isSystem ? 90 : 120),
+            background: "transparent",
           },
           data: {
             overlayElementOnChart: oeOnChart,
