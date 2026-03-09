@@ -87,6 +87,17 @@ import type { DeleteSets } from "./interfaces/deleteSets.interfaces";
 import type { EditLineDialogFormResponse } from "./interfaces/editLineDialogForm.interfaces";
 import type { CtxState } from "./interfaces/ctsMenu.interfaces";
 
+const NODE_TYPES = {
+  device: DeviceNode,
+  bridge: BondBridgeNode,
+  note: NoteNode,
+  zone: ZoneNode,
+  cloud: CloudNode,
+  customElement: CustomElementNode,
+} as any;
+
+const DEFAULT_EDGE_OPTIONS = { type: ConnectionLineType.Step };
+
 interface ChardEditorProps {
   chart: Chart;
   setChart: React.Dispatch<React.SetStateAction<Chart>>;
@@ -155,7 +166,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const createCustomElementMut = useCreateAsset("customElements");
     const [editCustomElementTextTarget, setEditCustomElementTextTarget] = useState<{ id: string; currentText: string } | null>(null);
 
-    const { data: allCableTypes = [] } = useCableTypes();
+    const { data: cableTypesData } = useCableTypes();
+    const allCableTypes = useMemo(() => cableTypesData ?? [], [cableTypesData]);
     const [zoneStyleDialogZoneId, setZoneStyleDialogZoneId] = useState<string | null>(null);
 
     const actionsHistory = useRef<Chart[]>([chart]);
@@ -177,13 +189,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const applyChartChange = useCallback(
       (produce: (base: Chart) => Chart) => {
-        const base = chart;
+        const base = chartRef.current;
         const next = produce(base);
         setChart(next);
         addChartToHistory(next);
         setMadeChanges(true);
       },
-      [addChartToHistory, chart, setChart, setMadeChanges]
+      [addChartToHistory, setChart, setMadeChanges]
     );
 
 
@@ -204,17 +216,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { isDark } = useThemeMode();
 
-    const nodeTypes = useMemo(
-      () => ({
-        device: DeviceNode,
-        bridge: BondBridgeNode,
-        note: NoteNode,
-        zone: ZoneNode,
-        cloud: CloudNode,
-        customElement: CustomElementNode,
-      } as any),
-      []
-    );
 
     const devicesByIdRef = useRef<Map<string, Device>>(new Map());
     const chartRef = useRef<Chart>(chart);
@@ -2777,7 +2778,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           })()}
 
           <ReactFlow
-            nodeTypes={nodeTypes}
+            nodeTypes={NODE_TYPES}
             nodes={nodes}
             edges={edges}
             onNodesChange={editMode ? onNodesChange : undefined}
@@ -2788,7 +2789,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             onReconnect={editMode ? onReconnect : undefined}
             nodesDraggable={editMode}
             nodesConnectable={editMode}
-            defaultEdgeOptions={{ type: ConnectionLineType.Step }}
+            defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
             connectionLineType={ConnectionLineType.Step}
             onPaneContextMenu={editMode ? onPaneContextMenu : undefined}
             onNodeContextMenu={editMode ? onNodeContextMenu : undefined}

@@ -96,7 +96,7 @@ export default function DeviceNode({
 
   useLayoutEffect(() => {
     updateInternals(deviceId);
-  }, [deviceId, editMode, deviceOnChart, updateDeviceOnChart, updateInternals]);
+  }, [deviceId, updateInternals]);
 
   const onAddHandle = (side: Side) => {
     if (isEditorOpen) return;
@@ -285,16 +285,20 @@ export default function DeviceNode({
       </div>
 
       {leftYs.map((y, i) => {
-        return renderHandleBySide("left", handles.left?.[i]?.port, y);
+        const port = handles.left?.[i]?.port;
+        return <span key={port?.id ?? `left-${i}`}>{renderHandleBySide("left", port, y)}</span>;
       })}
       {rightYs.map((y, i) => {
-        return renderHandleBySide("right", handles.right?.[i]?.port, y);
+        const port = handles.right?.[i]?.port;
+        return <span key={port?.id ?? `right-${i}`}>{renderHandleBySide("right", port, y)}</span>;
       })}
       {topXs.map((x, i) => {
-        return renderHandleBySide("top", handles.top?.[i]?.port, x);
+        const port = handles.top?.[i]?.port;
+        return <span key={port?.id ?? `top-${i}`}>{renderHandleBySide("top", port, x)}</span>;
       })}
       {bottomXs.map((x, i) => {
-        return renderHandleBySide("bottom", handles.bottom?.[i]?.port, x);
+        const port = handles.bottom?.[i]?.port;
+        return <span key={port?.id ?? `bottom-${i}`}>{renderHandleBySide("bottom", port, x)}</span>;
       })}
 
       {editMode && isEditorOpen && (

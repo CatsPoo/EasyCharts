@@ -228,7 +228,7 @@ export function DevicesSidebar({ devicesList, cloudsList, customElementsList = [
       )}
 
       {/* ── Elements Tab ── */}
-      {activeTab === "elements" && (
+      {activeTab === "elements"  && (
         <>
           {/* Built-in layout elements: Note + Zone */}
           <p className={["text-[10px] font-semibold uppercase tracking-wide mb-1", isDark ? "text-slate-500" : "text-slate-400"].join(" ")}>Layout</p>
