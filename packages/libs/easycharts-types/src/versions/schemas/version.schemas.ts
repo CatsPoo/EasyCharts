@@ -21,7 +21,7 @@ export type ChartVersion = z.infer<typeof ChartVersionSchema>;
 export const AssetVersionMetaSchema = z.object({
   id: z.string().uuid(),
   assetId: z.string().uuid(),
-  assetKind: z.enum(["devices", "types", "models", "vendors", "clouds"]),
+  assetKind: z.enum(["devices", "types", "models", "vendors", "overlayElements"]),
   versionNumber: z.number().int(),
   savedAt: z.coerce.date(),
   savedByUserId: z.string().uuid(),

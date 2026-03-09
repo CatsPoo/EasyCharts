@@ -5,7 +5,7 @@ import { DevicesOnChartService } from './deviceOnChart.service';
 import { DevicesService } from '../devices/devices.service';
 import { PortsOnChartService } from './portsOnChart.service';
 import { PortsService } from '../devices/ports.service';
-import { AssetVersionsService } from '../devices/assetVersions.service';
+import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 import { DeviceOnChartEntity } from './entities/deviceOnChart.entity';
 import { PortOnChartEntity } from './entities/portOnChart.entity';
 import { DeviceEntity } from '../devices/entities/device.entity';

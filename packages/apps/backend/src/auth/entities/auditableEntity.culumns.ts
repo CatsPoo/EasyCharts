@@ -8,8 +8,8 @@ export class AuditableEntity {
   })
   createdAt!: Date;
 
-  @Column({ name: "created_by_user_id", type: "uuid" })
-  createdByUserId!: string;
+  @Column({ name: "created_by_user_id", type: "uuid", nullable: true })
+  createdByUserId!: string | null;
 
   @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
   updatedAt!: Date;

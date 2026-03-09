@@ -25,6 +25,15 @@ function serializeForApi(kind: keyof AssetMap, data: any, mode: 'create' | 'upda
       } as ModelUpdate;
     }
 
+    case 'cableTypes': {
+      // Strip nested compatiblePortTypes array, keep only compatiblePortTypeIds
+      const { compatiblePortTypes, ...rest } = data ?? {};
+      return {
+        ...rest,
+        compatiblePortTypeIds: rest.compatiblePortTypeIds ?? compatiblePortTypes?.map((pt: any) => pt.id) ?? [],
+      };
+    }
+
     default: {
       const {...rest } = data ?? {};
       return rest;

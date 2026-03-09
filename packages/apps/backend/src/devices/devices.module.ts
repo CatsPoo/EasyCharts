@@ -1,51 +1,42 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DevicesController } from './devices.controller';
 import { DevicesService } from './devices.service';
 import { DeviceEntity } from './entities/device.entity';
-import { ModelEntity } from './entities/model.entity';
-import { VendorEntity } from "./entities/vendor.entity";
-import { ModelsService } from './model.service';
-import { ModelsController } from './models.controller';
-import { VendorsController } from './vendors.controller';
-import { VendorsService } from './vendors.service';
 import { PortEntity } from './entities/port.entity';
+import { ModelEntity } from '../models/entities/model.entity';
 import { PortsController } from './ports.controller';
 import { PortsService } from './ports.service';
 import { AuthModule } from '../auth/auth.module';
 import { DeviceTypeEntity } from './entities/deviceType.entity';
 import { DeviceTypeController } from './deviceType.controller';
 import { DeviceTypeService } from './deviceType.service';
-import { CloudEntity } from './entities/cloud.entity';
-import { CloudsController } from './clouds.controller';
-import { CloudsService } from './clouds.service';
-import { AssetVersionEntity } from './entities/assetVersion.entity';
-import { AssetVersionsService } from './assetVersions.service';
-import { AssetVersionsController } from './assetVersions.controller';
+import { DeviceTypeSeeder } from './deviceType.seeder';
+import { OverlayElementsModule } from '../overlayElements/overlayElements.module';
+import { ModelsModule } from '../models/models.module';
+import { VendorsModule } from '../vendors/vendors.module';
+import { AssetVersionsModule } from '../assetVersions/assetVersions.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       DeviceEntity,
-      VendorEntity,
       ModelEntity,
       PortEntity,
       DeviceTypeEntity,
-      CloudEntity,
-      AssetVersionEntity,
     ]),
     AuthModule,
+    OverlayElementsModule,
+    ModelsModule,
+    VendorsModule,
+    forwardRef(() => AssetVersionsModule),
   ],
   controllers: [
     DevicesController,
-    VendorsController,
-    ModelsController,
     PortsController,
     DeviceTypeController,
-    CloudsController,
-    AssetVersionsController,
   ],
-  providers: [DevicesService, VendorsService, ModelsService, PortsService, DeviceTypeService, CloudsService, AssetVersionsService],
-  exports: [DevicesService, VendorsService, ModelsService, PortsService, DeviceTypeService, CloudsService, AssetVersionsService],
+  providers: [DevicesService, PortsService, DeviceTypeService, DeviceTypeSeeder],
+  exports: [DevicesService, PortsService, DeviceTypeService, ModelsModule, VendorsModule, AssetVersionsModule],
 })
 export class DevicesModule {}

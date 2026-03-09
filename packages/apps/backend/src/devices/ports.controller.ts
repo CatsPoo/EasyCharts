@@ -21,7 +21,7 @@ import { ZodValidationPipe } from '../common/zodValidation.pipe';
 import { QueryDto } from '../query/dto/query.dto';
 import { PortsService } from './ports.service';
 import { DevicesService } from './devices.service';
-import { AssetVersionsService } from './assetVersions.service';
+import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 
 @UseGuards(JwdAuthGuard, PermissionsGuard)
 @Controller("ports")

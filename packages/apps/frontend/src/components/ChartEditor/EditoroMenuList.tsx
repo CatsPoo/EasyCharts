@@ -24,13 +24,22 @@ export const NOTE_SWATCH: Record<string, string> = {
   gray:   "#94a3b8",
 };
 
+export interface CableTypeOption {
+  id: string;
+  name: string;
+  defaultColor: string;
+}
+
 interface EditorMenuListProps {
   kind: CtxKind;
   onAction: (a: EditorMenuListKeys) => void;
   onNoteColorChange?: (colorKey: string) => void;
+  onCableTypeSelect?: (cableType: CableTypeOption) => void;
+  onCreateCableType?: () => void;
   isUndoEnabled: boolean;
   isRedoEnabled: boolean;
   canConnectPaired?: boolean;
+  availableCableTypes?: CableTypeOption[];
 }
 
 const MOVE_SUBMENU_ITEMS = [
@@ -44,12 +53,16 @@ export default function EditorMenuList({
   kind,
   onAction,
   onNoteColorChange,
+  onCableTypeSelect,
+  onCreateCableType,
   isRedoEnabled,
   isUndoEnabled,
   canConnectPaired = false,
+  availableCableTypes = [],
 }: EditorMenuListProps) {
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
   const [colorSubmenuOpen, setColorSubmenuOpen] = useState(false);
+  const [cableSubmenuOpen, setCableSubmenuOpen] = useState(false);
   const { isDark } = useThemeMode();
   const colorMenuRef = useRef<HTMLLIElement>(null);
 
@@ -100,14 +113,13 @@ export default function EditorMenuList({
       { key: EditorMenuListKeys.UNBOND_PORTS, label: "Unbond Ports" },
       { key: EditorMenuListKeys.REMOVE_BOND_FROM_CHART, label: "Remove from Chart" },
     ],
-    cloud: [
-      { key: EditorMenuListKeys.EDIT_CLOUD, label: "Edit Cloud" },
-      { key: EditorMenuListKeys.REMOVE_CLOUD_FROM_CHART, label: "Remove Cloud From Chart" },
-      { key: EditorMenuListKeys.DELETE_CLOUD, label: "Delete Cloud" },
-    ],
     zone: [
       { key: EditorMenuListKeys.EDIT_ZONE_STYLE, label: "Edit Style..." },
       { key: EditorMenuListKeys.DELETE_ZONE, label: "Delete Zone" },
+    ],
+    customElement: [
+      { key: EditorMenuListKeys.EDIT_CUSTOM_ELEMENT_TEXT, label: "Edit Text..." },
+      { key: EditorMenuListKeys.REMOVE_CUSTOM_ELEMENT_FROM_CHART, label: "Remove From Chart" },
     ],
   };
 
@@ -241,6 +253,69 @@ export default function EditorMenuList({
               </li>
             </ul>
           )}
+        </li>
+      )}
+
+      {/* Cable type submenu (edge) */}
+      {kind === "edge" && (
+        <li
+          className="relative"
+          onMouseEnter={() => setCableSubmenuOpen(true)}
+          onMouseLeave={() => setCableSubmenuOpen(false)}
+        >
+          <button className={`${btnClass} flex justify-between items-center`}>
+            Cable Type...
+            <span className="ml-2 text-slate-400">›</span>
+          </button>
+          {cableSubmenuOpen && (
+            <ul className={submenuClass + " min-w-[160px]"}>
+              {availableCableTypes.map((ct) => (
+                <li key={ct.id}>
+                  <button
+                    className={`${btnClass} flex items-center gap-2`}
+                    onClick={() => { onCableTypeSelect?.(ct); setCableSubmenuOpen(false); }}
+                  >
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: ct.defaultColor }} />
+                    {ct.name}
+                  </button>
+                </li>
+              ))}
+              {availableCableTypes.length > 0 && <li><hr className={dividerClass} /></li>}
+              <li>
+                <button
+                  className={btnClass}
+                  onClick={() => { onAction(EditorMenuListKeys.SET_CABLE_NONE); setCableSubmenuOpen(false); }}
+                >
+                  None
+                </button>
+              </li>
+              <li><hr className={dividerClass} /></li>
+              <li>
+                <button
+                  className={`${btnClass} flex items-center gap-2`}
+                  onClick={() => { onCreateCableType?.(); setCableSubmenuOpen(false); }}
+                >
+                  + Create new type
+                </button>
+              </li>
+            </ul>
+          )}
+        </li>
+      )}
+
+      {/* Custom line color (edge) */}
+      {kind === "edge" && (
+        <li>
+          <button
+            className={`${btnClass} flex items-center gap-2`}
+            onClick={() => onAction(EditorMenuListKeys.SET_LINE_COLOR)}
+          >
+            <span
+              className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{ background: "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" }}
+            />
+            Custom Color...
+          </button>
         </li>
       )}
 

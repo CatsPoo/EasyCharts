@@ -1,6 +1,6 @@
 // src/charts/instance/lines-on-chart.service.ts
 import { Injectable } from "@nestjs/common";
-import { EntityManager, In } from "typeorm";
+import { EntityManager } from "typeorm";
 import type { LineOnChart } from "@easy-charts/easycharts-types";
 import { LineOnChartEntity } from "./entities/lineonChart.emtity";
 import { LinessService } from "../lines/lines.service";
@@ -14,11 +14,12 @@ export class LinesOnChartService {
   convertLineonChartEntity = async (
     lineOnChartEntity: LineOnChartEntity
   ): Promise<LineOnChart> => {
-    const { line: lineEntity, label, type, chartId } = lineOnChartEntity;
+    const { line: lineEntity, label, type, chartId, color } = lineOnChartEntity;
     return {
       label,
       type,
       chartId,
+      color: color ?? undefined,
       line: this.linesService.convertLineEntity(lineEntity),
     } as LineOnChart;
   };
@@ -42,6 +43,7 @@ export class LinesOnChartService {
             lineId: l.line.id,
             label: l.label,
             type: l.type,
+            color: l.color ?? null,
           } as LineOnChartEntity)
       ),
       {
