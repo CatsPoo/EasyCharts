@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PortsController } from './ports.controller';
 import { PortsService } from './ports.service';
 import { DevicesService } from './devices.service';
-import { AssetVersionsService } from './assetVersions.service';
+import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 import { JwdAuthGuard } from '../auth/guards/jwtAuth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 

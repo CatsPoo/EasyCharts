@@ -6,7 +6,7 @@ import { DeviceEntity } from './entities/device.entity';
 import { ModelEntity } from '../models/entities/model.entity';
 import { DeviceTypeEntity } from './entities/deviceType.entity';
 import { DevicesService } from './devices.service';
-import { AssetVersionsService } from './assetVersions.service';
+import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 
 const makeVendor = () => ({ id: 'vendor-1', name: 'Cisco' });
 const makeModel = () => ({ id: 'model-1', name: 'Catalyst', vendor: makeVendor() } as ModelEntity);

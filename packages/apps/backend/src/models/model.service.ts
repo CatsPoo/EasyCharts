@@ -9,7 +9,7 @@ import type {
   ModelUpdate,
 } from "@easy-charts/easycharts-types";
 import { ListModelsQueryDto } from "../query/dto/query.dto";
-import { AssetVersionsService } from "../devices/assetVersions.service";
+import { AssetVersionsService } from "../assetVersions/assetVersions.service";
 
 @Injectable()
 export class ModelsService {

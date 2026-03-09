@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DevicesController } from './devices.controller';
 import { DevicesService } from './devices.service';
@@ -12,12 +12,10 @@ import { DeviceTypeEntity } from './entities/deviceType.entity';
 import { DeviceTypeController } from './deviceType.controller';
 import { DeviceTypeService } from './deviceType.service';
 import { DeviceTypeSeeder } from './deviceType.seeder';
-import { AssetVersionEntity } from './entities/assetVersion.entity';
-import { AssetVersionsService } from './assetVersions.service';
-import { AssetVersionsController } from './assetVersions.controller';
 import { OverlayElementsModule } from '../overlayElements/overlayElements.module';
 import { ModelsModule } from '../models/models.module';
 import { VendorsModule } from '../vendors/vendors.module';
+import { AssetVersionsModule } from '../assetVersions/assetVersions.module';
 
 @Module({
   imports: [
@@ -26,20 +24,19 @@ import { VendorsModule } from '../vendors/vendors.module';
       ModelEntity,
       PortEntity,
       DeviceTypeEntity,
-      AssetVersionEntity,
     ]),
     AuthModule,
     OverlayElementsModule,
     ModelsModule,
     VendorsModule,
+    forwardRef(() => AssetVersionsModule),
   ],
   controllers: [
     DevicesController,
     PortsController,
     DeviceTypeController,
-    AssetVersionsController,
   ],
-  providers: [DevicesService, PortsService, DeviceTypeService, DeviceTypeSeeder, AssetVersionsService],
-  exports: [DevicesService, PortsService, DeviceTypeService, AssetVersionsService, ModelsModule, VendorsModule],
+  providers: [DevicesService, PortsService, DeviceTypeService, DeviceTypeSeeder],
+  exports: [DevicesService, PortsService, DeviceTypeService, ModelsModule, VendorsModule, AssetVersionsModule],
 })
 export class DevicesModule {}

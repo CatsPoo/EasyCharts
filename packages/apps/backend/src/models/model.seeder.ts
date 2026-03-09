@@ -3,7 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ModelEntity } from "./entities/model.entity";
 import { VendorEntity } from "../vendors/entities/vendor.entity";
-import { AssetVersionsService } from "../devices/assetVersions.service";
+import { AssetVersionsService } from "../assetVersions/assetVersions.service";
 import { UsersService } from "../auth/user.service";
 
 /** [vendorName, modelName] */

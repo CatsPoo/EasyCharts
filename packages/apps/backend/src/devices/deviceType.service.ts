@@ -4,7 +4,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { DeviceTypeEntity } from "./entities/deviceType.entity";
 import { QueryDto } from "../query/dto/query.dto";
-import { AssetVersionsService } from "./assetVersions.service";
+import { AssetVersionsService } from "../assetVersions/assetVersions.service";
 
 @Injectable()
 export class DeviceTypeService {

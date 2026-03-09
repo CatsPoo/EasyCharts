@@ -5,7 +5,7 @@ import { DataSource } from 'typeorm';
 import { ModelEntity } from './entities/model.entity';
 import { VendorEntity } from '../vendors/entities/vendor.entity';
 import { ModelsService } from './model.service';
-import { AssetVersionsService } from '../devices/assetVersions.service';
+import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 
 const makeVendor = (): VendorEntity =>
   ({ id: 'vendor-1', name: 'Cisco' } as VendorEntity);

@@ -4,7 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { VendorEntity } from './entities/vendor.entity';
 import { VendorsService } from './vendors.service';
-import { AssetVersionsService } from '../devices/assetVersions.service';
+import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 
 const makeVendor = (overrides: Partial<VendorEntity> = {}): VendorEntity =>
   ({

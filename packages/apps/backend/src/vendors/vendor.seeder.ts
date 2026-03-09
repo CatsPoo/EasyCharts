@@ -2,7 +2,7 @@ import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { VendorEntity } from './entities/vendor.entity';
-import { AssetVersionsService } from '../devices/assetVersions.service';
+import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 import { UsersService } from '../auth/user.service';
 
 const DEFAULT_VENDORS = [
