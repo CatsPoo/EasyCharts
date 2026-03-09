@@ -6,7 +6,7 @@ import type {
 import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { OverlayElementEntity } from '../devices/entities/overlayElement.entity';
+import { OverlayElementEntity } from './entities/overlayElement.entity';
 import { QueryDto } from '../query/dto/query.dto';
 import { OverlayElementOnChartEntity } from '../charts/entities/overlayElementOnChart.entity';
 

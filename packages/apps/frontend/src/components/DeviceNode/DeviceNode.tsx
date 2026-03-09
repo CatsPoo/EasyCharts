@@ -250,19 +250,19 @@ export default function DeviceNode({
       <div className="p-3 space-y-3">
         <div className="flex items-center gap-2">
           {iconUrl ? (
-            <div className="h-8 w-8 rounded-lg bg-slate-200 flex items-center justify-center text-xs font-bold">
+            <div className="h-12 w-12 rounded-lg bg-slate-200 flex items-center justify-center text-xs font-bold">
               <img
                 src={iconUrl}
                 onError={() => ""}
                 alt={modelName ? `${modelName} icon` : "Model icon"}
-                className="h-8 w-8 rounded-lg object-cover bg-slate-100 border border-slate-200 select-none"
+                className="h-12 w-12 rounded-lg object-cover bg-slate-100 border border-slate-200 select-none"
                 loading="lazy"
                 decoding="async"
                 draggable={false}
               />
             </div>
           ) : (
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-200 to-indigo-400 text-indigo-900 flex items-center justify-center text-xs font-bold">
+            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-indigo-200 to-indigo-400 text-indigo-900 flex items-center justify-center text-xs font-bold">
               {initials(name)}
             </div>
           )}

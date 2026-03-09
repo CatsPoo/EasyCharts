@@ -3,9 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { ModelEntity } from './entities/model.entity';
-import { VendorEntity } from './entities/vendor.entity';
+import { VendorEntity } from '../vendors/entities/vendor.entity';
 import { ModelsService } from './model.service';
-import { AssetVersionsService } from './assetVersions.service';
+import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 
 const makeVendor = (): VendorEntity =>
   ({ id: 'vendor-1', name: 'Cisco' } as VendorEntity);

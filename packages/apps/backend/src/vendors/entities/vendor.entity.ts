@@ -1,5 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { ModelEntity } from './model.entity';
+import { ModelEntity } from '../../models/entities/model.entity';
 import { AuditableEntity } from '../../auth/entities/auditableEntity.culumns';
 
 @Entity({ name: "vendors" })

@@ -58,6 +58,20 @@ export const columns: Record<AssetKind, GridColDef[]> = {
       width: 160,
       valueGetter: (_value, row: Model) => row.vendor?.name,
     },
+    {
+      field: "iconUrl",
+      headerName: "Icon",
+      width: 80,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) =>
+        params.value ? (
+          <img
+            src={params.value}
+            alt="icon"
+            style={{ height: 36, width: 36, objectFit: "contain", borderRadius: 4 }}
+          />
+        ) : null,
+    },
   ],
   portTypes: [{ field: "name", headerName: "Name", flex: 1 }],
   cableTypes: [

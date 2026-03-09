@@ -7,7 +7,7 @@ import {
   type Relation,
 } from 'typeorm';
 import { ChartEntity } from './chart.entity';
-import { OverlayElementEntity } from '../../devices/entities/overlayElement.entity';
+import { OverlayElementEntity } from '../../overlayElements/entities/overlayElement.entity';
 import { Position } from './position.entity';
 
 @Entity({ name: 'overlay_elements_on_chart' })

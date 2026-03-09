@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OverlayElementEntity } from '../devices/entities/overlayElement.entity';
+import { OverlayElementEntity } from './entities/overlayElement.entity';
 import { UsersService } from '../auth/user.service';
 
 /** Inline SVG data-URL for a generic cloud icon used as the default thumbnail. */

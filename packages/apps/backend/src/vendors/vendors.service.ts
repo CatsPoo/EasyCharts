@@ -1,54 +1,19 @@
 import type { Vendor, VendorCreate, VendorUpdate } from '@easy-charts/easycharts-types';
-import { HttpException, HttpStatus, Injectable, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { VendorEntity } from '../devices/entities/vendor.entity';
-import { QueryDto } from "../query/dto/query.dto";
-import { AssetVersionsService } from './assetVersions.service';
-import { UsersService } from '../auth/user.service';
-
-const DEFAULT_VENDORS = [
-  'Cisco',
-  'Checkpoint',
-  'Juniper',
-  'HP',
-  'F5',
-  'Palo Alto',
-  'Fortinet',
-  'Arista',
-  'Dell',
-  'Aruba',
-  'Ruckus',
-  'Extreme Networks',
-  'Netscout',
-  'VMware',
-  'Huawei',
-];
+import { VendorEntity } from './entities/vendor.entity';
+import { QueryDto } from '../query/dto/query.dto';
+import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 
 @Injectable()
-export class VendorsService implements OnApplicationBootstrap {
+export class VendorsService {
   constructor(
     @InjectRepository(VendorEntity)
     private readonly vendorsRepo: Repository<VendorEntity>,
     private readonly assetVersionsService: AssetVersionsService,
     private readonly dataSource: DataSource,
-    private readonly usersService: UsersService,
   ) {}
-
-  async onApplicationBootstrap() {
-    const count = await this.vendorsRepo.count();
-    if (count === 0) {
-      const users = await this.usersService.getAllUsers();
-      const adminId = users[0]?.id ?? null;
-      for (const name of DEFAULT_VENDORS) {
-        const entity = this.vendorsRepo.create({ name, createdByUserId: adminId });
-        const saved = await this.vendorsRepo.save(entity);
-        if (adminId) {
-          await this.assetVersionsService.saveVersion('vendors', saved.id, saved as unknown as object, adminId);
-        }
-      }
-    }
-  }
 
   async createVendor(dto: VendorCreate,createdByUserId:string) : Promise<Vendor> {
     const entity = this.vendorsRepo.create({...dto,createdByUserId});

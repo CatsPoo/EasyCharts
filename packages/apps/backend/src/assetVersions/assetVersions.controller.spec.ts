@@ -4,11 +4,11 @@ import { AssetVersionsController } from './assetVersions.controller';
 import { JwdAuthGuard } from '../auth/guards/jwtAuth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { AssetVersionsService } from './assetVersions.service';
-import { DevicesService } from './devices.service';
+import { DevicesService } from '../devices/devices.service';
 import { OverlayElementsService } from '../overlayElements/overlayElements.service';
-import { ModelsService } from './model.service';
-import { VendorsService } from './vendors.service';
-import { DeviceTypeService } from './deviceType.service';
+import { ModelsService } from '../models/model.service';
+import { VendorsService } from '../vendors/vendors.service';
+import { DeviceTypeService } from '../devices/deviceType.service';
 
 const mockAssetVersionsService = {
   listVersions: jest.fn(),
