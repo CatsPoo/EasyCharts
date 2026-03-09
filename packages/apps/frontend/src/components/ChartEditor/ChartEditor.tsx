@@ -293,11 +293,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       }
       if (node.type === "overlayElement") {
         const oeOnChart = (chartRef.current.overlayElementsOnChart ?? []).find((oe) => oe.id === node.id);
-        if (oeOnChart?.overlayElement.isSystem) {
-          setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "cloud", payload: { cloudId: node.id, cloudName: oeOnChart.freeText || oeOnChart.overlayElement.name } });
-        } else {
-          setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "customElement", payload: { instanceId: node.id, currentText: oeOnChart?.freeText ?? "" } });
-        }
+        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "customElement", payload: { instanceId: node.id, currentText: oeOnChart?.freeText ?? "" } });
         return;
       }
       if (node.type === "bridge") {
@@ -1646,10 +1642,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         const isSourceFree = isFreeNode(c.source, chart.overlayElementsOnChart ?? []);
         const isTargetFree = isFreeNode(c.target, chart.overlayElementsOnChart ?? []);
         if ((isSourceFree || isTargetFree) && c.source && c.target) {
-          // In ConnectionMode.Loose, targetHandle may be null when connecting source→source.
-          // Use the overlay node's default target handle as fallback so the edge renders correctly.
-          const sourceHandle = c.sourceHandle ?? "src-left";
-          const targetHandle = c.targetHandle ?? (isTargetFree ? "left" : c.sourceHandle ?? "src-left");
+          const sourceHandle = c.sourceHandle ?? "left";
+          const targetHandle = c.targetHandle ?? "left";
           const sourcePortId = !isSourceFree ? c.sourceHandle ?? undefined : undefined;
           const targetPortId = !isTargetFree ? c.targetHandle ?? undefined : undefined;
           // Block if the device port is already connected on this chart.
@@ -2267,24 +2261,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
           }
 
-          case EditorMenuListKeys.EDIT_CLOUD: {
-            const oe = (chart.overlayElementsOnChart ?? []).find((o) => o.id === payload.cloudId);
-            if (oe) setEditOverlayElementTarget(oe.overlayElement as OverlayElement);
-            break;
-          }
-
-          case EditorMenuListKeys.REMOVE_CLOUD_FROM_CHART:
-            onRemoveOverlayElement(payload.cloudId);
-            break;
-
-          case EditorMenuListKeys.DELETE_CLOUD: {
-            const oe = (chart.overlayElementsOnChart ?? []).find((o) => o.id === payload.cloudId);
-            setPandingDelete({ value: { instanceId: payload.cloudId, overlayElementId: oe?.overlayElementId } as unknown as Node, kind: "overlayElements" as any });
-            setConfirmDialogTitle("Delete Cloud?");
-            setConfirmDialogDescription(`Permanently delete cloud "${payload.cloudName}"?`);
-            setConfirmDeleteOpen(true);
-            break;
-          }
 
           case EditorMenuListKeys.EDIT_CUSTOM_ELEMENT_TEXT:
             setEditOverlayElementTextTarget({ id: payload.instanceId, currentText: payload.currentText });
@@ -2297,7 +2273,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.overlayElementsOnChart, chart.linesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, setEditOverlayElementTarget, applyChartChange, setNodes, setEdges, setColorPickerNoteId, setColorPickerValue, setColorPickerLineId, setColorPickerLineValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveOverlayElement, allCableTypes]
+      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.linesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, applyChartChange, setNodes, setEdges, setColorPickerNoteId, setColorPickerValue, setColorPickerLineId, setColorPickerLineValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveOverlayElement, allCableTypes]
     );
 
     const onCableTypeSelect = useCallback(

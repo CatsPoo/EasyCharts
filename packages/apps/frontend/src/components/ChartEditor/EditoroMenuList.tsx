@@ -113,11 +113,6 @@ export default function EditorMenuList({
       { key: EditorMenuListKeys.UNBOND_PORTS, label: "Unbond Ports" },
       { key: EditorMenuListKeys.REMOVE_BOND_FROM_CHART, label: "Remove from Chart" },
     ],
-    cloud: [
-      { key: EditorMenuListKeys.EDIT_CLOUD, label: "Edit Cloud" },
-      { key: EditorMenuListKeys.REMOVE_CLOUD_FROM_CHART, label: "Remove Cloud From Chart" },
-      { key: EditorMenuListKeys.DELETE_CLOUD, label: "Delete Cloud" },
-    ],
     zone: [
       { key: EditorMenuListKeys.EDIT_ZONE_STYLE, label: "Edit Style..." },
       { key: EditorMenuListKeys.DELETE_ZONE, label: "Delete Zone" },
