@@ -5,7 +5,7 @@ import { OverlayElementEntity } from '../devices/entities/overlayElement.entity'
 import { UsersService } from '../auth/user.service';
 
 /** Inline SVG data-URL for a generic cloud icon used as the default thumbnail. */
-const CLOUD_IMAGE_URL = 'unnamed.jpg'
+const CLOUD_IMAGE_URL = './cloud.png'
 
 @Injectable()
 export class OverlayElementsSeeder implements OnApplicationBootstrap {
