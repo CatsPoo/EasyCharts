@@ -31,10 +31,12 @@ export function AiChat() {
     openChat,
     closeChat,
     setPendingChartAction,
+    setPendingUiAction,
     currentEditorChartId,
     currentEditorChartName,
     editorEditMode,
     currentPage,
+    currentChartStateOnEditor,
   } = useAiChat();
 
   const navigate = useNavigate();
@@ -65,6 +67,7 @@ export function AiChat() {
         currentChartId: currentEditorChartId ?? undefined,
         editorEditMode: currentEditorChartId ? editorEditMode : undefined,
         currentPage: currentPage ?? undefined,
+        currentChartState:currentChartStateOnEditor ?? undefined
       },
       {
         onSuccess: (res) => {
@@ -76,10 +79,15 @@ export function AiChat() {
             setMessages((prev) => [...prev, assistantMsg]);
           }
 
+          if(res.uiActions?.length){
+            setPendingUiAction(res.uiActions)
+          }
           if (res.chartAction) {
             setPendingChartAction(res.chartAction);
             navigate("/charts");
           }
+
+
         },
         onError: (err) => setError((err as Error).message),
       },

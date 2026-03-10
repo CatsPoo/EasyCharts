@@ -344,6 +344,7 @@ export class AiService {
       }
 
       case AI_TOOLS.UI_ADD_DEVICEs_TO_CAHRT: {
+        console.log("ADD DEVICE TO CHART TOOL")
         const { deviceId, x, y } = args as {
           deviceId: string;
           x: number;

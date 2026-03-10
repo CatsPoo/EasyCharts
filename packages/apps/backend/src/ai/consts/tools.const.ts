@@ -130,7 +130,7 @@ export const TOOLS: ChatCompletionTool[] = [
     function: {
       name: AI_TOOLS.UI_ADD_DEVICEs_TO_CAHRT,
       description:
-        "Tell the UI to add one or more devices to the currently open chart editor in a single call. The chart must be open in edit mode. Always call list_devices first to get valid device IDs. Space devices ≥200px apart horizontally, ≥150px vertically on a ~1500×1000px canvas.",
+        "Tell the UI to add one or more devices to the currently open chart editor. The chart must be open in edit mode. Always call list_devices first to get valid device IDs. Space devices ≥200px apart horizontally, ≥150px vertically on a ~1500×1000px canvas.",
       parameters: {
         type: "object",
         properties: {
