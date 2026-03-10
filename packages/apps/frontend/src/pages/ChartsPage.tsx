@@ -66,7 +66,7 @@ export function ChartsPage() {
   const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,isLoading} = useChartLock(user!.id,selectedId || undefined)
   const readonly = false;
 
-  const { pendingChartAction, clearPendingChartAction, setCurrentEditorChart, setEditorEditMode } = useAiChat();
+  const { pendingChartAction, clearPendingChartAction, setCurrentEditorChart, setEditorEditMode, setCurrentPage } = useAiChat();
 
   // When the AI creates/edits a chart, auto-open the editor for it
   useEffect(() => {
@@ -105,6 +105,11 @@ export function ChartsPage() {
     return () => window.removeEventListener("keydown", handler);
    
   }, [dialogOpen, editMode, editorMadeChanges, saving]);
+
+  useEffect(() => {
+    setCurrentPage(tab === 1 ? "assets" : "charts");
+    return () => setCurrentPage(null);
+  }, [tab, setCurrentPage]);
 
   useEffect(() => {
     setSelectedId("");

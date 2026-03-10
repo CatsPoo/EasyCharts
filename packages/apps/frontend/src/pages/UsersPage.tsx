@@ -26,9 +26,17 @@ import { UserDialog } from "../components/UsersManagment/UserDialog";
 import type { SubmitPayload } from "../components/UsersManagment/interfaces";
 import { ConfirmDialog } from "../components/DeleteAlertDialog";
 import { useAuth } from "../auth/authProvider";
+import { useAiChat } from "../contexts/AiChatContext";
 
 
 export function UsersPage() {
+  const { setCurrentPage } = useAiChat();
+
+  useEffect(() => {
+    setCurrentPage("users");
+    return () => setCurrentPage(null);
+  }, [setCurrentPage]);
+
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isUserDialogOpen,setUserDialogOpen] = useState<boolean>(false)

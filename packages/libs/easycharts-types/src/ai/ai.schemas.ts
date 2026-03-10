@@ -7,11 +7,15 @@ export const ChatMessageSchema = z.object({
   content: z.string(),
 });
 
+export const CurrentPageSchema = z.enum(["charts", "assets", "users"]);
+
 export const ChatRequestSchema = z.object({
   messages: z.array(ChatMessageSchema).min(1),
   currentChartId: z.string().uuid().optional(),
   /** True when the user has the chart editor open in edit mode */
   editorEditMode: z.boolean().optional(),
+  /** Which page/view the user is currently on */
+  currentPage: CurrentPageSchema.optional(),
 });
 
 export const ChatChartActionSchema = z.object({

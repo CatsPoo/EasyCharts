@@ -40,6 +40,7 @@ export function AiChat() {
     currentEditorChartId,
     currentEditorChartName,
     editorEditMode,
+    currentPage,
   } = useAiChat();
 
   const navigate = useNavigate();
@@ -69,6 +70,7 @@ export function AiChat() {
         messages: newHistory,
         currentChartId: currentEditorChartId ?? undefined,
         editorEditMode: currentEditorChartId ? editorEditMode : undefined,
+        currentPage: currentPage ?? undefined,
       },
       {
         onSuccess: (res) => {
@@ -97,7 +99,11 @@ export function AiChat() {
     ? editorEditMode
       ? "Ask me to modify this chart — add devices, rename it, or describe changes."
       : "Ask me questions about this chart. Switch to Edit Mode to let me make changes."
-    : "Ask me to list your charts, explain a diagram, or create a new one from scratch.";
+    : currentPage === "assets"
+      ? "Ask me about assets — devices, ports, line types, or what's available."
+      : currentPage === "users"
+        ? "Ask me about user management or permissions in EasyCharts."
+        : "Ask me to list your charts, explain a diagram, or create a new one from scratch.";
 
   return (
     <>
@@ -147,7 +153,7 @@ export function AiChat() {
         </Box>
 
         {/* Chart context banner — shown when the editor is open */}
-        {currentEditorChartId && (
+        {currentEditorChartId ? (
           <Box sx={{ px: 2, py: 0.75, borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "center", gap: 1 }}>
             <Chip
               size="small"
@@ -159,6 +165,23 @@ export function AiChat() {
             />
             <Typography variant="caption" color="text.secondary">
               {editorEditMode ? "Edit mode — AI can modify" : "View mode — AI read-only"}
+            </Typography>
+          </Box>
+        ) : currentPage && (
+          <Box sx={{ px: 2, py: 0.75, borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "center", gap: 1 }}>
+            <Chip
+              size="small"
+              label={currentPage === "assets" ? "Assets" : currentPage === "users" ? "Users" : "Charts"}
+              color="default"
+              variant="outlined"
+              sx={{ fontSize: "0.7rem" }}
+            />
+            <Typography variant="caption" color="text.secondary">
+              {currentPage === "assets"
+                ? "Focused on assets"
+                : currentPage === "users"
+                  ? "Focused on user management"
+                  : "Focused on charts"}
             </Typography>
           </Box>
         )}

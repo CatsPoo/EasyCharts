@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatResponse, ChartMetadata } from "@easy-charts/easycharts-types";
+import type { ChatMessage, ChatResponse, ChartMetadata, CurrentPage } from "@easy-charts/easycharts-types";
 import { Permission } from "@easy-charts/easycharts-types";
 import {
   ForbiddenException,
@@ -204,6 +204,7 @@ export class AiService {
     inputMessages: ChatMessage[],
     currentChartId?: string,
     editorEditMode?: boolean,
+    currentPage?: CurrentPage,
   ): Promise<ChatResponse> {
     if (!this.isEnabled()) {
       throw new ServiceUnavailableException("AI chat is disabled");
@@ -217,16 +218,22 @@ export class AiService {
 
     let chartAction: ChatResponse["chartAction"] | undefined;
 
-    let chartContext = "";
+    let pageContext = "";
     if (currentChartId) {
-      chartContext = editorEditMode
+      pageContext = editorEditMode
         ? `\n\nThe user has chart ID "${currentChartId}" open in EDIT MODE. You can answer questions about it AND modify it using update_chart.`
         : `\n\nThe user has chart ID "${currentChartId}" open in VIEW MODE (read-only). Answer questions about it but do NOT call update_chart for this chart. If the user asks you to change it, tell them to enable Edit Mode in the editor toolbar first.`;
+    } else if (currentPage === "assets") {
+      pageContext = "\n\nThe user is on the Assets page. Their questions are likely about assets — device types, ports, line/cable types, or what equipment is available in the system.";
+    } else if (currentPage === "users") {
+      pageContext = "\n\nThe user is on the User Management page. Their questions are likely about users, roles, or permissions in EasyCharts.";
+    } else {
+      pageContext = "\n\nThe user is on the main Charts page. Their questions are likely global — about charts they own or have access to, or they want to create a new chart.";
     }
 
     const systemMessage: ChatCompletionMessageParam = {
       role: "system",
-      content: SYSTEM_PROMPT_BASE + buildPermissionsSection(userPermissions) + chartContext,
+      content: SYSTEM_PROMPT_BASE + buildPermissionsSection(userPermissions) + pageContext,
     };
 
     const messages: ChatCompletionMessageParam[] = [
