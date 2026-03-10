@@ -5,7 +5,14 @@ export interface appConfigSchema{
     jwt:JwtSignOptions,
     refreshJwt : JwtSignOptions,
     redis:redisConfig,
-    defaultAdminUser:DefaultAdminUserConfig
+    defaultAdminUser:DefaultAdminUserConfig,
+    ai: AiConfig,
+}
+
+export interface AiConfig {
+  enabled: boolean;
+  ollamaUrl: string;
+  model: string;
 }
 
 export interface databaseConfig {

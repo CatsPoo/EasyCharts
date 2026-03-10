@@ -12,3 +12,10 @@ JWT_EXPIRE_IN=30m
 
 REFRESH_JWT_SECRET=JWTREFRESHKEY
 REFRESH_JWT_EXPIRE_IN=1d
+
+# AI Chat feature
+# Set AI_ENABLED=true to enable the chat panel (requires a running Ollama instance)
+# Recommended models with tool-call support: qwen2.5:7b, llama3.1:8b, mistral:7b
+AI_ENABLED=false
+AI_OLLAMA_URL=http://localhost:11434
+AI_OLLAMA_MODEL=qwen2.5:7b
