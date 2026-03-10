@@ -1,4 +1,5 @@
 import type { ChatMessage, ChatResponse, ChartMetadata } from "@easy-charts/easycharts-types";
+import { Permission } from "@easy-charts/easycharts-types";
 import {
   ForbiddenException,
   Injectable,
@@ -8,6 +9,7 @@ import {
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
 import { AppConfigService } from "../appConfig/appConfig.service";
+import { UsersService } from "../auth/user.service";
 import { ChartsService } from "../charts/charts.service";
 import { DevicesService } from "../devices/devices.service";
 
@@ -50,7 +52,7 @@ const TOOLS: ChatCompletionTool[] = [
     function: {
       name: "create_chart",
       description:
-        "Create a new network diagram chart. The user always owns charts they create, so no permission check is needed. Always call list_devices first to get valid device IDs.",
+        "Create a new network diagram chart. Requires the chart:create global permission. Always call list_devices first to get valid device IDs.",
       parameters: {
         type: "object",
         properties: {
@@ -93,7 +95,7 @@ const TOOLS: ChatCompletionTool[] = [
   },
 ];
 
-const SYSTEM_PROMPT = `You are an AI assistant for EasyCharts, a network diagram tool.
+const SYSTEM_PROMPT_BASE = `You are an AI assistant for EasyCharts, a network diagram tool.
 
 EasyCharts allows users to create and manage network topology diagrams. Charts contain:
 - **Devices**: Network equipment (servers, routers, switches, firewalls, etc.) placed at x,y positions on the canvas
@@ -105,11 +107,10 @@ Canvas dimensions: approximately 1500px wide × 1000px tall.
 When placing devices, use good spacing (at least 200px apart horizontally, 150px vertically).
 Arrange devices logically — e.g., core routers at the top, servers at the bottom.
 
-## Permissions
+## Per-chart privileges
 Each chart has per-user privileges: canEdit, canDelete, canShare.
 - list_charts returns these privileges for every chart.
 - get_chart works for any chart the user can access (owned or shared).
-- create_chart always works — the user owns charts they create.
 - update_chart requires canEdit=true. If the user only has read access, politely explain they do not have edit permission and cannot modify that chart via AI or manually.
 
 When a user asks to modify a chart they only have read access to, do NOT attempt the update. Explain the situation and suggest they ask the chart owner to grant them edit access.
@@ -121,12 +122,54 @@ When creating charts:
 
 Be concise and helpful.`;
 
+const PERMISSION_LABELS: Record<Permission, string> = {
+  [Permission.CHART_CREATE]: "create new charts",
+  [Permission.CHART_UPDATE]: "update/rename charts",
+  [Permission.CHART_DELETE]: "delete charts",
+  [Permission.CHART_READ]: "read/view charts",
+  [Permission.CHART_SHARE]: "share charts with others",
+  [Permission.ASSET_EDIT]: "edit assets (devices, lines, etc.)",
+  [Permission.ASSET_DELETE]: "delete assets",
+  [Permission.ASSET_CREATE]: "create new assets",
+  [Permission.ASSET_READ]: "read/view assets",
+  [Permission.USER_MANAGE]: "manage users",
+  [Permission.APP_SETTINGS]: "modify application settings",
+};
+
+function buildPermissionsSection(permissions: Permission[]): string {
+  const permSet = new Set(permissions);
+  const allPerms = Object.values(Permission);
+
+  const allowed = allPerms.filter((p) => permSet.has(p));
+  const denied = allPerms.filter((p) => !permSet.has(p));
+
+  const lines: string[] = ["\n## Your global permissions"];
+
+  if (allowed.length > 0) {
+    lines.push("You CAN:");
+    for (const p of allowed) lines.push(`  - ${PERMISSION_LABELS[p]}`);
+  }
+
+  if (denied.length > 0) {
+    lines.push("You CANNOT:");
+    for (const p of denied) lines.push(`  - ${PERMISSION_LABELS[p]}`);
+  }
+
+  lines.push(
+    "\nEnforce these limits strictly. If the user asks you to do something they lack permission for, " +
+    "explain the missing permission and do NOT call the corresponding tool.",
+  );
+
+  return lines.join("\n");
+}
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
 
   constructor(
     private readonly appConfigService: AppConfigService,
+    private readonly usersService: UsersService,
     private readonly chartsService: ChartsService,
     private readonly devicesService: DevicesService,
   ) {}
@@ -169,6 +212,9 @@ export class AiService {
     const { model } = this.appConfigService.getConfig().ai;
     const client = this.buildClient();
 
+    const user = await this.usersService.getUserById(userId);
+    const userPermissions = (user.permissions ?? []) as Permission[];
+
     let chartAction: ChatResponse["chartAction"] | undefined;
 
     let chartContext = "";
@@ -180,7 +226,7 @@ export class AiService {
 
     const systemMessage: ChatCompletionMessageParam = {
       role: "system",
-      content: SYSTEM_PROMPT + chartContext,
+      content: SYSTEM_PROMPT_BASE + buildPermissionsSection(userPermissions) + chartContext,
     };
 
     const messages: ChatCompletionMessageParam[] = [
@@ -223,6 +269,7 @@ export class AiService {
             toolCall.function.name,
             JSON.parse(toolCall.function.arguments || "{}"),
             userId,
+            { currentChartId, editorEditMode, permissions: userPermissions },
           );
 
           // Track chart actions so the frontend can auto-open the editor
@@ -264,7 +311,9 @@ export class AiService {
     name: string,
     args: Record<string, unknown>,
     userId: string,
+    context: { currentChartId?: string; editorEditMode?: boolean; permissions?: Permission[] } = {},
   ): Promise<unknown> {
+    const permissions = new Set(context.permissions ?? []);
     switch (name) {
       case "list_charts": {
         const charts = await this.chartsService.getAllUserChartsMetadata(userId);
@@ -321,6 +370,10 @@ export class AiService {
       }
 
       case "create_chart": {
+        if (!permissions.has(Permission.CHART_CREATE)) {
+          throw new ForbiddenException("You do not have permission to create charts.");
+        }
+
         const { name, description, devices } = args as {
           name: string;
           description: string;
@@ -356,7 +409,18 @@ export class AiService {
       }
 
       case "update_chart": {
+        if (!permissions.has(Permission.CHART_UPDATE)) {
+          throw new ForbiddenException("You do not have permission to update charts.");
+        }
+
         const chartId = args.chartId as string;
+
+        // If this is the chart open in the editor and it's in view mode, block the update
+        if (context.currentChartId === chartId && context.editorEditMode === false) {
+          throw new ForbiddenException(
+            `The chart editor is in view mode. Enable Edit Mode in the editor toolbar before asking me to make changes.`,
+          );
+        }
 
         // Privilege check — require canEdit
         const meta = await this.getChartPrivileges(userId, chartId);
