@@ -1,4 +1,4 @@
-import { ChartMetadataSchema } from "dist/index.js";
+import { ChartMetadataSchema } from "../../charts/schemas/chart.schemas.js";
 import { AuditableSchema, IdentifiableSchema } from "../../generic.schema.js";
 import z from "zod";
 

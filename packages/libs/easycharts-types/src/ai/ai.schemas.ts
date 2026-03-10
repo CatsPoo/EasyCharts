@@ -1,7 +1,9 @@
-import { ChartMetadataSchema, ChartSchema, DeviceSchema, PortSchema } from "dist/index.js";
-import z from "zod";
-import { ChartDirectoryFullContentSchema } from "src/chartsDirectories/index.js";
+;import z from "zod";
+import { ChartDirectoryFullContentSchema } from "../chartsDirectories/schemas/chartsDirectories.schema.js";
 import { PositionSchema } from "../charts/schemas/position.schema.js";
+import { ChartMetadataSchema, ChartSchema } from "../charts/schemas/chart.schemas.js";
+import { DeviceSchema } from "../devices/schemas/device.schemas.js";
+import { PortSchema } from "../devices/schemas/port.schemas.js";
 
 export const ChatRoleSchema = z.enum(["user", "assistant"]);
 
@@ -24,7 +26,7 @@ export const ChatRequestSchema = z.object({
 });
 
 export const ChatChartActionSchema = z.object({
-  type: z.enum(["create", "open"]),
+  type: z.enum(["edit","create", "open"]),
   chartId: z.string().uuid(),
 });
 
@@ -32,37 +34,35 @@ export const ChatChartActionSchema = z.object({
  *  Each action operates on a list so the AI can batch multiple items in a single tool call. */
 export const UIActionSchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal("add_devices"),
-    devices: z.array(
-      z.object({ deviceId: z.string(), position:PositionSchema})
-    ),
+    type: z.literal("add_device"),
+    device: z.object({
+      deviceId: z.string(),
+      position: PositionSchema,
+    }),
   }),
   z.object({
-    type: z.literal("remove_devices"),
-    deviceIds: z.array(z.string()),
+    type: z.literal("remove_device"),
+    deviceId: z.string(),
   }),
   z.object({
-    type: z.literal("move_devices"),
-    moves: z.array(
-      z.object({ deviceId: z.string(), position:PositionSchema})
-    ),
+    type: z.literal("move_device"),
+    device: z.object({ deviceId: z.string(), position: PositionSchema }),
   }),
   z.object({
     type: z.literal("connect_ports"),
-    connections: z.array(
-      z.object({
-        sourceDeviceId: z.string(),
-        sourcePortId: z.string(),
-        targetDeviceId: z.string(),
-        targetPortId: z.string(),
-      })
-    ),
+    connection: z.object({
+      sourceDeviceId: z.string(),
+      sourcePortId: z.string(),
+      targetDeviceId: z.string(),
+      targetPortId: z.string(),
+    }),
   }),
   z.object({
     type: z.literal("disconnect_ports"),
-    connections: z.array(
-      z.object({ sourcePortId: z.string(), targetPortId: z.string() })
-    ),
+    connection: z.object({
+      sourcePortId: z.string(),
+      targetPortId: z.string(),
+    }),
   }),
 ]);
 

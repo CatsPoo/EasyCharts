@@ -18,6 +18,7 @@ import { PERMISSION_LABELS } from "./consts/permitionLabels.const";
 import { SYSTEM_PROMPT_BASE } from "./consts/systemPrompt.consBaset";
 import { TOOLS } from "./consts/tools.const";
 import { AI_TOOLS } from "./enums/aiTools.enum";
+import { Position } from "../charts/entities/position.entity";
 
 function buildPermissionsSection(permissions: Permission[]): string {
   const permSet = new Set(permissions);
@@ -161,14 +162,14 @@ export class AiService {
         return {
           message: assistantMessage.content ?? "",
           chartAction: ctx.chartAction,
-          uiActions: ctx.uiActions.length > 0 ? ctx.uiActions : undefined,
+          uiActions: ctx.uiActions,
         };
       }
 
       const toolResults: ChatCompletionMessageParam[] = [];
 
       for (const toolCall of assistantMessage.tool_calls ?? []) {
-        let resultData: unknown;
+        let resultData: AiToolResponse;
         try {
           resultData = await this.executeTool(
             toolCall.function.name,
@@ -194,7 +195,7 @@ export class AiService {
     return {
       message: "I ran into an issue completing your request. Please try again.",
       chartAction: ctx.chartAction,
-      uiActions: ctx.uiActions.length > 0 ? ctx.uiActions : undefined,
+      uiActions: ctx.uiActions,
     };
   }
 
@@ -336,10 +337,9 @@ export class AiService {
         ctx.chartAction = {
           type: editMode ? "edit" : "open",
           chartId,
-          chartName: chartName || meta.name,
         };
         return { 
-          aiToolUiResponse: {chartname:meta.name,editMode: editMode ?? false },
+          message:"open chart with id: "+ chartId
         };
       }
 
@@ -349,7 +349,7 @@ export class AiService {
           x: number;
           y: number;
         };
-        ctx.uiActions.push({ type: "add_device", deviceId, x, y });
+        ctx.uiActions.push({ type:"add_device",device:{deviceId,position:{x,y}} });
         return {message:"Device added to chart" };
       }
 
@@ -365,7 +365,7 @@ export class AiService {
           x: number;
           y: number;
         };
-        ctx.uiActions.push({ type: "move_device", deviceId, x, y });
+        ctx.uiActions.push({ type: "move_device",device:{ deviceId, position:{x,y} }});
         return {message:"device moved" };
       }
 
@@ -379,10 +379,12 @@ export class AiService {
           };
         ctx.uiActions.push({
           type: "connect_ports",
-          sourceDeviceId,
-          sourcePortId,
-          targetDeviceId,
-          targetPortId,
+          connection: {
+            sourceDeviceId,
+            sourcePortId,
+            targetDeviceId,
+            targetPortId,
+          },
         });
         return { message:"port connected" };
       }
@@ -394,8 +396,10 @@ export class AiService {
         };
         ctx.uiActions.push({
           type: "disconnect_ports",
-          sourcePortId,
-          targetPortId,
+          connection: {
+            sourcePortId,
+            targetPortId,
+          },
         });
         return { message:"port disconnected" };
       }
