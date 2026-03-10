@@ -4,7 +4,7 @@ import z from "zod";
 export const PortBaseSchema = z.object({
   name: z.string().min(1),
   deviceId: z.uuid(),
-  type: z.string().min(1),
+  typeId: z.string().min(1),
   inUse: z.boolean().default(false),
   connectedPortId: z.string().uuid().optional(),
 });

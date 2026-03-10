@@ -49,7 +49,11 @@ const ChartPrivilegesSchema = z.object({
 export const ChartMetadataSchema = ChartSchema.omit({
   devicesOnChart: true,
   linesOnChart: true,
-  bondsOnChart:true
+  bondsOnChart:true,
+  notesOnChart:true,
+  zonesOnChart:true,
+  overlayEdgesOnChart:true,
+  overlayElementsOnChart:true,
 }).extend({
   myPrivileges: ChartPrivilegesSchema.optional(),
 });

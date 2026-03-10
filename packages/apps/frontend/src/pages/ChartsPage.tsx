@@ -67,11 +67,15 @@ export function ChartsPage() {
   const readonly = false;
 
   const { pendingChartAction, clearPendingChartAction, setCurrentEditorChart, setEditorEditMode, setCurrentPage } = useAiChat();
+  const [pendingOpenInEditMode, setPendingOpenInEditMode] = useState(false);
 
-  // When the AI creates/edits a chart, auto-open the editor for it
+  // When the AI creates/edits/opens a chart, auto-open the editor for it
   useEffect(() => {
     if (!pendingChartAction) return;
     handleEdit(pendingChartAction.chartId);
+    if (pendingChartAction.type === "edit") {
+      setPendingOpenInEditMode(true);
+    }
     clearPendingChartAction();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingChartAction]);
@@ -135,6 +139,14 @@ export function ChartsPage() {
       console.error(e);
     }
   },[lockChart, unlockChart])
+
+  // Once the dialog is open, trigger edit mode if the AI requested it
+  useEffect(() => {
+    if (dialogOpen && pendingOpenInEditMode && selectedId && !locking && !unlocking) {
+      setPendingOpenInEditMode(false);
+      void onEditSwitchToggle(true);
+    }
+  }, [dialogOpen, pendingOpenInEditMode, selectedId, locking, unlocking, onEditSwitchToggle]);
 
   const handleEdit = (chartId: string, metadata?: ChartMetadata) => {
     setSelectedId(chartId);
