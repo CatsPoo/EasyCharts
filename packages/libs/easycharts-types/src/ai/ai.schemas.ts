@@ -10,6 +10,8 @@ export const ChatMessageSchema = z.object({
 export const ChatRequestSchema = z.object({
   messages: z.array(ChatMessageSchema).min(1),
   currentChartId: z.string().uuid().optional(),
+  /** True when the user has the chart editor open in edit mode */
+  editorEditMode: z.boolean().optional(),
 });
 
 export const ChatChartActionSchema = z.object({

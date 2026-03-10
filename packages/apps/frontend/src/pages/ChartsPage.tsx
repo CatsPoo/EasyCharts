@@ -39,6 +39,7 @@ import { useChartById } from "../hooks/chartsHooks";
 import { useChartLock } from "../hooks/chartsLockHooks";
 import { LockStatusChip } from "../components/ChartEditor/LockStatusClip";
 import { useThemeMode } from "../contexts/ThemeModeContext";
+import { useAiChat } from "../contexts/AiChatContext";
 
 export function ChartsPage() {
   const { user } = useAuth();
@@ -64,6 +65,30 @@ export function ChartsPage() {
 
   const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,isLoading} = useChartLock(user!.id,selectedId || undefined)
   const readonly = false;
+
+  const { pendingChartAction, clearPendingChartAction, setCurrentEditorChart, setEditorEditMode } = useAiChat();
+
+  // When the AI creates/edits a chart, auto-open the editor for it
+  useEffect(() => {
+    if (!pendingChartAction) return;
+    handleEdit(pendingChartAction.chartId);
+    clearPendingChartAction();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingChartAction]);
+
+  // Keep the AI context aware of which chart is open (id + name) so the LLM gets context
+  useEffect(() => {
+    if (dialogOpen && selectedId) {
+      setCurrentEditorChart(selectedId, editChart?.name ?? null);
+    } else {
+      setCurrentEditorChart(null, null);
+    }
+  }, [dialogOpen, selectedId, editChart?.name, setCurrentEditorChart]);
+
+  // Tell the AI whether the editor is in edit mode
+  useEffect(() => {
+    setEditorEditMode(dialogOpen && editMode);
+  }, [dialogOpen, editMode, setEditorEditMode]);
 
   const nope = useCallback(()=>{return} ,[])
 
