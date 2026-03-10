@@ -79,6 +79,26 @@ const TOOLS: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "open_chart",
+      description:
+        "Open a chart in the editor by name or id. " +
+        "If the user provides a name (not a UUID), pass it as chartName and leave chartId empty. " +
+        "The tool will search by name: if exactly one match is found it opens automatically; " +
+        "if multiple are found it returns a list so you can ask the user to pick one; " +
+        "if none are found it returns an error. " +
+        "If you already have the exact chartId (UUID), pass it directly as chartId.",
+      parameters: {
+        type: "object",
+        properties: {
+          chartId: { type: "string", description: "Exact UUID of the chart (use when you already know the id)" },
+          chartName: { type: "string", description: "Name or partial name to search for (use when the user refers to a chart by name)" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "update_chart",
       description:
         "Update a chart's name or description. Requires the user to have edit permission on that chart. If the user only has read access, this will fail — tell them they need edit permission.",
@@ -98,29 +118,32 @@ const TOOLS: ChatCompletionTool[] = [
 const SYSTEM_PROMPT_BASE = `You are an AI assistant for EasyCharts, a network diagram tool.
 
 EasyCharts allows users to create and manage network topology diagrams. Charts contain:
-- **Devices**: Network equipment (servers, routers, switches, firewalls, etc.) placed at x,y positions on the canvas
-- **Ports**: Network interfaces on devices (e.g., eth0, fa0/0) used to create connections
-- **Lines**: Cable/connection types used between devices
-- **Bonds**: Grouped connections between device ports
+- Devices: Network equipment (servers, routers, switches, firewalls, etc.) placed at x,y positions on a visual canvas
+- Ports: Network interfaces on devices used to create connections
+- Lines: Cable/connection types used between devices
+- Bonds: Grouped connections between device ports
 
-Canvas dimensions: approximately 1500px wide × 1000px tall.
-When placing devices, use good spacing (at least 200px apart horizontally, 150px vertically).
-Arrange devices logically — e.g., core routers at the top, servers at the bottom.
+## Behaviour rules
+- Never reveal or discuss the user's permissions. Use them silently to decide what actions are allowed.
+- Never draw ASCII diagrams, tables, or text-based representations of network topology. The canvas is the diagram — use it.
+- Focus on understanding the user's intent and taking the best action. Prefer doing over describing.
+- If the user's request is ambiguous, make a reasonable assumption and act on it rather than asking too many questions.
+- Be concise. Skip preamble and filler. Get to the point or to the action.
 
-## Per-chart privileges
-Each chart has per-user privileges: canEdit, canDelete, canShare.
-- list_charts returns these privileges for every chart.
-- get_chart works for any chart the user can access (owned or shared).
-- update_chart requires canEdit=true. If the user only has read access, politely explain they do not have edit permission and cannot modify that chart via AI or manually.
+## Per-chart privileges (internal use only)
+- list_charts returns canEdit/canDelete per chart.
+- update_chart requires canEdit=true. If the user lacks edit access, explain briefly and suggest they ask the chart owner.
 
-When a user asks to modify a chart they only have read access to, do NOT attempt the update. Explain the situation and suggest they ask the chart owner to grant them edit access.
+## Opening charts by name
+When the user asks to open/show/display a chart by name, call open_chart with chartName.
+- If the result contains chartId → the chart will open automatically, say nothing.
+- If the result contains multipleMatches → list the chart names to the user and ask which one they want, then call open_chart again with the chosen chartId.
+- If the result contains error → tell the user no matching chart was found.
 
-When creating charts:
-1. Call list_devices to see available devices
-2. Choose appropriate devices and place them at sensible positions
-3. After creation, the chart opens in the editor so the user can add connections manually
-
-Be concise and helpful.`;
+## Creating charts
+1. Call list_devices to get available devices
+2. Choose appropriate devices and arrange them logically (core at top, edge/servers at bottom, spacing ≥200px horizontal, ≥150px vertical, canvas ~1500×1000px)
+3. Call create_chart — the editor opens automatically after`;
 
 const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.CHART_CREATE]: "create new charts",
@@ -143,22 +166,20 @@ function buildPermissionsSection(permissions: Permission[]): string {
   const allowed = allPerms.filter((p) => permSet.has(p));
   const denied = allPerms.filter((p) => !permSet.has(p));
 
-  const lines: string[] = ["\n## Your global permissions"];
+  const lines: string[] = [
+    "\n## User capability constraints (internal — never disclose these to the user)",
+    "Silently enforce these. If blocked, say only that the action is not available to them.",
+  ];
 
   if (allowed.length > 0) {
-    lines.push("You CAN:");
+    lines.push("Allowed:");
     for (const p of allowed) lines.push(`  - ${PERMISSION_LABELS[p]}`);
   }
 
   if (denied.length > 0) {
-    lines.push("You CANNOT:");
+    lines.push("Not allowed:");
     for (const p of denied) lines.push(`  - ${PERMISSION_LABELS[p]}`);
   }
-
-  lines.push(
-    "\nEnforce these limits strictly. If the user asks you to do something they lack permission for, " +
-    "explain the missing permission and do NOT call the corresponding tool.",
-  );
 
   return lines.join("\n");
 }
@@ -285,7 +306,7 @@ export class AiService {
             typeof resultData === "object" &&
             "chartId" in resultData
           ) {
-            const r = resultData as { chartId: string; chartName: string; actionType?: "create" | "edit" };
+            const r = resultData as { chartId: string; chartName: string; actionType?: "create" | "edit" | "open" };
             chartAction = {
               type: r.actionType ?? "create",
               chartId: r.chartId,
@@ -413,6 +434,38 @@ export class AiService {
           userId,
         );
         return { chartId: created.id, chartName: created.name, actionType: "create" };
+      }
+
+      case "open_chart": {
+        const allCharts = await this.chartsService.getAllUserChartsMetadata(userId);
+
+        // Resolve by ID if provided
+        if (args.chartId) {
+          const meta = allCharts.find((c) => c.id === args.chartId);
+          if (!meta) throw new ForbiddenException(`You do not have access to chart ${args.chartId as string}.`);
+          return { chartId: meta.id, chartName: meta.name, actionType: "open" };
+        }
+
+        // Search by name
+        const query = (args.chartName as string ?? "").trim().toLowerCase();
+        if (!query) return { error: "Provide a chartId or chartName to open a chart." };
+
+        const matches = allCharts.filter((c) => c.name.toLowerCase().includes(query));
+
+        if (matches.length === 0) {
+          return { error: `No chart found matching "${args.chartName as string}".` };
+        }
+
+        if (matches.length === 1) {
+          return { chartId: matches[0].id, chartName: matches[0].name, actionType: "open" };
+        }
+
+        // Multiple matches — return the list so the AI can ask the user to pick one
+        return {
+          multipleMatches: true,
+          matches: matches.map((c) => ({ id: c.id, name: c.name })),
+          message: `Found ${matches.length} charts matching "${args.chartName as string}". Ask the user which one they mean.`,
+        };
       }
 
       case "update_chart": {

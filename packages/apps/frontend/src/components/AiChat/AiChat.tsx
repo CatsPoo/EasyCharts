@@ -1,4 +1,4 @@
-import type { ChatChartAction, ChatMessage } from "@easy-charts/easycharts-types";
+import type { ChatMessage } from "@easy-charts/easycharts-types";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
@@ -21,12 +21,6 @@ import { useAiChatMutation } from "../../hooks/aiChatHooks";
 import { ChatInput } from "./ChatInput";
 import { ChatMessage as ChatMessageComponent } from "./ChatMessage";
 
-/** Pairs an assistant message with the chart action it triggered (if any) */
-interface MessageEntry {
-  message: ChatMessage;
-  chartAction?: ChatChartAction;
-}
-
 const DRAWER_WIDTH = 380;
 // Must be above MUI Dialog (1300) and SpeedDial so the chat is reachable inside the editor
 const CHAT_Z_INDEX = 1400;
@@ -47,14 +41,14 @@ export function AiChat() {
   const chatMutation = useAiChatMutation();
 
   const [history, setHistory] = useState<ChatMessage[]>([]);
-  const [entries, setEntries] = useState<MessageEntry[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [entries, chatMutation.isPending]);
+  }, [messages, chatMutation.isPending]);
 
   const handleSend = (text: string) => {
     setError(null);
@@ -63,7 +57,7 @@ export function AiChat() {
     const newHistory: ChatMessage[] = [...history, userMsg];
 
     setHistory(newHistory);
-    setEntries((prev) => [...prev, { message: userMsg }]);
+    setMessages((prev) => [...prev, userMsg]);
 
     chatMutation.mutate(
       {
@@ -75,23 +69,26 @@ export function AiChat() {
       {
         onSuccess: (res) => {
           const assistantMsg: ChatMessage = { role: "assistant", content: res.message };
+          // Always keep in history so the LLM has context, but don't show in chat when
+          // a chart action was triggered — the editor opening is the result.
           setHistory((prev) => [...prev, assistantMsg]);
-          setEntries((prev) => [...prev, { message: assistantMsg, chartAction: res.chartAction }]);
-          if (res.chartAction) setPendingChartAction(res.chartAction);
+          if (!res.chartAction) {
+            setMessages((prev) => [...prev, assistantMsg]);
+          }
+
+          if (res.chartAction) {
+            setPendingChartAction(res.chartAction);
+            navigate("/charts");
+          }
         },
         onError: (err) => setError((err as Error).message),
       },
     );
   };
 
-  const handleOpenChart = (action: ChatChartAction) => {
-    setPendingChartAction(action);
-    navigate("/charts");
-  };
-
   const handleClear = () => {
     setHistory([]);
-    setEntries([]);
+    setMessages([]);
     setError(null);
   };
 
@@ -143,7 +140,7 @@ export function AiChat() {
             AI Assistant
           </Typography>
           <Tooltip title="Clear conversation">
-            <IconButton size="small" onClick={handleClear} disabled={entries.length === 0}>
+            <IconButton size="small" onClick={handleClear} disabled={messages.length === 0}>
               <DeleteSweepIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -152,7 +149,7 @@ export function AiChat() {
           </IconButton>
         </Box>
 
-        {/* Chart context banner — shown when the editor is open */}
+        {/* Context banner */}
         {currentEditorChartId ? (
           <Box sx={{ px: 2, py: 0.75, borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "center", gap: 1 }}>
             <Chip
@@ -188,19 +185,14 @@ export function AiChat() {
 
         {/* Message list */}
         <Box sx={{ flex: 1, overflowY: "auto", p: 1.5 }}>
-          {entries.length === 0 && (
+          {messages.length === 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", mt: 4 }}>
               {emptyHint}
             </Typography>
           )}
 
-          {entries.map((entry, i) => (
-            <ChatMessageComponent
-              key={i}
-              message={entry.message}
-              chartAction={entry.chartAction}
-              onOpenChart={handleOpenChart}
-            />
+          {messages.map((msg, i) => (
+            <ChatMessageComponent key={i} message={msg} />
           ))}
 
           {chatMutation.isPending && (

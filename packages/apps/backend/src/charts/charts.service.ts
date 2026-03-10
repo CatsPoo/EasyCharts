@@ -194,7 +194,8 @@ export class ChartsService {
       bondOnChart: [],
     });
     const newChart: ChartEntity = await this.chartRepo.save(chart);
-    const result = await this.convertChartEntityToChart(newChart);
+    // Re-fetch with all relations populated before converting — save() does not load relations.
+    const result = await this.getChartById(newChart.id);
     await this.chartVersionsService.saveVersion(result.id, result, createdByUserId);
     return result;
   }

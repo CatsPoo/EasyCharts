@@ -19,7 +19,7 @@ export const ChatRequestSchema = z.object({
 });
 
 export const ChatChartActionSchema = z.object({
-  type: z.enum(["create", "edit"]),
+  type: z.enum(["create", "edit", "open"]),
   chartId: z.string().uuid(),
   chartName: z.string(),
 });
