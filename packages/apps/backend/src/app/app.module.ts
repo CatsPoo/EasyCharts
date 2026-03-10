@@ -13,6 +13,7 @@ import { UploadModule } from '../upload/upload.module';
 import { OverlayElementsModule } from '../overlayElements/overlayElements.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { join } from 'path';
     ChartsDirectoriesModule,
     AppConfigModule,
     AuthModule,
+    AiModule,
     TypeOrmModule.forRootAsync({
       imports: [AppConfigModule],
       inject:  [AppConfigService],

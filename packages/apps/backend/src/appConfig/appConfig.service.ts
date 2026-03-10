@@ -31,7 +31,12 @@ export class AppConfigService {
       defaultAdminUser:{
         username:this.configService.get<string>("DEFAULT_ADMIN_USERNAME","admin"),
         password:this.configService.get<string>("DEFAULT_ADMIN_PASSWORD","admin"),
-      }
+      },
+      ai: {
+        enabled: this.configService.get<string>("AI_ENABLED", "false") === "true",
+        ollamaUrl: this.configService.get<string>("AI_OLLAMA_URL", "http://localhost:11434"),
+        model: this.configService.get<string>("AI_OLLAMA_MODEL", "qwen2.5:7b"),
+      },
     };
   }
 
