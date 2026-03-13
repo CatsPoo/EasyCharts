@@ -229,6 +229,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       devices: new Set(),
       ports: new Set(),
       lines: new Set(),
+      overlayElements:new Set()
     });
     const applyChartChangeRef = useRef(applyChartChange);
     useEffect(() => { applyChartChangeRef.current = applyChartChange; }, [applyChartChange]);
@@ -591,11 +592,19 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     );
 
     const onEditLine = useCallback(
-      (line: Edge) => {
-        setSelectedEditLine(line);
+      (edge: Edge) => {
+        // Find the actual data record for this line
+        const lineData = chart.linesOnChart.find((l) => l.line.id === edge.id);
+
+        // Merge the edge with the saved data so 'type' is correct
+        setSelectedEditLine({
+          ...edge,
+          type: lineData?.type || edge.type || "straight",
+          label: lineData?.label || edge.label || "",
+        });
         setEditLineDialogOpen(true);
       },
-      [setEditLineDialogOpen, setSelectedEditLine]
+      [chart.linesOnChart, setEditLineDialogOpen, setSelectedEditLine]
     );
 
     const onUnbondPorts = useCallback(
@@ -747,6 +756,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 ? ({
                     ...loc,
                     label: newValue.label,
+                    type:newValue.type
                   } as LineOnChart as LineOnChart)
                 : loc;
             }),
@@ -2743,7 +2753,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         </div>
         <EditLineDialog
           isOpen={isEditlineDialogOpen}
-          line={selectedEditLine ?? edges[0]}
+          line={selectedEditLine}
           onClose={onEditLineDialogClose}
           onSubmit={onEditLineDialgSubmit}
         />
