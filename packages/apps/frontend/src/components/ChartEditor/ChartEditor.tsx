@@ -390,6 +390,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         ? allCableTypes.find((ct) => ct.name === lineonChart.line.cableType)?.defaultColor
         : undefined;
       const edgeColor = lineonChart.color ?? cableColor;
+      const strokeDasharray =
+        lineonChart.strokeType === "dashed" ? "8 4" :
+        lineonChart.strokeType === "dotted" ? "2 4" :
+        lineonChart.strokeType === "long-dashed" ? "16 4" :
+        undefined;
       return {
         id: lineonChart.line.id,
         source: lineonChart.line.sourcePort.deviceId,
@@ -399,7 +404,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         label: lineonChart.label,
         type: lineonChart.type,
         animated: false,
-        style: edgeColor ? { stroke: edgeColor, strokeWidth: 2,color:lineonChart.color } : undefined,
+        data: { strokeType: lineonChart.strokeType },
+        style: (edgeColor || strokeDasharray)
+          ? { stroke: edgeColor, strokeWidth: 2, color: lineonChart.color, strokeDasharray }
+          : undefined,
       };
     }, [allCableTypes]);
 
@@ -756,7 +764,8 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 ? ({
                     ...loc,
                     label: newValue.label,
-                    type:newValue.type
+                    type: newValue.type,
+                    strokeType: newValue.strokeType,
                   } as LineOnChart as LineOnChart)
                 : loc;
             }),

@@ -12,11 +12,11 @@ import {
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import type { Edge } from "reactflow";
-import { 
-  EditLineDialogFormSchema, 
-  type EditLineDialogFormResponse 
+import {
+  EditLineDialogFormSchema,
+  type EditLineDialogFormResponse
 } from "./interfaces/editLineDialogForm.interfaces";
-import { LineTypeEnum } from "@easy-charts/easycharts-types";
+import { LineTypeEnum, StrokeTypeEnum } from "@easy-charts/easycharts-types";
 
 interface EditLineDialogProps {
   isOpen: boolean;
@@ -42,13 +42,14 @@ export function EditLineDialog({
     defaultValues: {
       id: "",
       label: "",
-      type: "straight", // Base fallback
+      type: "straight",
+      strokeType: undefined,
     },
     mode: "onSubmit",
   });
 
-  // This "watches" the form state so the MUI Select stays in sync
   const typeValue = watch("type");
+  const strokeTypeValue = watch("strokeType");
 
   useEffect(() => {
     if (isOpen && line) {
@@ -56,6 +57,7 @@ export function EditLineDialog({
         id: line.id,
         label: typeof line.label === "string" ? line.label : "",
         type: (line.type ?? "step") as EditLineDialogFormResponse["type"],
+        strokeType: line.data?.strokeType as EditLineDialogFormResponse["strokeType"],
       });
     }
   }, [isOpen, line, reset]);
@@ -66,8 +68,6 @@ export function EditLineDialog({
     <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Edit Line</DialogTitle>
       <form
-        // The 'key' ensures that if you switch from Line A to Line B, 
-        // the form completely remounts with the new data.
         key={line.id}
         onSubmit={handleSubmit(onSubmit, (errs) =>
           console.error("Form validation failed:", errs)
@@ -76,10 +76,8 @@ export function EditLineDialog({
       >
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
-            {/* Hidden ID field */}
             <input type="hidden" {...register("id")} />
 
-            {/* Label Field */}
             <TextField
               label="Label"
               fullWidth
@@ -88,20 +86,35 @@ export function EditLineDialog({
               error={!!errors.label}
             />
 
-            {/* Line Type Select Box */}
             <TextField
               select
               label="Line Type"
               fullWidth
               {...register("type")}
-              // Linking the visual value to the watched form state
-              value={typeValue} 
+              value={typeValue}
               error={!!errors.type}
               helperText={errors.type?.message}
             >
               {LineTypeEnum.options.map((option) => (
                 <MenuItem key={option} value={option}>
                   {option.charAt(0).toUpperCase() + option.slice(1)}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField
+              select
+              label="Stroke Style"
+              fullWidth
+              {...register("strokeType")}
+              value={strokeTypeValue ?? ""}
+              error={!!errors.strokeType}
+              helperText={errors.strokeType?.message}
+            >
+              <MenuItem value="">Default (Solid)</MenuItem>
+              {StrokeTypeEnum.options.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option.charAt(0).toUpperCase() + option.slice(1).replace("-", " ")}
                 </MenuItem>
               ))}
             </TextField>
@@ -112,9 +125,9 @@ export function EditLineDialog({
           <Button onClick={onClose} variant="outlined">
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            variant="contained" 
+          <Button
+            type="submit"
+            variant="contained"
             disabled={isSubmitting}
           >
             Save Changes

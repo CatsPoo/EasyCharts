@@ -1,4 +1,4 @@
-import type { LineType } from "@easy-charts/easycharts-types";
+import type { LineType, StrokeType } from "@easy-charts/easycharts-types";
 import {
   Column,
   Entity,
@@ -45,5 +45,8 @@ export class LineOnChartEntity {
 
   @Column({ type: "varchar", length: 50, nullable: true, default: null })
   color!: string | null;
+
+  @Column({ type: "varchar", length: 20, nullable: true, default: null })
+  strokeType!: StrokeType | null;
 
 }
