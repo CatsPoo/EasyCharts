@@ -39,7 +39,7 @@ export class DevicesService {
       createdAt,
       createdByUserId,
       updatedAt,
-      updatedByUserId
+      updatedByUserId,
     } as Device;
   }
 
