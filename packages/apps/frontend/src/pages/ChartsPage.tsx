@@ -61,8 +61,36 @@ export function ChartsPage() {
   const [saveNoteLabel, setSaveNoteLabel] = useState("");
   const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
   const [saveErrorOpen, setSaveErrorOpen] = useState(false);
+  const [lockAvailableOpen, setLockAvailableOpen] = useState(false);
+  const [lockExpiredOpen, setLockExpiredOpen] = useState(false);
 
   const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,isLoading} = useChartLock(user!.id,selectedId || undefined)
+
+  const {
+    data: selectedChart,
+    isLoading: isSelectedChartLoading,
+    error: selectedChartError,
+  } = useChartById(selectedId ?? "");
+
+  const prevLockStateRef = useRef<LockState | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevLockStateRef.current;
+    prevLockStateRef.current = lockState;
+
+    if (!dialogOpen) return;
+
+    if (prev === LockState.OTHERs && lockState === LockState.UNLOCKED) {
+      setLockAvailableOpen(true);
+    }
+
+    if (prev === LockState.MINE && lockState === LockState.UNLOCKED) {
+      // Lock was auto-released by the server — discard unsaved changes and exit edit mode
+      setEditMode(false);
+      setEditorMadeChanges(false);
+      setEditChart(selectedChart ? structuredClone(selectedChart) : undefined);
+      setLockExpiredOpen(true);
+    }
+  }, [lockState, dialogOpen, selectedChart]);
   const readonly = false;
 
   const nope = useCallback(()=>{return} ,[])
@@ -84,12 +112,6 @@ export function ChartsPage() {
   useEffect(() => {
     setSelectedId("");
   }, [tab]);
-
-  const {
-    data: selectedChart,
-    isLoading: isSelectedChartLoading,
-    error: selectedChartError,
-  } = useChartById(selectedId ?? "");
 
   const onEditSwitchToggle = useCallback(async (checked:boolean)=>{
     try {
@@ -416,6 +438,30 @@ export function ChartsPage() {
       >
         <Alert severity="error" onClose={() => setSaveErrorOpen(false)} sx={{ width: "100%" }}>
           Failed to save the chart. Please try again.
+        </Alert>
+      </Snackbar>
+
+      {/* Lock expired feedback (own lock auto-released) */}
+      <Snackbar
+        open={lockExpiredOpen}
+        autoHideDuration={8000}
+        onClose={() => setLockExpiredOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="warning" onClose={() => setLockExpiredOpen(false)} sx={{ width: "100%" }}>
+          Your edit lock expired due to inactivity. Unsaved changes were discarded.
+        </Alert>
+      </Snackbar>
+
+      {/* Lock available feedback */}
+      <Snackbar
+        open={lockAvailableOpen}
+        autoHideDuration={8000}
+        onClose={() => setLockAvailableOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="info" onClose={() => setLockAvailableOpen(false)} sx={{ width: "100%" }}>
+          The chart is now available — you can switch to edit mode.
         </Alert>
       </Snackbar>
     </Box>

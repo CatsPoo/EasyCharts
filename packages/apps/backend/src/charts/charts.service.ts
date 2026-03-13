@@ -420,6 +420,11 @@ export class ChartsService {
     await this.linesService.deleteOrphanLines();
     await this.portsService.recomputePortsInUse();
 
+    // Refresh lockedAt so the inactivity timer resets on each save by the lock owner
+    if (updated.lockedById === userId) {
+      await this.chartRepo.update(chartId, { lockedAt: new Date() });
+    }
+
     const converted = await this.convertChartEntityToChart(updated);
     const result = await this.enrichPortsWithConnectedPortIds(converted);
     await this.chartVersionsService.saveVersion(chartId, result, userId, dto.versionLabel);
