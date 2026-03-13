@@ -24,6 +24,8 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    volumes:
+      - uploads_data:/app/public/uploads
     environment:
       NODE_ENV: production
       DB_HOST: postgres
@@ -52,4 +54,5 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:
   

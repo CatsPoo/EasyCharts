@@ -10,6 +10,12 @@ export const LineTypeEnum = z.enum([
   "simplebezier",
 ]);
 
+export const StrokeTypeEnum = z.enum([
+  "solid",
+  "dashed",
+  "dotted",
+  "long-dashed",
+]);
 
 export const LineOnChartSchema = z.object({
   chartId: z.string().uuid(),
@@ -17,4 +23,5 @@ export const LineOnChartSchema = z.object({
   type:LineTypeEnum,
   label: z.string().min(1).default(""),
   color: z.string().optional(),
+  strokeType: StrokeTypeEnum.optional().default("solid"),
 });
