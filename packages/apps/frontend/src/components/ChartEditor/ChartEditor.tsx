@@ -48,6 +48,7 @@ import ReactFlow, {
   useReactFlow,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { CableTypeLabels } from "./CableTypeLabels";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
 import { useListAssets, useCreateAsset, useUpdateAsset, useDeleteAsset } from "../../hooks/assetsHooks";
 import { updatePort } from "../../hooks/portsHooks";
@@ -172,6 +173,18 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const { data: cableTypesData } = useCableTypes();
     const allCableTypes = useMemo(() => cableTypesData ?? [], [cableTypesData]);
+
+    const getDefaultCableType = useCallback(
+      (srcPortType: string, tgtPortType: string): string | undefined => {
+        const compatible = allCableTypes.filter((ct) => {
+          const names = ct.compatiblePortTypes?.map((p: { name: string }) => p.name) ?? [];
+          return names.includes(srcPortType) && names.includes(tgtPortType);
+        });
+        return compatible.length === 1 ? compatible[0].name : undefined;
+      },
+      [allCableTypes]
+    );
+
     const [zoneStyleDialogZoneId, setZoneStyleDialogZoneId] = useState<string | null>(null);
 
     const actionsHistory = useRef<Chart[]>([chart]);
@@ -401,10 +414,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         target: lineonChart.line.targetPort.deviceId,
         sourceHandle: lineonChart.line.sourcePort.id,
         targetHandle: lineonChart.line.targetPort.id,
-        label: lineonChart.label,
+        label: lineonChart.label || undefined,
         type: lineonChart.type,
         animated: false,
-        data: { strokeType: lineonChart.strokeType },
+        data: { strokeType: lineonChart.strokeType, cableType: lineonChart.line.cableType },
         style: (edgeColor || strokeDasharray)
           ? { stroke: edgeColor, strokeWidth: 2, color: lineonChart.color, strokeDasharray }
           : undefined,
@@ -938,7 +951,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               ?? pendingBondRef.current?.lineMap.get(`${targetPort.id}:${port.id}`);
             const newLine: LineOnChart = {
               chartId: chart.id,
-              line: { id: existingLineId ?? uuidv4(), sourcePort: port, targetPort } as Line,
+              line: { id: existingLineId ?? uuidv4(), sourcePort: port, targetPort, cableType: getDefaultCableType(port.type, targetPort.type) } as Line,
               type: "step",
               label: "",
             };
@@ -996,7 +1009,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           return { ...next, bondsOnChart: [...(next.bondsOnChart ?? []), bondOnChart] } as Chart;
         });
       },
-      [chart, greenPortIds, convertLineToEdge, setEdges, setMadeChanges, applyChartChange]
+      [chart, greenPortIds, convertLineToEdge, setEdges, setMadeChanges, applyChartChange, getDefaultCableType]
     );
 
     const onPortAdded = useCallback(async (portId: string, deviceId: string, side: Side) => {
@@ -1777,7 +1790,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             id: newId,
             sourcePort,
             targetPort,
-            cableType: sourcePort.type === "rj45" && targetPort.type === "rj45" ? "copper" : undefined,
+            cableType: getDefaultCableType(sourcePort.type, targetPort.type),
           } as Line,
           type: "step",
           label: "",
@@ -1822,6 +1835,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         chart.devicesOnChart,
         chart.id,
         convertLineToEdge,
+        getDefaultCableType,
         setEdges,
         setMadeChanges,
         setPortChartUsed,
@@ -2748,6 +2762,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             fitView
             style={{ width: "100%", height: "100%" }}
           >
+            <CableTypeLabels />
             <Background color={isDark ? "#1f2937" : "#e5e7eb"} gap={16} />
             <Controls className={isDark ? "invert" : ""} />
             <MiniMap
