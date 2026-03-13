@@ -4,12 +4,12 @@ import React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 
+import { useAuth } from './useAuth';
+
 // Mock useAuth so we can control auth state in each test
 jest.mock('./useAuth', () => ({
   useAuth: jest.fn(),
 }));
-
-import { useAuth } from './useAuth';
 const mockUseAuth = useAuth as jest.Mock;
 
 function renderRoute(initialPath: string, permission = 'MANAGE_USERS' as any) {

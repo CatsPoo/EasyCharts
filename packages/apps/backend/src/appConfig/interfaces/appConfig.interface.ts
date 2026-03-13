@@ -5,7 +5,15 @@ export interface appConfigSchema{
     jwt:JwtSignOptions,
     refreshJwt : JwtSignOptions,
     redis:redisConfig,
-    defaultAdminUser:DefaultAdminUserConfig
+    defaultAdminUser:DefaultAdminUserConfig,
+    chartLock:ChartLockConfig
+}
+
+export interface ChartLockConfig {
+  /** Minutes of inactivity before a lock is auto-released */
+  expiryMinutes: number;
+  /** How often (in seconds) the expiry check runs */
+  checkIntervalSeconds: number;
 }
 
 export interface databaseConfig {

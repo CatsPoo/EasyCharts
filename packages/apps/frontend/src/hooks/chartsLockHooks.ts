@@ -1,7 +1,6 @@
 import { LockState, type ChartLock } from "@easy-charts/easycharts-types";
 import { http } from "../api/http";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
 
 
 export const fetchLock = async (id: string): Promise<ChartLock> => {

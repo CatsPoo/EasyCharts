@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx nx test @easy-charts/backend --passWithNoTests)",
+      "Bash(grep -A 8 \"Cannot access ''DeviceTypeEntity''\")",
+      "Bash(npx nx test backend --testPathPattern=\"lines.service\" --no-coverage)",
+      "Bash(npx jest --testPathPatterns=\"lines.service\" --no-coverage)",
+      "Bash(npx jest --testPathPatterns=\"devices.service.spec\" --no-coverage)",
+      "Bash(npx jest --no-coverage)",
+      "Bash(npx nx run backend:build)",
+      "Bash(npx nx run frontend:build)"
+    ]
+  }
+}

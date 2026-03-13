@@ -20,12 +20,12 @@ services:
 
   # ── Backend (NestJS) ────────────────────────────────────────────
   backend:
-    build:
-      context: .
-      dockerfile: packages/apps/backend/Dockerfile
+    image: rongorlik/easy-charts:backend-latest
     restart: unless-stopped
     ports:
       - "3000:3000"
+    volumes:
+      - uploads_data:/app/public/uploads
     environment:
       NODE_ENV: production
       DB_HOST: postgres
@@ -45,9 +45,7 @@ services:
 
   # ── Frontend (React + nginx) ────────────────────────────────────
   frontend:
-    build:
-      context: .
-      dockerfile: packages/apps/frontend/Dockerfile
+    image: rongorlik/easy-charts:frontend-latest
     restart: unless-stopped
     ports:
       - "80:80"
@@ -56,4 +54,5 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:
   

@@ -1,7 +1,7 @@
 // src/charts/instance/devices-on-chart.service.ts
 import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { EntityManager, In } from "typeorm";
-import type { Device, DeviceOnChart, HandleInfo, Handles, Port, Position, Side } from "@Easy-charts/easycharts-types";
+import type { Device, DeviceOnChart, HandleInfo, Handles, Port, Position, Side } from "@easy-charts/easycharts-types";
 import { PortOnChartEntity } from "./entities/portOnChart.entity";
 import { DeviceEntity } from "../devices/entities/device.entity";
 import { DeviceOnChartEntity } from "./entities/deviceOnChart.entity";
@@ -9,7 +9,7 @@ import { PortEntity } from "../devices/entities/port.entity";
 import { DevicesService } from "../devices/devices.service";
 import { PortsOnChartService } from "./portsOnChart.service";
 import { PortsService } from "../devices/ports.service";
-import { AssetVersionsService } from "../devices/assetVersions.service";
+import { AssetVersionsService } from "../assetVersions/assetVersions.service";
 
 @Injectable()
 export class DevicesOnChartService {

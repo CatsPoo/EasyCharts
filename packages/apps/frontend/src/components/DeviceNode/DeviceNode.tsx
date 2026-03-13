@@ -8,13 +8,12 @@ import {
   type Side,
 } from "@easy-charts/easycharts-types";
 import AddIcon from "@mui/icons-material/Add";
-import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import { IconButton } from "@mui/material";
 import { PortFormDialog } from "../PortFormDialog";
-import { Fragment, useLayoutEffect, useMemo, useState, type CSSProperties } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
-import { Handle, Position, useUpdateNodeInternals } from "reactflow";
+import { useUpdateNodeInternals } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
 import type { DeviceNodeData } from "./interfaces/deviceModes.interfaces";
 import { useThemeMode } from "../../contexts/ThemeModeContext";
@@ -33,7 +32,7 @@ export default function DeviceNode({
   data,
   selected,
 }: NodeProps<DeviceNodeData>) {
-  const { deviceOnChart, editMode, updateDeviceOnChart, onRemoveNode, onHandleContextMenu, greenPortIds, onPortAdded } = data;
+  const { deviceOnChart, editMode, updateDeviceOnChart, onRemoveNode, onHandleContextMenu, greenPortIds, overlayPortIds, onPortAdded } = data;
   const { device, handles } = deviceOnChart;
   const { id: deviceId, name, ipAddress, model } = device;
   const { name: modelName, iconUrl, vendor } = model;
@@ -97,7 +96,7 @@ export default function DeviceNode({
 
   useLayoutEffect(() => {
     updateInternals(deviceId);
-  }, [deviceId, editMode, deviceOnChart, updateDeviceOnChart, updateInternals]);
+  }, [deviceId, updateInternals]);
 
   const onAddHandle = (side: Side) => {
     if (isEditorOpen) return;
@@ -195,6 +194,7 @@ export default function DeviceNode({
         offset={offset}
         inUse={isPortInUse(port.id)}
         isPairedHere={greenPortIds.has(port.id)}
+        isOverlayConnected={overlayPortIds.has(port.id)}
         onHandleContextMenu={onHandleContextMenu}
         />;
   }
@@ -250,19 +250,19 @@ export default function DeviceNode({
       <div className="p-3 space-y-3">
         <div className="flex items-center gap-2">
           {iconUrl ? (
-            <div className="h-8 w-8 rounded-lg bg-slate-200 flex items-center justify-center text-xs font-bold">
+            <div className="h-12 w-12 rounded-lg bg-slate-200 flex items-center justify-center text-xs font-bold">
               <img
                 src={iconUrl}
                 onError={() => ""}
                 alt={modelName ? `${modelName} icon` : "Model icon"}
-                className="h-8 w-8 rounded-lg object-cover bg-slate-100 border border-slate-200 select-none"
+                className="h-12 w-12 rounded-lg object-cover bg-slate-100 border border-slate-200 select-none"
                 loading="lazy"
                 decoding="async"
                 draggable={false}
               />
             </div>
           ) : (
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-200 to-indigo-400 text-indigo-900 flex items-center justify-center text-xs font-bold">
+            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-indigo-200 to-indigo-400 text-indigo-900 flex items-center justify-center text-xs font-bold">
               {initials(name)}
             </div>
           )}
@@ -286,16 +286,20 @@ export default function DeviceNode({
       </div>
 
       {leftYs.map((y, i) => {
-        return renderHandleBySide("left", handles.left?.[i]?.port, y);
+        const port = handles.left?.[i]?.port;
+        return <span key={port?.id ?? `left-${i}`}>{renderHandleBySide("left", port, y)}</span>;
       })}
       {rightYs.map((y, i) => {
-        return renderHandleBySide("right", handles.right?.[i]?.port, y);
+        const port = handles.right?.[i]?.port;
+        return <span key={port?.id ?? `right-${i}`}>{renderHandleBySide("right", port, y)}</span>;
       })}
       {topXs.map((x, i) => {
-        return renderHandleBySide("top", handles.top?.[i]?.port, x);
+        const port = handles.top?.[i]?.port;
+        return <span key={port?.id ?? `top-${i}`}>{renderHandleBySide("top", port, x)}</span>;
       })}
       {bottomXs.map((x, i) => {
-        return renderHandleBySide("bottom", handles.bottom?.[i]?.port, x);
+        const port = handles.bottom?.[i]?.port;
+        return <span key={port?.id ?? `bottom-${i}`}>{renderHandleBySide("bottom", port, x)}</span>;
       })}
 
       {editMode && isEditorOpen && (

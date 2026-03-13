@@ -1,4 +1,4 @@
-import { type Chart, type ChartMetadata, type ChartCreate, type ChartUpdate, ChartUpdateSchema } from '@easy-charts/easycharts-types';
+import { type Chart, type ChartMetadata, type ChartCreate, type ChartUpdate } from '@easy-charts/easycharts-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { http } from '../api/http';
 
@@ -31,7 +31,7 @@ export async function getChartsMetadata(): Promise<ChartMetadata[]> {
     const {data} = await http.get<ChartMetadata[]>('/charts/metadata');
     return data
   }
-  catch(err:any){
+  catch {
     throw new Error('Failed to fetch chart metadata');
   }
 }
@@ -48,7 +48,7 @@ export async function getChartById(chartId: string): Promise<Chart> {
     const {data} = await http.get<Chart>(`/charts/${chartId}`);
     return data
   }
-  catch(err:any){
+  catch {
     throw new Error(`Failed to fetch metadata for chart ID: ${chartId}`);
   }
 }

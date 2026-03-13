@@ -20,6 +20,9 @@ const LS_USER = "user";
 
 const authHttp = axios.create({ baseURL: "/api" }); // bare client for login/refresh
 
+// Initialize eagerly so http is available before any child useEffect runs
+createHttp("/api");
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem(LS_ACCESS));
   const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem(LS_REFRESH));
@@ -34,7 +37,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const isAuthenticated = !!accessToken;
 
   useEffect(() => {
-    createHttp("/api");
     setupHttpAuth({
       getAccessToken: () => accessToken,
       getRefreshToken: () => refreshToken,

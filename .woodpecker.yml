@@ -1,91 +1,128 @@
-# EasyCharts CI/CD Pipeline
-# Requires Woodpecker CI v2+
-#
-# Secrets to configure in Woodpecker repository settings:
-#   docker_username  — container registry username
-#   docker_password  — container registry password / token
-#
-# Repository variables to configure (or override per-step):
-#   BACKEND_IMAGE   — e.g. registry.example.com/easycharts/backend
-#   FRONTEND_IMAGE  — e.g. registry.example.com/easycharts/frontend
+when:
+  - branch: [main, dev]
+    event: [push, pull_request]
 
-#
+workspace:
+  base: /woodpecker
+  path: src
+
 steps:
+  - name: restore-npm-cache
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      restore: true
+      cache_key: "node_modules"
+      # This MUST match the path inside the container
+      filesystem_root: "/tmp/cache"
+      mount:
+        - node_modules
+
+  - name: restore-nx-cache
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      restore: true
+      cache_key: "nx"
+      # This MUST match the path inside the container
+      filesystem_root: "/tmp/cache"
+      mount:
+        - .cache/nx
 
   # ── 1. Install dependencies ─────────────────────────────────────
   - name: install
-    image: node:22-alpine
+    image: node:22-bookworm-slim
     environment:
       CI: "true"
     commands:
-      - npm ci
+      - npm config set maxsockets 1
+      - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund --loglevel info
 
-  # ── 2a. Lint (parallel with test) ───────────────────────────────
+  - name: rebuild-npm-cache
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      rebuild: true
+      cache_key: "node_modules"
+      filesystem_root: "/tmp/cache"
+      mount:
+        - node_modules
+    when:
+      event: push
+      branch: [main, dev]
+    depends_on: [install]
+
+# ── 1.5 Version Guard (Enforces bump on 'dev' branch) ────────────
+  - name: version-guard
+    image: node:22-bookworm-slim
+    depends_on: [install]
+    commands:
+      - git fetch origin main
+      - CURRENT_VERSION=$(node -p "require('./package.json').version")
+      - LAST_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
+      - echo "Checking version... Branch ($CURRENT_VERSION) vs Main ($LAST_VERSION)"
+      # Wrap the command in quotes so the colon doesn't break YAML
+      - "npx semver $CURRENT_VERSION --range \">$LAST_VERSION\" || (echo \"❌ VERSION ERROR: You must bump the version in package.json before pushing to dev!\" && exit 1)"
+    when:
+      branch: main
+
+  # ── 2. Lint & Test (Parallel) ───────────────────────────────────
   - name: lint
-    image: node:22-alpine
+    image: node:22-bookworm-slim
     depends_on: [install]
-    environment:
-      CI: "true"
     commands:
-      - npx nx run-many --target=lint --all --parallel=3
+      - git fetch origin main
+      - npx nx affected --target=lint --base=origin/main --parallel=3
+    when:
+      branch: [main, dev]
 
-  # ── 2b. Test (parallel with lint) ───────────────────────────────
   - name: test
-    image: node:22-alpine
+    image: node:22-bookworm-slim
     depends_on: [install]
-    environment:
-      CI: "true"
     commands:
-      - npx nx run-many --target=test --all --passWithNoTests --parallel=3
+      - git fetch origin main
+      - npx nx affected --target=test --base=origin/main --passWithNoTests --parallel=3
+    when:
+      branch: [main, dev]
 
-  # ── 3. Verify build compiles ─────────────────────────────────────
+  # ── 3. Build (Only on Main) ─────────────────────────────────────
   - name: build
-    image: node:22-alpine
+    image: node:22-bookworm-slim
     depends_on: [lint, test]
-    environment:
-      CI: "true"
     commands:
-      - apk add --no-cache python3 make g++
-      - npx nx run-many --target=build --all --parallel=3
+      - apt-get update -qq && apt-get install -y --no-install-recommends python3 make g++
+      - npx nx affected --target=build --base=origin/main --parallel=3
+    when:
+      branch: main
 
-  # # ── 4a. Publish backend image ────────────────────────────────────
-  # # Runs only on pushes to main or on git tags.
-  # - name: publish-backend
-  #   image: woodpeckerci/plugin-docker-buildx
-  #   privileged: true
-  #   depends_on: [build]
-  #   settings:
-  #     dockerfile: packages/apps/backend/Dockerfile
-  #     context: .
-  #     repo:
-  #       from_env: BACKEND_IMAGE
-  #     auto_tag: true
-  #     username:
-  #       from_secret: docker_username
-  #     password:
-  #       from_secret: docker_password
-  #   when:
-  #     - event: push
-  #       branch: main
-  #     - event: tag
+  - name: rebuild-nx-cache
+    image: meltwater/drone-cache
+    settings:
+      backend: "filesystem"
+      rebuild: true
+      cache_key: "nx"
+      filesystem_root: "/tmp/cache"
+      mount:
+        - .cache/nx
+    when:
+      event: push
+      branch: main
+    depends_on: [build]
 
-  # # ── 4b. Publish frontend image ───────────────────────────────────
-  # - name: publish-frontend
-  #   image: woodpeckerci/plugin-docker-buildx
-  #   privileged: true
-  #   depends_on: [build]
-  #   settings:
-  #     dockerfile: packages/apps/frontend/Dockerfile
-  #     context: .
-  #     repo:
-  #       from_env: FRONTEND_IMAGE
-  #     auto_tag: true
-  #     username:
-  #       from_secret: docker_username
-  #     password:
-  #       from_secret: docker_password
-  #   when:
-  #     - event: push
-  #       branch: main
-  #     - event: tag
-  #
+  # ── 4. Publish ──────────────────────────────────────────────────
+  - name: publish
+    image: woodpeckerci/plugin-docker-buildx
+    privileged: true
+    depends_on: [build]
+    settings:
+      dockerfile: ./Dockerfile
+      context: .
+      repo: rongorlik/easy-charts
+      # Automatically use version from package.json for tagging
+      tags: ${CI_COMMIT_TAG:-latest}
+      username:
+        from_secret: dockerhub_username
+      password:
+        from_secret: dockerhub_password
+    when:
+      branch: main

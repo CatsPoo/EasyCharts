@@ -3,7 +3,7 @@ import {
   type User,
   type UserCreate,
   type UserUpdate
-} from "@Easy-charts/easycharts-types";
+} from "@easy-charts/easycharts-types";
 import {
   BadRequestException,
   Injectable,
@@ -71,7 +71,7 @@ export class UsersService {
         ...dto,
         password: await bcrypt.hash(dto.password, 12)
     }
-    return await this.userRepo.save({...hasjedPasswordUser,createdByUserId});
+    return this.convertUserEntity(await this.userRepo.save({...hasjedPasswordUser,createdByUserId}));
   }
 
   async updateUser(userId: string, dto: UserUpdate,updatedByUserId:string): Promise<User> {

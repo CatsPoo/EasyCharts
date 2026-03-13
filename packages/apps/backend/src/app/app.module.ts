@@ -9,10 +9,20 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppConfigService } from '../appConfig/appConfig.service';
 import { AuthModule } from '../auth/auth.module';
 import { ChartsDirectoriesModule } from '../chartsDirectories/chartsDirectories.module';
+import { UploadModule } from '../upload/upload.module';
+import { OverlayElementsModule } from '../overlayElements/overlayElements.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'public'),
+      exclude: ['/api/(.*)'],
+    }),
+    UploadModule,
     DevicesModule,
+    OverlayElementsModule,
     LinesModule,
     ChartsModule,
     ChartsDirectoriesModule,

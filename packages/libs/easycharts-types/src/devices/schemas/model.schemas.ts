@@ -5,13 +5,13 @@ import { VendorSchema } from "./vendor.schemas.js";
 export const ModelBaseSchema = z.object({
   name: z.string().min(1),
   vendor: VendorSchema,
-  iconUrl: z.string().url().optional(),
+  iconUrl: z.string().optional(),
 });
 
 export const ModelCreateSchema = z.object({
   name: z.string().min(1),
   vendorId: z.string().uuid().optional(),
-  iconUrl: z.string().url().optional(),    // from your CreateModelDto
+  iconUrl: z.string().optional(),
 });
 
 export const ModelUpdateSchema = ModelCreateSchema.partial();

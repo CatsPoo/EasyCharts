@@ -8,6 +8,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, EntityManager, In, Repository } from "typeorm";
 import { LineEntity } from "../lines/entities/line.entity";
+import { OverlayEdgeOnChartEntity } from "../charts/entities/overlayElementOnChart.entity";
 import { QueryDto } from "../query/dto/query.dto";
 import { PortEntity } from "./entities/port.entity";
 import { updatePortPayload } from "./interfaces/ports.interfaces";
@@ -109,6 +110,21 @@ export class PortsService {
         .from(LineEntity, "l2")
         .getQuery();
 
+      // Also include ports used via custom element edges (device → CE connections)
+      const usedByCeSource = qb
+        .subQuery()
+        .select("ce.source_port_id")
+        .from(OverlayEdgeOnChartEntity, "ce")
+        .where("ce.source_port_id IS NOT NULL")
+        .getQuery();
+
+      const usedByCeTarget = qb
+        .subQuery()
+        .select("ce2.target_port_id")
+        .from(OverlayEdgeOnChartEntity, "ce2")
+        .where("ce2.target_port_id IS NOT NULL")
+        .getQuery();
+
       // 1) set all to false
       await portRepo
         .createQueryBuilder()
@@ -116,12 +132,14 @@ export class PortsService {
         .set({ inUse: false })
         .execute();
 
-      // 2) set used ones to true
+      // 2) set used ones to true (lines + CE edges)
       await portRepo
         .createQueryBuilder()
         .update(PortEntity)
         .set({ inUse: true })
-        .where(`id IN ${usedAsSource} OR id IN ${usedAsTarget}`)
+        .where(
+          `id IN ${usedAsSource} OR id IN ${usedAsTarget} OR id IN ${usedByCeSource} OR id IN ${usedByCeTarget}`,
+        )
         .execute();
     });
   }

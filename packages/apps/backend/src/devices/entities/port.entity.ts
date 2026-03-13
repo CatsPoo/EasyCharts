@@ -25,7 +25,7 @@ export class PortEntity extends AuditableEntity{
     onDelete: "CASCADE",
   })
   @JoinColumn({ name: "device_id" })
-  device!: DeviceEntity;
+  device!: Relation<DeviceEntity>;
 
   @OneToMany(() => LineEntity, (line) => line.sourcePort)
   asSourceInLines!: Relation<LineEntity[]>;
