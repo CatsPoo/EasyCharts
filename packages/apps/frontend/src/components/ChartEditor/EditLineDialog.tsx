@@ -55,8 +55,7 @@ export function EditLineDialog({
       reset({
         id: line.id,
         label: typeof line.label === "string" ? line.label : "",
-        // Look for the type in line.data, fallback to 'straight' if missing
-        type: line.data?.type ?? "straight",
+        type: (line.type ?? "step") as EditLineDialogFormResponse["type"],
       });
     }
   }, [isOpen, line, reset]);
