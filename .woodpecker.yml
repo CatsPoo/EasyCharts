@@ -34,8 +34,9 @@ steps:
     image: node:22-bookworm-slim
     environment:
       CI: "true"
+    extra_hosts:
+      - "registry.npmjs.org:104.16.9.34"
     commands:
-      - npm config set maxsockets 1
       - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund --loglevel info
 
   - name: rebuild-npm-cache
