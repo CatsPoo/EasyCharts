@@ -25,9 +25,6 @@ const makeCableType = (overrides: Partial<CableTypeEntity> = {}): CableTypeEntit
 
 describe("CableTypesService", () => {
   let service: CableTypesService;
-  let cableRepo: jest.Mocked<any>;
-  let portTypeRepo: jest.Mocked<any>;
-  let dataSource: jest.Mocked<any>;
 
   const mockCableRepo = {
     count: jest.fn(),
@@ -59,9 +56,6 @@ describe("CableTypesService", () => {
     }).compile();
 
     service = module.get<CableTypesService>(CableTypesService);
-    cableRepo = module.get(getRepositoryToken(CableTypeEntity));
-    portTypeRepo = module.get(getRepositoryToken(PortTypeEntity));
-    dataSource = module.get(DataSource);
   });
 
   // ── onApplicationBootstrap ──────────────────────────────────────────────────────────

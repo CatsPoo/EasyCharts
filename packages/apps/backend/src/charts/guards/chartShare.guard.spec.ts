@@ -1,7 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ChartShareGuard } from './chartShare.guard';
-import { CHART_PRIVILEGE_KEY } from '../decorators/requireChartPrivilege.decorator';
 
 const mockReflector = { getAllAndOverride: jest.fn() };
 const mockChartRepo = { findOne: jest.fn() };

@@ -20,7 +20,6 @@ const makePortType = (overrides: Partial<PortTypeEntity> = {}): PortTypeEntity =
 describe("PortTypesService", () => {
   let service: PortTypesService;
   let repo: jest.Mocked<any>;
-  let dataSource: jest.Mocked<any>;
 
   const mockRepo = {
     count: jest.fn(),
@@ -49,7 +48,6 @@ describe("PortTypesService", () => {
 
     service = module.get<PortTypesService>(PortTypesService);
     repo = module.get(getRepositoryToken(PortTypeEntity));
-    dataSource = module.get(DataSource);
   });
 
   // ── onApplicationBootstrap ──────────────────────────────────────────────────────────

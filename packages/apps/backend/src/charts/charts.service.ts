@@ -454,7 +454,7 @@ export class ChartsService {
     this.logger.log(`Chart "${chart.name}" (${id}) removed by userId "${userId}"`);
   }
 
-  async fetchLock(chartId: string, userId: string): Promise<ChartLock> {
+  async fetchLock(chartId: string): Promise<ChartLock> {
     const chart : ChartLockFeilds | null = await this.chartRepo.findOne({
       where: { id: chartId },
       select: { lockedAt: true, id: true, lockedById: true, lockedBy: true },

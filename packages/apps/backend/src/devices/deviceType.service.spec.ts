@@ -19,9 +19,7 @@ const makeType = (overrides: Partial<DeviceTypeEntity> = {}): DeviceTypeEntity =
 
 describe('DeviceTypeService', () => {
   let service: DeviceTypeService;
-  let repo: jest.Mocked<any>;
   let assetVersionsService: jest.Mocked<any>;
-  let dataSource: jest.Mocked<any>;
 
   const qbMock = {
     where: jest.fn().mockReturnThis(),
@@ -55,9 +53,7 @@ describe('DeviceTypeService', () => {
     }).compile();
 
     service = module.get<DeviceTypeService>(DeviceTypeService);
-    repo = module.get(getRepositoryToken(DeviceTypeEntity));
     assetVersionsService = module.get(AssetVersionsService);
-    dataSource = module.get(DataSource);
   });
 
   // ── createDeviceType ───────────────────────────────────────────────────────
