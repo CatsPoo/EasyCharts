@@ -30,6 +30,6 @@ export class AiController {
     if (!this.aiService.isEnabled()) {
       throw new ServiceUnavailableException("AI chat is disabled by the administrator");
     }
-    return this.aiService.chat(req.user, body.messages, body.currentChartId, body.editorEditMode, body.currentPage);
+    return this.aiService.chat(req.user, body.messages, body.currentChartId, body.editorEditMode, body.currentPage, body.currentChartState as any);
   }
 }

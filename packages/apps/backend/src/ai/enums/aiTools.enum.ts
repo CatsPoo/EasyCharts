@@ -22,5 +22,8 @@ export enum AI_TOOLS{
     
     UI_GET_CURRENT_CHART_STATE="ui_get_current_chart_state", //get the current chart state on the chart editor (used to trac user manual changes that not saved on the database yet)
 
-    UI_ADD_PORT_TO_DEVICE_ON_CHART='ui_add_port_to_device_on_chart'
+    UI_ADD_PORT_TO_DEVICE_ON_CHART='ui_add_port_to_device_on_chart',
+
+    /** Special tool: the ONLY way the model can send text back to the user */
+    RESPOND_TO_USER="respond_to_user"
 }

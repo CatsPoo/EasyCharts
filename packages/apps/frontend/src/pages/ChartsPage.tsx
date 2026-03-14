@@ -73,7 +73,7 @@ export function ChartsPage() {
   useEffect(() => {
     if (!pendingChartAction) return;
     handleEdit(pendingChartAction.chartId);
-    if (pendingChartAction.type === "edit") {
+    if (pendingChartAction.type === "edit" || pendingChartAction.type === "create") {
       setPendingOpenInEditMode(true);
     }
     clearPendingChartAction();

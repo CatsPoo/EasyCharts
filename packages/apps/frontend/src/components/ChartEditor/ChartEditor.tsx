@@ -2914,25 +2914,116 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     );
 
     useEffect(() => {
-    if (pendingUiAction?.length) return;
-    for(const act of pendingUiAction){
-      switch(act.type){
-        case "add_device":
-          console.log("added device")
-          break;
-        case "connect_ports":
-          break
-        case "disconnect_ports":
-          break
-        case "move_device":
-          break
-        case "remove_device":
-          break;
+    if (!pendingUiAction?.length) return;
+    // If any action needs a device lookup but the device list hasn't loaded yet, wait.
+    // devicesById is in the deps so this effect re-runs once devices arrive.
+    const hasAddDevice = pendingUiAction.some((a) => a.type === "add_device");
+    if (hasAddDevice && devicesById.size === 0) return;
+
+    const removedDeviceIds: string[] = [];
+    const movedDevices: { id: string; position: { x: number; y: number } }[] = [];
+    const newLines: LineOnChart[] = [];
+    const removedLineIds: string[] = [];
+
+    applyChartChangeRef.current((prev) => {
+      const next: Chart = {
+        ...prev,
+        devicesOnChart: [...prev.devicesOnChart],
+        linesOnChart: [...prev.linesOnChart],
+      };
+
+      for (const act of pendingUiAction) {
+        switch (act.type) {
+          case "add_device": {
+            const device = devicesByIdRef.current.get(act.device.deviceId);
+            if (!device) break;
+            if (next.devicesOnChart.some((d) => d.device.id === device.id)) break;
+            const newDoc: DeviceOnChart = {
+              chartId: next.id,
+              device,
+              position: act.device.position,
+              handles: { left: [], right: [], top: [], bottom: [] },
+            };
+            next.devicesOnChart = [...next.devicesOnChart, newDoc];
+            break;
+          }
+          case "remove_device": {
+            removedDeviceIds.push(act.deviceId);
+            next.devicesOnChart = next.devicesOnChart.filter((d) => d.device.id !== act.deviceId);
+            next.linesOnChart = next.linesOnChart.filter(
+              (l) =>
+                l.line.sourcePort.deviceId !== act.deviceId &&
+                l.line.targetPort.deviceId !== act.deviceId
+            );
+            break;
+          }
+          case "move_device": {
+            movedDevices.push({ id: act.device.deviceId, position: act.device.position });
+            next.devicesOnChart = next.devicesOnChart.map((d) =>
+              d.device.id === act.device.deviceId ? { ...d, position: act.device.position } : d
+            );
+            break;
+          }
+          case "connect_ports": {
+            const { sourceDeviceId, sourcePortId, targetDeviceId, targetPortId } = act.connection;
+            const sourceDoc = next.devicesOnChart.find((d) => d.device.id === sourceDeviceId);
+            const targetDoc = next.devicesOnChart.find((d) => d.device.id === targetDeviceId);
+            if (!sourceDoc || !targetDoc) break;
+            const sourcePort = sourceDoc.device.ports.find((p) => p.id === sourcePortId);
+            const targetPort = targetDoc.device.ports.find((p) => p.id === targetPortId);
+            if (!sourcePort || !targetPort) break;
+            const newLine: LineOnChart = {
+              chartId: next.id,
+              line: { id: uuidv4(), sourcePort, targetPort } as Line,
+              type: "step",
+              label: "",
+            };
+            newLines.push(newLine);
+            next.linesOnChart = [...next.linesOnChart, newLine];
+            break;
+          }
+          case "disconnect_ports": {
+            const { sourcePortId, targetPortId } = act.connection;
+            const lineToRemove = next.linesOnChart.find(
+              (l) =>
+                (l.line.sourcePort.id === sourcePortId && l.line.targetPort.id === targetPortId) ||
+                (l.line.sourcePort.id === targetPortId && l.line.targetPort.id === sourcePortId)
+            );
+            if (!lineToRemove) break;
+            removedLineIds.push(lineToRemove.line.id);
+            next.linesOnChart = next.linesOnChart.filter((l) => l.line.id !== lineToRemove.line.id);
+            break;
+          }
+        }
       }
+
+      return next as Chart;
+    });
+
+    if (removedDeviceIds.length > 0) {
+      setNodes((ns) => ns.filter((n) => !removedDeviceIds.includes(n.id)));
+      setEdges((es) =>
+        es.filter((e) => !removedDeviceIds.includes(e.source) && !removedDeviceIds.includes(e.target))
+      );
     }
-    setPendingUiAction([])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingUiAction]);
+    if (movedDevices.length > 0) {
+      setNodes((ns) =>
+        ns.map((n) => {
+          const moved = movedDevices.find((m) => m.id === n.id);
+          return moved ? { ...n, position: moved.position } : n;
+        })
+      );
+    }
+    if (newLines.length > 0) {
+      setEdges((eds) => [...eds, ...newLines.map(convertLineToEdge)]);
+    }
+    if (removedLineIds.length > 0) {
+      setEdges((es) => es.filter((e) => !removedLineIds.includes(e.id)));
+    }
+
+    setMadeChanges(true);
+    setPendingUiAction([]);
+  }, [pendingUiAction, devicesById, convertLineToEdge, setNodes, setEdges, setMadeChanges, setPendingUiAction]);
 
     return (
       <div className="flex flex-1 h-full">

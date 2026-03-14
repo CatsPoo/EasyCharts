@@ -259,4 +259,20 @@ export const TOOLS: ChatCompletionTool[] = [
       parameters: { type: "object", properties: {} },
     },
   },
+  // ── Final reply ────────────────────────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: AI_TOOLS.RESPOND_TO_USER,
+      description:
+        "Send a final text reply to the user. Call this ONLY when all actions are complete and you want to confirm what was done, or when you need to ask the user a clarifying question. Do NOT call this mid-task.",
+      parameters: {
+        type: "object",
+        properties: {
+          message: { type: "string", description: "The message to show the user" },
+        },
+        required: ["message"],
+      },
+    },
+  },
 ];

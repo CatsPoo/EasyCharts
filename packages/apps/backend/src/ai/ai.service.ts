@@ -16,9 +16,7 @@ import { DevicesService } from "../devices/devices.service";
 import { PortsService } from "../devices/ports.service";
 import { PERMISSION_LABELS } from "./consts/permitionLabels.const";
 import { SYSTEM_PROMPT_BASE } from "./consts/systemPrompt.consBaset";
-import { TOOLS } from "./consts/tools.const";
 import { AI_TOOLS } from "./enums/aiTools.enum";
-import { Position } from "../charts/entities/position.entity";
 
 function buildPermissionsSection(permissions: Permission[]): string {
   const permSet = new Set(permissions);
@@ -102,17 +100,17 @@ export class AiService {
     let pageContext = "";
     if (currentChartId) {
       pageContext = editorEditMode
-        ? `\n\nThe user has chart ID "${currentChartId}" open in EDIT MODE. You can read it and make UI changes using the ui_* tools.`
-        : `\n\nThe user has chart ID "${currentChartId}" open in VIEW MODE (read-only). Answer questions about it but do NOT use ui_* edit tools. If the user wants changes, tell them to enable Edit Mode first.`;
+        ? `\n\n**Current context:** Chart ID "${currentChartId}" is open in **EDIT MODE**. For changes to this chart, call ui_* tools directly. For global requests (list all charts, create a new chart, etc.), call the appropriate tool normally.`
+        : `\n\n**Current context:** Chart ID "${currentChartId}" is open in **VIEW MODE** (read-only). Use get_chart or ui_get_current_chart_state to answer questions. Tell the user they need to enable Edit Mode before making changes.`;
     } else if (currentPage === "assets") {
       pageContext =
-        "\n\nThe user is on the Assets page. Their questions are likely about assets — device types, ports, line/cable types, or what equipment is available.";
+        "\n\n**Current context:** The user is on the Assets page. Questions are likely about device types, ports, or cable types.";
     } else if (currentPage === "users") {
       pageContext =
-        "\n\nThe user is on the User Management page. Their questions are likely about users, roles, or permissions in EasyCharts.";
+        "\n\n**Current context:** The user is on the User Management page. Questions are likely about users, roles, or permissions.";
     } else {
       pageContext =
-        "\n\nThe user is on the main Charts page. Their questions are likely global — about charts they own or have access to, or they want to create a new chart.";
+        "\n\n**Current context:** The user is on the main Charts page. Questions are likely about their charts or creating a new one.";
     }
 
     const systemMessage: ChatCompletionMessageParam = {
@@ -139,61 +137,112 @@ export class AiService {
       uiActions: [],
     };
 
-    // Agentic loop — max 50 iterations as safety valve
-    for (let iteration = 0; iteration < 50; iteration++) {
+    // Query tools: return data only, they never set ctx.chartAction or ctx.uiActions.
+    const QUERY_TOOLS = new Set([
+      AI_TOOLS.LIST_CHARTS, AI_TOOLS.GET_CHART,
+      AI_TOOLS.LIST_DEVICES, AI_TOOLS.GET_DEVICE,
+      AI_TOOLS.LIST_DIRECTORIES, AI_TOOLS.LIST_DIRECTORY_CONTENT,
+      AI_TOOLS.UI_GET_CURRENT_CHART_STATE,
+    ]);
+
+    // ── ReAct agentic loop ────────────────────────────────────────────────────
+    // Plain-text ReAct instead of OpenAI function-calling because Ollama's
+    // OpenAI-compatible endpoint does not reliably support the tools API.
+    let toolCallsMade = 0;
+    let actionToolsMade = 0; // tools that produce side effects (ui_* / create_*)
+
+    for (let iteration = 0; iteration < 15; iteration++) {
       const response = await client.chat.completions.create({
         model,
         messages,
-        tools: TOOLS,
-        tool_choice: "auto",
+        temperature: 0,
       });
 
       const choice = response.choices[0];
       if (!choice) break;
 
-      const assistantMessage = choice.message;
-      messages.push(assistantMessage as ChatCompletionMessageParam);
+      const raw = choice.message.content ?? "";
+      messages.push({ role: "assistant", content: raw });
 
-      if (
-        choice.finish_reason === "stop" ||
-        choice.finish_reason === "end" ||
-        !assistantMessage.tool_calls?.length
-      ) {
+      // ── Parse Final Answer ─────────────────────────────────────────────
+      const finalMatch = raw.match(/Final Answer:\s*([\s\S]*)/i);
+      if (finalMatch) {
+        // Guard: model produced a Final Answer but skipped the action tool.
+        // This means it hallucinated the result (e.g. said "chart is open" without
+        // calling ui_open_chart). Re-prompt it to actually call the action tool.
+        const nothingDone = ctx.uiActions.length === 0 && !ctx.chartAction;
+        if (nothingDone && actionToolsMade === 0) {
+          const hint = toolCallsMade === 0
+            ? "You gave a Final Answer without calling any tool. You MUST call the appropriate tool first."
+            : "You called a query tool (e.g. list_charts) but never called the required action tool " +
+              "(e.g. ui_open_chart, ui_add_device_to_chart, create_chart). " +
+              "You cannot claim the action is done until you call the action tool and receive an Observation. " +
+              "Call the action tool now.";
+          messages.push({ role: "user", content: hint });
+          continue;
+        }
         return {
-          message: assistantMessage.content ?? "",
+          message: finalMatch[1].trim(),
           chartAction: ctx.chartAction,
           uiActions: ctx.uiActions,
         };
       }
 
-      const toolResults: ChatCompletionMessageParam[] = [];
+      // ── Parse Action / Arguments ───────────────────────────────────────
+      const actionMatch = raw.match(/Action:\s*(\S+)/i);
+      const argsMatch = raw.match(/Arguments:\s*(\{[\s\S]*\})/i);
 
-      for (const toolCall of assistantMessage.tool_calls ?? []) {
-        let resultData: AiToolResponse;
-        try {
-          resultData = await this.executeTool(
-            toolCall.function.name,
-            JSON.parse(toolCall.function.arguments || "{}"),
-            userId,
-            ctx
-          );
-        } catch (err) {
-          this.logger.error(`Tool "${toolCall.function.name}" failed`, err);
-          resultData = { error: (err as Error).message };
+      if (!actionMatch) {
+        // Model gave plain text with no Action and no Final Answer.
+        // If it already did work, return what we have. Otherwise re-prompt once.
+        if (toolCallsMade > 0) {
+          return {
+            message: raw.trim(),
+            chartAction: ctx.chartAction,
+            uiActions: ctx.uiActions,
+          };
         }
-
-        toolResults.push({
-          role: "tool",
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(resultData),
+        messages.push({
+          role: "user",
+          content:
+            "Your response must start with either 'Action:' or 'Final Answer:'. " +
+            "Output Action: <tool_name> now.",
         });
+        continue;
       }
 
-      messages.push(...toolResults);
+      const toolName = actionMatch[1].trim();
+      let toolArgs: Record<string, unknown> = {};
+      if (argsMatch) {
+        try { toolArgs = JSON.parse(argsMatch[1]); } catch { /* ignore */ }
+      }
+
+      if (toolName === AI_TOOLS.RESPOND_TO_USER) {
+        return {
+          message: (toolArgs as { message?: string }).message ?? "",
+          chartAction: ctx.chartAction,
+          uiActions: ctx.uiActions,
+        };
+      }
+
+      toolCallsMade++;
+      if (!QUERY_TOOLS.has(toolName as AI_TOOLS)) actionToolsMade++;
+      let observation: string;
+      try {
+        const result = await this.executeTool(toolName, toolArgs, userId, ctx);
+        observation = JSON.stringify(result);
+      } catch (err) {
+        this.logger.error(`Tool "${toolName}" failed`, err);
+        observation = JSON.stringify({ error: (err as Error).message });
+      }
+
+      messages.push({ role: "user", content: `Observation: ${observation}` });
     }
 
+    // Iteration limit reached.
+    const anyActionTaken = ctx.uiActions.length > 0 || !!ctx.chartAction;
     return {
-      message: "I ran into an issue completing your request. Please try again.",
+      message: anyActionTaken ? "" : "I ran into an issue completing your request. Please try again.",
       chartAction: ctx.chartAction,
       uiActions: ctx.uiActions,
     };
@@ -211,75 +260,48 @@ export class AiService {
       // ── Read-only DB queries ──────────────────────────────────────────────
 
       case AI_TOOLS.LIST_CHARTS: {
-        const charts = await this.chartsService.getAllUserChartsMetadata(
-          userId
-        );
-        return {
-          aiToolListResonse: charts,
-        };
+        const charts = await this.chartsService.getAllUserChartsMetadata(userId);
+        return { aiToolListResonse: charts };
       }
 
       case AI_TOOLS.GET_CHART: {
         const chartId = args.chartId as string;
-        const meta = await this.chartsService.getChartPrivileges(
-          userId,
-          chartId
-        );
+        const meta = await this.chartsService.getChartPrivileges(userId, chartId);
         if (!meta)
-          throw new ForbiddenException(
-            `You do not have access to chart ${chartId}.`
-          );
-
+          throw new ForbiddenException(`You do not have access to chart ${chartId}.`);
         const chart = await this.chartsService.getChartById(chartId);
-        return {
-          aiToolListResonse: chart,
-        };
+        return { aiToolListResonse: chart };
       }
 
       case AI_TOOLS.LIST_DEVICES: {
         const devices = await this.devicesService.getAllDevices();
-        return {
-          aiToolListResonse: devices,
-        };
+        return { aiToolListResonse: devices };
       }
 
       case AI_TOOLS.GET_DEVICE: {
-        const device = await this.devicesService.getDeviceById(
-          args.deviceId as string
-        );
-       return {
-          aiToolListResonse: device,
-        };
+        const device = await this.devicesService.getDeviceById(args.deviceId as string);
+        return { aiToolListResonse: device };
       }
 
       case AI_TOOLS.LIST_DIRECTORIES: {
         const dirs = await this.chartsDirectoriesService.listRoots(userId);
-        return {
-          aiToolListResonse: dirs,
-        };
+        return { message: JSON.stringify(dirs) };
       }
 
       case AI_TOOLS.LIST_DIRECTORY_CONTENT: {
         const directoryId = args.directoryId as string;
-        const content : ChartDirectoryFullContent =  await this.chartsDirectoriesService.getFullDirectoryComntent(directoryId,userId)
-        return {
-          aiToolListResonse: content,
-        };
-        
+        const content: ChartDirectoryFullContent =
+          await this.chartsDirectoriesService.getFullDirectoryComntent(directoryId, userId);
+        return { aiToolListResonse: content };
       }
 
       // ── DB write operations ───────────────────────────────────────────────
 
       case AI_TOOLS.CREATE_CHART: {
         if (!permissions.has(Permission.CHART_CREATE)) {
-          throw new ForbiddenException(
-            "You do not have permission to create charts."
-          );
+          throw new ForbiddenException("You do not have permission to create charts.");
         }
-        const { name, description } = args as {
-          name: string;
-          description: string;
-        };
+        const { name, description } = args as { name: string; description: string };
         const created = await this.chartsService.createChart(
           {
             name,
@@ -294,14 +316,10 @@ export class AiService {
           } as ChartCreate,
           userId
         );
-        ctx.chartAction = {
-          type: "create",
-          chartId: created.id,
-        };
+        ctx.chartAction = { type: "create", chartId: created.id };
         return {
-          aiToolListResonse:created,
-          message:
-            "Chart created and will open in edit mode. Use ui_add_device_to_chart to add devices.",
+          aiToolListResonse: created,
+          message: "Chart created and will open in edit mode. Use ui_add_device_to_chart to add devices.",
         };
       }
 
@@ -315,7 +333,7 @@ export class AiService {
           { deviceId, name, typeId: portTypeId, inUse: false } as PortCreate,
           userId
         );
-        return { aiToolListResonse:port,message:"Port successfully created"};
+        return { aiToolListResonse: port, message: "Port successfully created" };
       }
 
       // ── UI actions (tell the frontend to modify the live chart editor) ─────
@@ -326,93 +344,82 @@ export class AiService {
           chartName: string;
           editMode?: boolean;
         };
-        const allCharts = await this.chartsService.getAllUserChartsMetadata(
-          userId
-        );
+        const allCharts = await this.chartsService.getAllUserChartsMetadata(userId);
         const meta = allCharts.find((c) => c.id === chartId);
         if (!meta)
-          throw new ForbiddenException(
-            `You do not have access to chart ${chartId}.`
-          );
-        ctx.chartAction = {
-          type: editMode ? "edit" : "open",
-          chartId,
-        };
-        return { 
-          message:"open chart with id: "+ chartId
+          throw new ForbiddenException(`You do not have access to chart ${chartId}.`);
+        ctx.chartAction = { type: editMode ? "edit" : "open", chartId };
+        return {
+          message: `Opening chart "${chartName}" (id: ${chartId})${editMode ? " in edit mode" : ""}.`,
         };
       }
 
       case AI_TOOLS.UI_ADD_DEVICEs_TO_CAHRT: {
-        console.log("ADD DEVICE TO CHART TOOL")
-        const { deviceId, x, y } = args as {
-          deviceId: string;
-          x: number;
-          y: number;
+        const { devices } = args as {
+          devices: { deviceId: string; x: number; y: number }[];
         };
-        ctx.uiActions.push({ type:"add_device",device:{deviceId,position:{x,y}} });
-        return {message:"Device added to chart" };
+        for (const { deviceId, x, y } of devices) {
+          ctx.uiActions.push({ type: "add_device", device: { deviceId, position: { x, y } } });
+        }
+        return { message: `${devices.length} device(s) queued to be added to the chart.` };
       }
 
       case AI_TOOLS.UI_remove_DEVICEs_from_CAHRT: {
-        const { deviceId } = args as { deviceId: string };
-        ctx.uiActions.push({ type: "remove_device", deviceId });
-        return {message:"devices removed" };
+        const { deviceIds } = args as { deviceIds: string[] };
+        for (const deviceId of deviceIds) {
+          ctx.uiActions.push({ type: "remove_device", deviceId });
+        }
+        return { message: `${deviceIds.length} device(s) queued for removal.` };
       }
 
       case AI_TOOLS.UI_MOVE_DEVICEs_ON_CHART: {
-        const { deviceId, x, y } = args as {
-          deviceId: string;
-          x: number;
-          y: number;
+        const { moves } = args as {
+          moves: { deviceId: string; x: number; y: number }[];
         };
-        ctx.uiActions.push({ type: "move_device",device:{ deviceId, position:{x,y} }});
-        return {message:"device moved" };
+        for (const { deviceId, x, y } of moves) {
+          ctx.uiActions.push({ type: "move_device", device: { deviceId, position: { x, y } } });
+        }
+        return { message: `${moves.length} device(s) queued to be moved.` };
       }
 
       case AI_TOOLS.UI_CONNECT_DEVICES_PORTS: {
-        const { sourceDeviceId, sourcePortId, targetDeviceId, targetPortId } =
-          args as {
+        const { connections } = args as {
+          connections: {
             sourceDeviceId: string;
             sourcePortId: string;
             targetDeviceId: string;
             targetPortId: string;
-          };
-        ctx.uiActions.push({
-          type: "connect_ports",
-          connection: {
-            sourceDeviceId,
-            sourcePortId,
-            targetDeviceId,
-            targetPortId,
-          },
-        });
-        return { message:"port connected" };
+          }[];
+        };
+        for (const { sourceDeviceId, sourcePortId, targetDeviceId, targetPortId } of connections) {
+          ctx.uiActions.push({
+            type: "connect_ports",
+            connection: { sourceDeviceId, sourcePortId, targetDeviceId, targetPortId },
+          });
+        }
+        return { message: `${connections.length} connection(s) queued.` };
       }
 
       case AI_TOOLS.UI_DISCONNECT_DEVICES_PORTS: {
-        const { sourcePortId, targetPortId } = args as {
-          sourcePortId: string;
-          targetPortId: string;
+        const { connections } = args as {
+          connections: { sourcePortId: string; targetPortId: string }[];
         };
-        ctx.uiActions.push({
-          type: "disconnect_ports",
-          connection: {
-            sourcePortId,
-            targetPortId,
-          },
-        });
-        return { message:"port disconnected" };
+        for (const { sourcePortId, targetPortId } of connections) {
+          ctx.uiActions.push({
+            type: "disconnect_ports",
+            connection: { sourcePortId, targetPortId },
+          });
+        }
+        return { message: `${connections.length} connection(s) queued for removal.` };
       }
 
       case AI_TOOLS.UI_GET_CURRENT_CHART_STATE: {
         if (!ctx.currentChartState) {
           return {
-            message:
-              "No chart is currently open in the editor, or its state was not provided.",
+            message: "No chart is currently open in the editor, or its state was not provided.",
           };
         }
-        return {aiToolListResonse: ctx.currentChartState};
+        return { aiToolListResonse: ctx.currentChartState };
       }
 
       default:
