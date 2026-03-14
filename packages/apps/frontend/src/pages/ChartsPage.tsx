@@ -158,7 +158,10 @@ export function ChartsPage() {
   };
 
   const doCloseDialog = async () => {
-    if (lockState === LockState.MINE) await unlockChart();
+    if (lockState === LockState.MINE) {
+      intentionalUnlockRef.current = true;
+      await unlockChart();
+    }
     setDialogOpen(false);
     setSelectedId("");
     setEditMode(false);
