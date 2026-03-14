@@ -132,6 +132,8 @@ steps:
     image: woodpeckerci/plugin-docker-buildx
     privileged: true
     depends_on: [build]
+    extra_hosts:
+      - "index.docker.io:13.216.233.49"
     settings:
       dockerfile: ./Dockerfile
       context: .
@@ -142,6 +144,5 @@ steps:
         from_secret: dockerhub_username
       password:
         from_secret: dockerhub_password
-      daemon_dns: "8.8.8.8"
     when:
       branch: main
