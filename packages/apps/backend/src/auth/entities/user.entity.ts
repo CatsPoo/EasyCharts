@@ -24,5 +24,5 @@ export class UserEntity extends AuditableEntity{
   permissions!: Permission[];
 
    @Column({nullable:true})
-  refreshTokenHash?: string;
+  refreshTokenHash?: string | null;
 }
