@@ -129,7 +129,7 @@ steps:
 
   # ── 4. Publish ──────────────────────────────────────────────────
   - name: publish
-    image: woodpeckerci/plugin-docker
+    image: plugins/docker
     privileged: true
     depends_on: [build]
     settings:
