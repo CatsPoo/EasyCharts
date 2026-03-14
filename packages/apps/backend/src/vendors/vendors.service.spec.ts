@@ -21,7 +21,6 @@ describe('VendorsService', () => {
   let service: VendorsService;
   let repo: jest.Mocked<any>;
   let assetVersionsService: jest.Mocked<AssetVersionsService>;
-  let dataSource: jest.Mocked<any>;
 
   const qbMock = {
     where: jest.fn().mockReturnThis(),
@@ -62,7 +61,6 @@ describe('VendorsService', () => {
     service = module.get<VendorsService>(VendorsService);
     repo = module.get(getRepositoryToken(VendorEntity));
     assetVersionsService = module.get(AssetVersionsService);
-    dataSource = module.get(DataSource);
   });
 
   // ── createVendor ─────────────────────────────────────────────────────────────

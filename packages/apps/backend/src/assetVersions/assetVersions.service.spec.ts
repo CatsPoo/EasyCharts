@@ -19,7 +19,6 @@ const makeRow = (overrides: Partial<AssetVersionEntity> = {}): AssetVersionEntit
 
 describe('AssetVersionsService', () => {
   let service: AssetVersionsService;
-  let repo: jest.Mocked<any>;
 
   const qbMock = {
     select: jest.fn().mockReturnThis(),
@@ -44,7 +43,6 @@ describe('AssetVersionsService', () => {
     }).compile();
 
     service = module.get<AssetVersionsService>(AssetVersionsService);
-    repo = module.get(getRepositoryToken(AssetVersionEntity));
   });
 
   // ── saveVersion ────────────────────────────────────────────────────────────

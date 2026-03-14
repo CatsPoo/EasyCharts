@@ -34,9 +34,11 @@ steps:
     image: node:22-bookworm-slim
     environment:
       CI: "true"
+    extra_hosts:
+      - "registry.npmjs.org:104.16.9.34" 
     commands:
-      - npm config set maxsockets 1
       - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund --loglevel info
+    depends_on: [restore-npm-cache]
 
   - name: rebuild-npm-cache
     image: meltwater/drone-cache
@@ -57,7 +59,6 @@ steps:
     image: node:22-bookworm-slim
     depends_on: [install]
     commands:
-      - git fetch origin main
       - CURRENT_VERSION=$(node -p "require('./package.json').version")
       - LAST_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
       - echo "Checking version... Branch ($CURRENT_VERSION) vs Main ($LAST_VERSION)"
@@ -69,19 +70,28 @@ steps:
   # ── 2. Lint & Test (Parallel) ───────────────────────────────────
   - name: lint
     image: node:22-bookworm-slim
-    depends_on: [install]
+    depends_on: [install,restore-nx-cache]
     commands:
+      - apt-get update && apt-get install -y git --no-install-recommends
+      # 2. Now git commands will work
       - git fetch origin main
       - npx nx affected --target=lint --base=origin/main --parallel=3
+    extra_hosts:
+      - "deb.debian.org:146.75.54.132"
     when:
       branch: [main, dev]
+      
 
   - name: test
     image: node:22-bookworm-slim
-    depends_on: [install]
+    depends_on: [install,restore-nx-cache]
     commands:
+      - apt-get update && apt-get install -y git --no-install-recommends
+      # 2. Now git commands will work
       - git fetch origin main
       - npx nx affected --target=test --base=origin/main --passWithNoTests --parallel=3
+    extra_hosts:
+      - "deb.debian.org:146.75.54.132"
     when:
       branch: [main, dev]
 
@@ -90,7 +100,8 @@ steps:
     image: node:22-bookworm-slim
     depends_on: [lint, test]
     commands:
-      - apt-get update -qq && apt-get install -y --no-install-recommends python3 make g++
+      - apt-get update -qq && apt-get install -y --no-install-recommends python3 make g++ git
+      - git fetch origin main
       - npx nx affected --target=build --base=origin/main --parallel=3
     when:
       branch: main

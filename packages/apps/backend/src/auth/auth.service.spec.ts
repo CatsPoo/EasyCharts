@@ -27,7 +27,6 @@ describe('AuthService', () => {
   let service: AuthService;
   let usersService: jest.Mocked<UsersService>;
   let jwtService: jest.Mocked<JwtService>;
-  let appConfigService: jest.Mocked<AppConfigService>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -65,7 +64,6 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
     usersService = module.get(UsersService);
     jwtService = module.get(JwtService);
-    appConfigService = module.get(AppConfigService);
   });
 
   // ── validateUser ────────────────────────────────────────────────────────────

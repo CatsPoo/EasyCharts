@@ -7,6 +7,7 @@ import {
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -16,6 +17,8 @@ import { UserEntity } from "./entities/user.entity";
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>
@@ -38,7 +41,7 @@ export class UsersService {
   }
 
   convertUserEntity(userEntity : UserEntity) : User{
-    const {password,refreshTokenHash,...safe} = userEntity
+    const {password: _password, refreshTokenHash: _refreshTokenHash, ...safe} = userEntity
     return safe as User
   }
   async getUserById(id: string): Promise<User> {
@@ -66,12 +69,17 @@ export class UsersService {
 
   async createUser(dto: UserCreate,createdByUserId:string): Promise<User> {
     const user : UserEntity[] = await this.userRepo.find({where:{username : dto.username}})
-    if(user.length > 0) throw new BadRequestException('Username '+dto.username + ' already exists')
+    if(user.length > 0) {
+      this.logger.warn(`Create user failed: username "${dto.username}" already exists`);
+      throw new BadRequestException('Username '+dto.username + ' already exists')
+    }
     const hasjedPasswordUser : UserCreate = {
         ...dto,
         password: await bcrypt.hash(dto.password, 12)
     }
-    return this.convertUserEntity(await this.userRepo.save({...hasjedPasswordUser,createdByUserId}));
+    const created = this.convertUserEntity(await this.userRepo.save({...hasjedPasswordUser,createdByUserId}));
+    this.logger.log(`User "${dto.username}" created (id: ${created.id})`);
+    return created;
   }
 
   async updateUser(userId: string, dto: UserUpdate,updatedByUserId:string): Promise<User> {
@@ -83,13 +91,16 @@ export class UsersService {
     if (dto.isActive !== undefined) user.isActive = dto.isActive;
     if(dto.password !== undefined) user.password = await bcrypt.hash(dto.password, 12);
     if(dto.permissions !== undefined) user.permissions = dto.permissions
-    return this.convertUserEntity(await this.userRepo.save(user));
+    const updated = this.convertUserEntity(await this.userRepo.save(user));
+    this.logger.log(`User "${updated.username}" (${userId}) updated by userId "${updatedByUserId}"`);
+    return updated;
   }
 
   async removeUser(id: string): Promise<void> {
     const User = await this.userRepo.findOne({ where: { id } });
     if (!User) throw new NotFoundException("User not found");
-    await this.userRepo.remove(User); 
+    await this.userRepo.remove(User);
+    this.logger.log(`User "${User.username}" (${id}) removed`);
   }
 
   async updateUserRefreshToken(id:string,refreshToken:string|null) : Promise<number>{

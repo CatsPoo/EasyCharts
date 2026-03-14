@@ -23,6 +23,6 @@ export class UserEntity extends AuditableEntity{
   @Column("varchar", { array: true, default: "{}" })
   permissions!: Permission[];
 
-   @Column({nullable:true})
-  refreshTokenHash?: string;
+  @Column({ type: 'varchar', nullable: true })
+  refreshTokenHash?: string | null;
 }

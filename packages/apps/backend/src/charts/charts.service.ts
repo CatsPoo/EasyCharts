@@ -14,6 +14,7 @@ import {
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -40,6 +41,8 @@ import { OverlayElementsOnChartService } from "./overlayElementOnChart.service";
 
 @Injectable()
 export class ChartsService {
+  private readonly logger = new Logger(ChartsService.name);
+
   constructor(
     private readonly dataSource: DataSource,
 
@@ -196,6 +199,7 @@ export class ChartsService {
     const newChart: ChartEntity = await this.chartRepo.save(chart);
     const result = await this.convertChartEntityToChart(newChart);
     await this.chartVersionsService.saveVersion(result.id, result, createdByUserId);
+    this.logger.log(`Chart "${dto.name}" created (id: ${result.id}) by userId "${createdByUserId}"`);
     return result;
   }
 
@@ -306,10 +310,12 @@ export class ChartsService {
         .orIgnore()
         .execute();
     }
+    this.logger.log(`Chart "${chartId}" shared with userId "${sharedWithUserId}" by userId "${sharedByUserId}" (permissions: ${JSON.stringify(permissions)})`);
   }
 
   async unshareChart(chartId: string, sharedWithUserId: string): Promise<void> {
     await this.chartShareRepo.delete({ chartId, sharedWithUserId });
+    this.logger.log(`Chart "${chartId}" unshared from userId "${sharedWithUserId}"`);
   }
 
   async getChartShares(chartId: string): Promise<ChartShareEntity[]> {
@@ -428,6 +434,7 @@ export class ChartsService {
     const converted = await this.convertChartEntityToChart(updated);
     const result = await this.enrichPortsWithConnectedPortIds(converted);
     await this.chartVersionsService.saveVersion(chartId, result, userId, dto.versionLabel);
+    this.logger.log(`Chart "${chartId}" updated by userId "${userId}"`);
     return result;
   }
 
@@ -444,9 +451,10 @@ export class ChartsService {
     await this.chartRepo.remove(chart);
     await this.linesService.deleteOrphanLines();
     await this.portsService.recomputePortsInUse();
+    this.logger.log(`Chart "${chart.name}" (${id}) removed by userId "${userId}"`);
   }
 
-  async fetchLock(chartId: string, userId: string): Promise<ChartLock> {
+  async fetchLock(chartId: string): Promise<ChartLock> {
     const chart : ChartLockFeilds | null = await this.chartRepo.findOne({
       where: { id: chartId },
       select: { lockedAt: true, id: true, lockedById: true, lockedBy: true },
@@ -466,9 +474,11 @@ export class ChartsService {
       throw new ChartIsLockedExeption(chartId, chart.lockedById);
     if (!chart.lockedById) {
       chart.lockedById = userId;
-      chart.lockedAt = new Date();
-      await this.chartRepo.save(chart);
+      this.logger.log(`Chart "${chartId}" locked by userId "${userId}"`);
     }
+    // Refresh lockedAt whether acquiring or heartbeating an existing own lock
+    chart.lockedAt = new Date();
+    await this.chartRepo.save(chart);
     return this.getLockFromChartEntity(chart)
   }
 
@@ -482,6 +492,7 @@ export class ChartsService {
     await this.chartRepo.update(chartId, { lockedById: null, lockedAt: null });
     const updatedChart = await this.chartRepo.findOne({ where: { id: chartId }, relations: { lockedBy: true } });
     if(!updatedChart) throw new Error('Enable to un lock chart')
+    this.logger.log(`Chart "${chartId}" unlocked by userId "${userId}"`);
     return this.getLockFromChartEntity(updatedChart)
   }
 }

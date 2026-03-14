@@ -40,6 +40,11 @@ export function useChartLock(userId: string, chartId?: string) {
     onSuccess: (lock) => {
       qc.setQueryData<ChartLock>(["chartLock", chartId], lock);
     },
+    onError: () => {
+      // Lock request failed — fetch real state immediately so the UI discovers
+      // expiry or a takeover without waiting for the next poll interval
+      qc.invalidateQueries({ queryKey: ["chartLock", chartId] });
+    },
   });
 
   const releaseMut = useMutation({
@@ -95,6 +100,7 @@ export function useChartLock(userId: string, chartId?: string) {
     // actions
     lockChart: () => acquireMut.mutateAsync(),
     unlockChart: () => releaseMut.mutateAsync(),
+    refreshLock: () => acquireMut.mutate(),
 
     // action states
     locking: acquireMut.isPending,

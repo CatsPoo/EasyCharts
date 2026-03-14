@@ -2215,8 +2215,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             setPandingDelete({ value: payload.edge, kind: "lines" });
             setConfirmDialogTitle("Delete Line?");
             setConfirmDialogDescription(
-              "Are you shure you want to permenantly delete line: " +
-                payload.edge.label
+              `Are you sure you want to permanently delete line: ${payload.edge.label}?\nThe deletion will be applied when you save the chart.`
             );
             setConfirmDeleteOpen(true);
             //onDeleteLine(payload.edge.id);
@@ -2242,7 +2241,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             const port = doc?.device.ports.find(p => p.id === payload.portId);
             setPandingDelete({ value: { portId: payload.portId, deviceId: payload.deviceId } as unknown as Node, kind: "ports" });
             setConfirmDialogTitle("Delete Port?");
-            setConfirmDialogDescription(`Permanently delete port "${port?.name ?? payload.portId}"?`);
+            setConfirmDialogDescription(`Permanently delete port "${port?.name ?? payload.portId}"?\nThe deletion will be applied when you save the chart.`);
             setConfirmDeleteOpen(true);
             break;
           }

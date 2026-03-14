@@ -12,3 +12,10 @@ JWT_EXPIRE_IN=30m
 
 REFRESH_JWT_SECRET=JWTREFRESHKEY
 REFRESH_JWT_EXPIRE_IN=1d
+
+# Minimum log level to display. All levels at or above this severity will be shown.
+# Severity order (low → high): verbose < debug < log < warn < error < fatal
+# Example: LOG_LEVEL=warn  → shows warn, error, fatal
+#          LOG_LEVEL=log   → shows log, warn, error, fatal  (default)
+#          LOG_LEVEL=debug → shows debug, log, warn, error, fatal
+LOG_LEVEL=log

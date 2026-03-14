@@ -24,10 +24,8 @@ const makeModel = (overrides: Partial<ModelEntity> = {}): ModelEntity =>
 
 describe('ModelsService', () => {
   let service: ModelsService;
-  let modelsRepo: jest.Mocked<any>;
   let vendorRepo: jest.Mocked<any>;
   let assetVersionsService: jest.Mocked<any>;
-  let dataSource: jest.Mocked<any>;
 
   const qbMock = {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -63,10 +61,8 @@ describe('ModelsService', () => {
     }).compile();
 
     service = module.get<ModelsService>(ModelsService);
-    modelsRepo = module.get(getRepositoryToken(ModelEntity));
     vendorRepo = module.get(getRepositoryToken(VendorEntity));
     assetVersionsService = module.get(AssetVersionsService);
-    dataSource = module.get(DataSource);
   });
 
   // ── createModel ────────────────────────────────────────────────────────────
