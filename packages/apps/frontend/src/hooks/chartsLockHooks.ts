@@ -95,6 +95,7 @@ export function useChartLock(userId: string, chartId?: string) {
     // actions
     lockChart: () => acquireMut.mutateAsync(),
     unlockChart: () => releaseMut.mutateAsync(),
+    refreshLock: () => acquireMut.mutate(),
 
     // action states
     locking: acquireMut.isPending,

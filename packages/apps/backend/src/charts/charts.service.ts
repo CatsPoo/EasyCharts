@@ -474,10 +474,11 @@ export class ChartsService {
       throw new ChartIsLockedExeption(chartId, chart.lockedById);
     if (!chart.lockedById) {
       chart.lockedById = userId;
-      chart.lockedAt = new Date();
-      await this.chartRepo.save(chart);
       this.logger.log(`Chart "${chartId}" locked by userId "${userId}"`);
     }
+    // Refresh lockedAt whether acquiring or heartbeating an existing own lock
+    chart.lockedAt = new Date();
+    await this.chartRepo.save(chart);
     return this.getLockFromChartEntity(chart)
   }
 

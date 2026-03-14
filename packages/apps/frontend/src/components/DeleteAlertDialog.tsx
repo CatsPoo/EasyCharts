@@ -52,7 +52,7 @@ export function ConfirmDialog({
     >
       {title && <DialogTitle>{title}</DialogTitle>}
       <DialogContent dividers>
-        {description ? <Typography>{description}</Typography> : null}
+        {description ? <Typography sx={{ whiteSpace: "pre-line" }}>{description}</Typography> : null}
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel} variant="outlined" disabled={loading}>

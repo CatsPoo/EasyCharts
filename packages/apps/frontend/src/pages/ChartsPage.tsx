@@ -56,6 +56,7 @@ export function ChartsPage() {
   const [previewKey, setPreviewKey] = useState(0);
 
   const chartEditorRef = useRef<ChartEditorHandle>(null);
+  const intentionalUnlockRef = useRef(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [saveNoteOpen, setSaveNoteOpen] = useState(false);
   const [saveNoteLabel, setSaveNoteLabel] = useState("");
@@ -64,7 +65,7 @@ export function ChartsPage() {
   const [lockAvailableOpen, setLockAvailableOpen] = useState(false);
   const [lockExpiredOpen, setLockExpiredOpen] = useState(false);
 
-  const {lock,state:lockState,lockChart,unlockChart,locking,unlocking,isLoading} = useChartLock(user!.id,selectedId || undefined)
+  const {lock,state:lockState,lockChart,unlockChart,refreshLock,locking,unlocking,isLoading} = useChartLock(user!.id,selectedId || undefined)
 
   const {
     data: selectedChart,
@@ -84,6 +85,10 @@ export function ChartsPage() {
     }
 
     if (prev === LockState.MINE && lockState === LockState.UNLOCKED) {
+      if (intentionalUnlockRef.current) {
+        intentionalUnlockRef.current = false;
+        return;
+      }
       // Lock was auto-released by the server — discard unsaved changes and exit edit mode
       setEditMode(false);
       setEditorMadeChanges(false);
@@ -119,6 +124,7 @@ export function ChartsPage() {
         await lockChart();
         setEditMode(true);
       } else {
+        intentionalUnlockRef.current = true;
         await unlockChart();
         setEditMode(false);
       }
@@ -152,7 +158,10 @@ export function ChartsPage() {
   };
 
   const doCloseDialog = async () => {
-    if (lockState === LockState.MINE) await unlockChart();
+    if (lockState === LockState.MINE) {
+      intentionalUnlockRef.current = true;
+      await unlockChart();
+    }
     setDialogOpen(false);
     setSelectedId("");
     setEditMode(false);
@@ -169,6 +178,7 @@ export function ChartsPage() {
       if( ! saved)
         throw new Error('Unable to save the chart')
       // do any parent-side updates you want
+      intentionalUnlockRef.current = true;
       await unlockChart()
       setEditMode(false);
       setDialogOpen(false);
@@ -365,7 +375,7 @@ export function ChartsPage() {
             chart={editChart}
             setChart={setEditChart}
             editMode={lockState !== LockState.OTHERs && editMode}
-            setMadeChanges={setEditorMadeChanges}
+            setMadeChanges={(v) => { setEditorMadeChanges(v); if (v && lockState === LockState.MINE) refreshLock(); }}
             ref={chartEditorRef}
           />
         )}
