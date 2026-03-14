@@ -24,12 +24,6 @@ const makeDir = (overrides: Partial<ChartsDirectoryEntity> = {}): ChartsDirector
 
 describe('ChartsDirectoriesService', () => {
   let service: ChartsDirectoriesService;
-  let dirRepo: jest.Mocked<any>;
-  let cidRepo: jest.Mocked<any>;
-  let shareDirRepo: jest.Mocked<any>;
-  let chartRepo: jest.Mocked<any>;
-  let chartShareRepo: jest.Mocked<any>;
-  let chartsService: jest.Mocked<any>;
 
   // Minimal query builder returned by dirRepo.createQueryBuilder
   const makeQb = (existsResult = false, getManyResult: any[] = []) => ({
@@ -99,12 +93,6 @@ describe('ChartsDirectoriesService', () => {
     }).compile();
 
     service = module.get<ChartsDirectoriesService>(ChartsDirectoriesService);
-    dirRepo = module.get(getRepositoryToken(ChartsDirectoryEntity));
-    cidRepo = module.get(getRepositoryToken(ChartInDirectoryEntity));
-    shareDirRepo = module.get(getRepositoryToken(DirectoryShareEntity));
-    chartRepo = module.get(getRepositoryToken(ChartEntity));
-    chartShareRepo = module.get(getRepositoryToken(ChartShareEntity));
-    chartsService = module.get(ChartsService);
   });
 
   // ── createChartsDirectory ────────────────────────────────────────────────────

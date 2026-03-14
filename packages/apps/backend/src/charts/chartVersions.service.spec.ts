@@ -19,7 +19,6 @@ const makeRow = (overrides: Partial<ChartVersionEntity> = {}): ChartVersionEntit
 
 describe('ChartVersionsService', () => {
   let service: ChartVersionsService;
-  let repo: jest.Mocked<any>;
 
   const qbMock = {
     select: jest.fn().mockReturnThis(),
@@ -44,7 +43,6 @@ describe('ChartVersionsService', () => {
     }).compile();
 
     service = module.get<ChartVersionsService>(ChartVersionsService);
-    repo = module.get(getRepositoryToken(ChartVersionEntity));
   });
 
   // ── saveVersion ────────────────────────────────────────────────────────────

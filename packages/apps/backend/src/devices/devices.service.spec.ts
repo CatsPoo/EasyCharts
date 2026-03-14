@@ -34,7 +34,6 @@ describe('DevicesService', () => {
   let modelsRepo: jest.Mocked<any>;
   let deviceTypesRepo: jest.Mocked<any>;
   let assetVersionsService: jest.Mocked<any>;
-  let dataSource: jest.Mocked<any>;
 
   const qbMock = {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -93,7 +92,6 @@ describe('DevicesService', () => {
     modelsRepo = module.get(getRepositoryToken(ModelEntity));
     deviceTypesRepo = module.get(getRepositoryToken(DeviceTypeEntity));
     assetVersionsService = module.get(AssetVersionsService);
-    dataSource = module.get(DataSource);
   });
 
   // ── convertDeviceEntity ────────────────────────────────────────────────────────

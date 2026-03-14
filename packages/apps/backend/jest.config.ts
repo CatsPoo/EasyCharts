@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 const { readFileSync } = require('fs');
 
 // Reading the SWC compilation config for the spec files

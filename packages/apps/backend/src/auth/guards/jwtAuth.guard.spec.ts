@@ -19,7 +19,7 @@ function makeCtx(token: string | null): ExecutionContext {
         headers: token ? { authorization: `Bearer ${token}` } : {},
       }),
       getResponse: () => ({}),
-      getNext: () => () => {},
+      getNext: () => jest.fn(),
     }),
     getHandler: () => ({}),
     getClass: () => ({}),
