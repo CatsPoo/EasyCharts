@@ -3,7 +3,7 @@ import type {
   DeviceCreate,
   DeviceUpdate,
 } from "@easy-charts/easycharts-types";
-import { HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { DeviceOnChartEntity } from "../charts/entities/deviceOnChart.entity";
@@ -15,6 +15,8 @@ import { AssetVersionsService } from "../assetVersions/assetVersions.service";
 
 @Injectable()
 export class DevicesService {
+  private readonly logger = new Logger(DevicesService.name);
+
   constructor(
     @InjectRepository(DeviceEntity)
     private readonly devicesRepo: Repository<DeviceEntity>,
@@ -63,6 +65,7 @@ export class DevicesService {
     });
     const result = this.convertDeviceEntity(await this.devicesRepo.save(device));
     await this.assetVersionsService.saveVersion("devices", result.id, result as unknown as object, createdByUserId);
+    this.logger.log(`Device "${dto.name}" created (id: ${result.id}) by userId "${createdByUserId}"`);
     return result;
   }
 
@@ -167,6 +170,7 @@ export class DevicesService {
     device.updatedByUserId=updatedByUserId
     const result = await this.convertDeviceEntity(await this.devicesRepo.save(device));
     await this.assetVersionsService.saveVersion("devices", result.id, result as unknown as object, updatedByUserId);
+    this.logger.log(`Device "${result.name}" (${id}) updated by userId "${updatedByUserId}"`);
     return result;
   }
 
@@ -181,6 +185,7 @@ export class DevicesService {
       .getRawMany<{ id: string; name: string }>();
 
     if (usedCharts.length) {
+      this.logger.warn(`Device "${id}" cannot be deleted — in use by ${usedCharts.length} chart(s): ${usedCharts.map(c => c.name).join(', ')}`);
       throw new HttpException(
         { message: 'Device is in use and cannot be deleted', usedIn: usedCharts.map(r => ({ ...r, kind: 'chart' })) },
         HttpStatus.CONFLICT,
@@ -190,5 +195,6 @@ export class DevicesService {
     if (result.affected === 0) {
       throw new NotFoundException(`Device ${id} not found`);
     }
+    this.logger.log(`Device "${id}" removed`);
   }
 }

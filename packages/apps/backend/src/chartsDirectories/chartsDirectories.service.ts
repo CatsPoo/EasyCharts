@@ -1,5 +1,5 @@
 import type { ChartMetadata, CreateChartDirectory, UpadateChartDirectory } from "@easy-charts/easycharts-types";
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ILike, In, Repository } from "typeorm";
 import { ChartsService } from "../charts/charts.service";
@@ -11,6 +11,8 @@ import { DirectoryShareEntity } from "./entities/directoryShare.entity";
 
 @Injectable()
 export class ChartsDirectoriesService {
+  private readonly logger = new Logger(ChartsDirectoriesService.name);
+
   constructor(
     @InjectRepository(ChartsDirectoryEntity)
     private readonly dirRepo: Repository<ChartsDirectoryEntity>,
@@ -36,7 +38,10 @@ export class ChartsDirectoriesService {
     if (!dir) throw new NotFoundException("Directory not found");
     if (dir.createdByUserId === userId) return; // owner has full access
     const share = await this.shareDirRepo.findOne({ where: { directoryId, sharedWithUserId: userId } });
-    if (!share?.[permission]) throw new ForbiddenException(`No ${permission} permission on this directory`);
+    if (!share?.[permission]) {
+      this.logger.warn(`userId "${userId}" lacks "${permission}" on directory "${directoryId}"`);
+      throw new ForbiddenException(`No ${permission} permission on this directory`);
+    }
   }
 
   // ─── CRUD ────────────────────────────────────────────────────────────────────
@@ -51,7 +56,9 @@ export class ChartsDirectoriesService {
     }
 
     const entity = this.dirRepo.create({ ...dto, createdByUserId: currentUserId });
-    return this.dirRepo.save(entity);
+    const saved = await this.dirRepo.save(entity);
+    this.logger.log(`Directory "${dto.name}" created (id: ${saved.id})${parentId ? ` under parent "${parentId}"` : ''} by userId "${currentUserId}"`);
+    return saved;
   }
 
   async getChartsDirectoryById(id: string) {
@@ -67,7 +74,10 @@ export class ChartsDirectoriesService {
     // Resource-level permission: owner OR shared with canEdit
     if (dir.createdByUserId !== currentUserId) {
       const share = await this.shareDirRepo.findOne({ where: { directoryId: id, sharedWithUserId: currentUserId } });
-      if (!share?.canEdit) throw new ForbiddenException("No edit permission on this directory");
+      if (!share?.canEdit) {
+        this.logger.warn(`userId "${currentUserId}" lacks edit permission on directory "${id}"`);
+        throw new ForbiddenException("No edit permission on this directory");
+      }
     }
 
     if (dto.name && dto.name !== dir.name) {
@@ -92,7 +102,9 @@ export class ChartsDirectoriesService {
     }
 
     dir.updatedByUserId = currentUserId;
-    return this.dirRepo.save(dir);
+    const saved = await this.dirRepo.save(dir);
+    this.logger.log(`Directory "${id}" updated by userId "${currentUserId}"`);
+    return saved;
   }
 
   async remove(id: string, currentUserId: string) {
@@ -100,6 +112,7 @@ export class ChartsDirectoriesService {
     const exists = await this.dirRepo.exist({ where: { id } });
     if (!exists) throw new NotFoundException("Directory not found");
     await this.dirRepo.delete({ id });
+    this.logger.log(`Directory "${id}" removed by userId "${currentUserId}"`);
   }
 
   async search(q: string) {
@@ -187,6 +200,7 @@ export class ChartsDirectoriesService {
       { directoryId, chartId, addedByUserId } as ChartInDirectoryEntity,
       { conflictPaths: ["directoryId", "chartId"], skipUpdateIfNoValuesChanged: true },
     );
+    this.logger.log(`Chart "${chartId}" added to directory "${directoryId}" by userId "${addedByUserId}"`);
   }
 
   async removeChart(directoryId: string, chartId: string): Promise<void> {
@@ -194,6 +208,7 @@ export class ChartsDirectoriesService {
     if (!res.affected) {
       throw new NotFoundException("Chart is not in this directory");
     }
+    this.logger.log(`Chart "${chartId}" removed from directory "${directoryId}"`);
   }
 
   // ─── Sharing ────────────────────────────────────────────────────────────────
@@ -220,10 +235,12 @@ export class ChartsDirectoriesService {
         );
       }
     }
+    this.logger.log(`Directory "${directoryId}" shared with userId "${sharedWithUserId}" by userId "${sharedByUserId}" (permissions: ${JSON.stringify(permissions)}${includeContent ? ', includeContent: true' : ''})`);
   }
 
   async unshareDirectory(directoryId: string, sharedWithUserId: string): Promise<void> {
     await this.shareDirRepo.delete({ directoryId, sharedWithUserId });
+    this.logger.log(`Directory "${directoryId}" unshared from userId "${sharedWithUserId}"`);
   }
 
   async unshareDirectoryContent(directoryId: string, sharedWithUserId: string): Promise<void> {
@@ -231,6 +248,7 @@ export class ChartsDirectoriesService {
     const chartIds = charts.map(c => c.chartId);
     if (chartIds.length > 0) {
       await this.chartShareRepo.delete({ chartId: In(chartIds), sharedWithUserId });
+      this.logger.log(`Unshared ${chartIds.length} chart(s) in directory "${directoryId}" from userId "${sharedWithUserId}"`);
     }
   }
 
@@ -264,6 +282,7 @@ export class ChartsDirectoriesService {
 
     for (let i = 0; i < 1024 && cursor; i++) {
       if (cursor === directoryId) {
+        this.logger.warn(`Cycle detected: cannot move directory "${directoryId}" under "${newParentId}"`);
         throw new BadRequestException(
           "Cannot move a directory under itself or its descendants"
         );

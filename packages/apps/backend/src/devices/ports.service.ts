@@ -4,7 +4,7 @@ import type {
   PortType,
   PortUpdate,
 } from "@easy-charts/easycharts-types";
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, EntityManager, In, Repository } from "typeorm";
 import { LineEntity } from "../lines/entities/line.entity";
@@ -15,6 +15,8 @@ import { updatePortPayload } from "./interfaces/ports.interfaces";
 
 @Injectable()
 export class PortsService {
+  private readonly logger = new Logger(PortsService.name);
+
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(PortEntity)
@@ -27,7 +29,9 @@ export class PortsService {
       type: dto.type as PortType,
       createdByUserId
     });
-    return this.portsRepo.save(entity);
+    const saved = await this.portsRepo.save(entity);
+    this.logger.log(`Port "${dto.name}" created (id: ${saved.id}) for deviceId "${dto.deviceId}" by userId "${createdByUserId}"`);
+    return saved;
   }
 
   async upsertPorts(ports: Partial<PortEntity>[], manager?: EntityManager) {
@@ -68,11 +72,14 @@ export class PortsService {
 
   async updatePort(id: string, dto: PortUpdate,updatedByUserId:string): Promise<Port> {
     await this.portsRepo.update(id, { ...dto, type: dto.type as PortType ,updatedByUserId});
-    return this.getPortrById(id);
+    const updated = await this.getPortrById(id);
+    this.logger.log(`Port "${updated.name}" (${id}) updated by userId "${updatedByUserId}"`);
+    return updated;
   }
 
   async removePort(id: string): Promise<void> {
     await this.portsRepo.delete(id);
+    this.logger.log(`Port "${id}" removed`);
   }
 
   async getPortsInUse(): Promise<Port[]> {
@@ -184,6 +191,7 @@ export class PortsService {
       (p) => byId.has(p.id) && byId.get(p.id) !== deviceId
     );
     if (conflicts.length) {
+      this.logger.warn(`Port conflict for deviceId "${deviceId}": port(s) ${conflicts.map(c => c.id).join(', ')} belong to a different device`);
       throw new BadRequestException(
         `Port(s) belong to a different device: ${conflicts
           .map((c) => c.id)
@@ -205,6 +213,10 @@ export class PortsService {
       })),
       { conflictPaths: ["id"], skipUpdateIfNoValuesChanged: true }
     );
+
+    if (hasNewPorts) {
+      this.logger.log(`New port(s) added to deviceId "${deviceId}" by userId "${updatedBuUserid}"`);
+    }
 
     return hasNewPorts;
   }

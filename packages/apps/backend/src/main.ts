@@ -1,11 +1,30 @@
-import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Logger, LogLevel, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import 'reflect-metadata';
 import { AppModule } from './app/app.module';
 
+/** NestJS log levels ordered from least to most severe. */
+const LOG_LEVEL_ORDER: LogLevel[] = ['verbose', 'debug', 'log', 'warn', 'error', 'fatal'];
+
+/**
+ * Returns all log levels at or above the given minimum level.
+ * e.g. minLevel='warn' → ['warn', 'error', 'fatal']
+ */
+function levelsFromMin(minLevel: string): LogLevel[] {
+  const idx = LOG_LEVEL_ORDER.indexOf(minLevel as LogLevel);
+  if (idx === -1) {
+    console.warn(`Unknown LOG_LEVEL "${minLevel}", falling back to "log"`);
+    return LOG_LEVEL_ORDER.slice(LOG_LEVEL_ORDER.indexOf('log'));
+  }
+  return LOG_LEVEL_ORDER.slice(idx);
+}
+
 async function bootstrap() {
+  const minLevel = process.env.LOG_LEVEL ?? 'log';
+  const logLevels = levelsFromMin(minLevel);
+
   const app = await NestFactory.create(AppModule, {
-    logger: ["log", "error", "warn", "debug", "verbose"],
+    logger: logLevels,
   });
 
   app.use((req: { method: any; originalUrl: any; }, res: { on: (arg0: string, arg1: () => void) => void; statusCode: any; }, next: () => void) => {
@@ -47,7 +66,7 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
-  
+
   Logger.log(
     `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`
   );

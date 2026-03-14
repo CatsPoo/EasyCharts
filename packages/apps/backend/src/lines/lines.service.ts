@@ -2,6 +2,7 @@ import {
   BadGatewayException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { LineEntity } from "./entities/line.entity";
@@ -29,6 +30,8 @@ export interface BondPortSiblingsResult {
 
 @Injectable()
 export class LinessService {
+  private readonly logger = new Logger(LinessService.name);
+
   constructor(
     @InjectRepository(LineEntity)
     private readonly linesrepo: Repository<LineEntity>,
@@ -187,7 +190,11 @@ export class LinessService {
         .where(`id NOT IN ${usedLinesSub}`)
         .execute();
 
-      return res.affected ?? 0;
+      const count = res.affected ?? 0;
+      if (count > 0) {
+        this.logger.log(`Deleted ${count} orphan line(s)`);
+      }
+      return count;
     });
   }
 
@@ -209,7 +216,7 @@ export class LinessService {
       name: bondCreate.name,
       created_by_user_id:createdByUserId
     });
-
+    this.logger.log(`Bond "${bondCreate.name}" (id: ${bondCreate.id}) created by userId "${createdByUserId}"`);
     return this.convertBondEntitytoBond(newBond);
   }
 
@@ -230,7 +237,7 @@ export class LinessService {
     if (!bond) throw new NotFoundException(`Bond ${id} not found`);
 
     bond.updatedByUserId=updatedByUserId
-    
+
     if (bondUpdate.name) {
       bond.name = bondUpdate.name;
       await this.bondRepo.save(bond);
@@ -252,6 +259,7 @@ export class LinessService {
       const foreign = requestedLines.filter((l) => l.bondId && l.bondId !== id);
       if (foreign.length) {
         const ids = foreign.map((f) => f.id).join(", ");
+        this.logger.warn(`Bond "${id}" update rejected: line(s) ${ids} already belong to another bond`);
         throw new BadGatewayException(
           `Line(s) ${ids} already member of bond ${foreign[0].bondId}`
         );
@@ -290,11 +298,13 @@ export class LinessService {
     });
     if (!reloaded)
       throw new InternalServerErrorException(`Cannot reload bond ${id}`);
+    this.logger.log(`Bond "${id}" updated by userId "${updatedByUserId}"`);
     return this.convertBondEntitytoBond(reloaded);
   }
 
   async deleteBond(id: string): Promise<void> {
     this.bondRepo.delete(id);
+    this.logger.log(`Bond "${id}" deleted`);
   }
 
   async upsertLines(manager: EntityManager, lines: Line[], userId: string): Promise<Line[]> {
@@ -324,6 +334,7 @@ export class LinessService {
       { conflictPaths: ['id'], skipUpdateIfNoValuesChanged: true }
     );
 
+    this.logger.debug(`Upserted ${normalizedLines.length} line(s) for userId "${userId}"`);
     return normalizedLines;
   }
 
@@ -343,6 +354,7 @@ export class LinessService {
       let bond = await bondRepo.findOne({ where: { id: bondId } });
       if (!bond) {
         bond = await bondRepo.save({ id: bondId, name: b.name,createdByUserId:userId } as Partial<BondEntity>);
+        this.logger.log(`Bond "${bondId}" created via chart update by userId "${userId}"`);
       } else if (b.name && b.name !== bond.name) {
         bond.name = b.name;
         bond.updatedByUserId = userId
@@ -376,6 +388,7 @@ export class LinessService {
       );
       if (foreign.length) {
         const ids = foreign.map((f) => f.id).join(", ");
+        this.logger.warn(`Bond "${bondId}" update rejected: line(s) ${ids} already belong to another bond`);
         throw new BadGatewayException(
           `Line(s) ${ids} already member of bond ${foreign[0].bondId}`
         );
