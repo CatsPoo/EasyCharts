@@ -129,18 +129,19 @@ steps:
 
   # ── 4. Publish ──────────────────────────────────────────────────
   - name: publish
-    image: plugins/docker
+    image: docker:dind
     privileged: true
     depends_on: [build]
-    settings:
-      dockerfile: ./Dockerfile
-      context: .
-      repo: rongorlik/easy-charts
-      # Automatically use version from package.json for tagging
-      tags: ${CI_COMMIT_TAG:-latest}
-      username:
+    environment:
+      DOCKER_USERNAME:
         from_secret: dockerhub_username
-      password:
+      DOCKER_PASSWORD:
         from_secret: dockerhub_password
+    commands:
+      - dockerd --dns=8.8.8.8 &
+      - sleep 5
+      - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+      - docker build -t rongorlik/easy-charts:latest .
+      - docker push rongorlik/easy-charts:latest
     when:
       branch: main
