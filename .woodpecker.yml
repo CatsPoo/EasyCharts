@@ -62,6 +62,7 @@ steps:
       - "deb.debian.org:146.75.54.132"
     commands:
       - apt-get update && apt-get install -y git --no-install-recommends
+      - git fetch origin main
       - CURRENT_VERSION=$(node -p "require('./package.json').version")
       - LAST_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
       - echo "Checking version... Branch ($CURRENT_VERSION) vs Main ($LAST_VERSION)"
