@@ -182,12 +182,12 @@ describe('ChartsService', () => {
       expect(chartRepo.save).toHaveBeenCalled();
     });
 
-    it('does not re-lock when already locked by the same user', async () => {
+    it('refreshes lockedAt (heartbeat) when already locked by the same user', async () => {
       const chart = baseChart({ lockedById: 'user-1', lockedAt: new Date() });
       chartRepo.findOne.mockResolvedValue(chart);
 
       await service.lockChart('chart-1', 'user-1');
-      expect(chartRepo.save).not.toHaveBeenCalled();
+      expect(chartRepo.save).toHaveBeenCalled();
     });
 
     it('throws ChartIsLockedExeption when locked by another user', async () => {
