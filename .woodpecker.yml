@@ -36,6 +36,7 @@ steps:
       CI: "true"
     extra_hosts:
       - "registry.npmjs.org:104.16.9.34" 
+      - "deb.debian.org:146.75.54.132"
     commands:
       - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund --loglevel info
     depends_on: [restore-npm-cache]
