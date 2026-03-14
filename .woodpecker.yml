@@ -142,7 +142,8 @@ steps:
       DOCKER_PASSWORD:
         from_secret: dockerhub_password
     commands:
-      - dockerd --dns=8.8.8.8 &
+      - echo "nameserver 8.8.8.8" > /etc/resolv.conf
+      - dockerd &
       - sleep 5
       - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       - docker build -t rongorlik/easy-charts:latest .
