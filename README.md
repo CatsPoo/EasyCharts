@@ -1,109 +1,149 @@
 # EasyCharts
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+A collaborative web application for creating and managing interactive network / infrastructure diagrams. Users can build charts with devices, connections, and overlay elements, share them with teammates, and track changes through version history.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+---
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## Main Target
 
-## Generate a library
+EasyCharts aims to provide a simple, intuitive interface for visualizing and documenting network topologies and infrastructure layouts — replacing static diagrams with live, shareable, and versioned charts.
 
-```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
+---
+
+## Main Features
+
+- **Interactive chart editor** — drag-and-drop devices, draw connections (lines/cables), and add overlay elements (zones, notes)
+- **Device & port management** — define reusable device types and place them on charts with connection ports
+- **Chart sharing & permissions** — share charts with specific users; role-based access control (view / edit)
+- **Chart version history** — track and review changes over time
+- **Directory organization** — organize charts into folders, with per-directory sharing
+- **Concurrent edit locking** — prevents conflicting edits with a per-chart lock system
+- **User authentication** — JWT-based login with refresh token rotation
+- **Default admin account** — auto-created on first boot from environment config
+- **Single-container deployment** — backend serves the React frontend as static files
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Vite, React Flow, MUI, TailwindCSS, TanStack Query |
+| Backend | NestJS 11, TypeORM, PostgreSQL 16 |
+| Shared Types | Zod schemas (`packages/libs/easycharts-types`) |
+| Monorepo | Nx |
+| Containerization | Docker / Docker Compose |
+
+---
+
+## Project Structure
+
+```
+EasyCharts/
+├── packages/
+│   ├── apps/
+│   │   ├── backend/          # NestJS API (port 3000)
+│   │   └── frontend/         # React + Vite app (port 4200 in dev)
+│   └── libs/
+│       └── easycharts-types/ # Shared Zod schemas & TypeScript types
+├── docker-compose.yml
+├── Dockerfile
+└── .woodpecker.yml           # CI/CD pipeline
 ```
 
-## Run tasks
+---
 
-To build the library use:
+## Setup
 
-```sh
-npx nx build pkg1
+### Option 1 — Docker Compose (recommended)
+
+1. Copy the environment file and fill in your values:
+   ```bash
+   cp "packages/apps/backend/.env example" .env
+   ```
+
+2. Start the full stack:
+   ```bash
+   docker-compose up -d
+   ```
+
+The app will be available at `http://localhost:3000`.
+The database schema is created automatically on first boot.
+
+---
+
+### Option 2 — Local Development
+
+**Prerequisites**: Node.js 22+, PostgreSQL 16, npm
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Create `packages/apps/backend/.env` from the example file and configure your DB connection.
+
+3. Start the backend (port 3000):
+   ```bash
+   npx nx serve @easy-charts/backend
+   ```
+
+4. Start the frontend (port 4200, proxies `/api` to backend):
+   ```bash
+   npx nx serve @easy-charts/frontend
+   ```
+
+---
+
+## Environment Variables
+
+Create a `.env` file based on `packages/apps/backend/.env example`.
+
+```env
+# ── Database ──────────────────────────────────────────────
+DB_HOST=localhost          # PostgreSQL host (use service name in Docker, e.g. "postgres")
+DB_PORT=5432
+DB_USER=postgres
+DB_PASS=postgres
+DB_NAME=EasyCharts
+
+# ── Default Admin (created automatically on first boot) ───
+DEFAULT_ADMIN_USERNAME=admin
+DEFAULT_ADMIN_PASSWORD=admin        # Change in production!
+
+# ── JWT Access Token ──────────────────────────────────────
+JWT_SECRET=JWTKEY                   # Change to a long random string in production!
+JWT_EXPIRE_IN=30m
+
+# ── JWT Refresh Token ─────────────────────────────────────
+REFRESH_JWT_SECRET=JWTREFRESHKEY    # Change to a different long random string in production!
+REFRESH_JWT_EXPIRE_IN=1d
+
+# ── Logging ───────────────────────────────────────────────
+# Severity order (low → high): verbose < debug < log < warn < error < fatal
+# verbose → all messages, fatal → critical only
+LOG_LEVEL=log
 ```
 
-To run any task with Nx use:
+> **Security**: Always use strong, unique values for `JWT_SECRET`, `REFRESH_JWT_SECRET`, and `DEFAULT_ADMIN_PASSWORD` in any non-local environment.
 
-```sh
-npx nx <target> <project-name>
+---
+
+## Available Scripts
+
+```bash
+# Serve backend in dev mode (with hot reload)
+npx nx serve @easy-charts/backend
+
+# Serve frontend in dev mode
+npx nx serve @easy-charts/frontend
+
+# Build all packages for production
+npx nx run-many --all --target=build
+
+# Run tests
+npx nx run-many --all --target=test
+
+# Lint
+npx nx run-many --all --target=lint
 ```
-
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
-
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Versioning and releasing
-
-To version and release the library use
-
-```
-npx nx release
-```
-
-Pass `--dry-run` to see what would happen without actually releasing the library.
-
-[Learn more about Nx release &raquo;](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Keep TypeScript project references up to date
-
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
-
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
-
-```sh
-npx nx sync
-```
-
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
-
-```sh
-npx nx sync:check
-```
-
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
-```
-
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
