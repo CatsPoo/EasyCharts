@@ -129,7 +129,7 @@ steps:
 
   # ── 4. Publish ──────────────────────────────────────────────────
   - name: publish
-    image: woodpeckerci/plugin-docker-buildx
+    image: woodpeckerci/plugin-docker
     privileged: true
     depends_on: [build]
     settings:
@@ -142,6 +142,5 @@ steps:
         from_secret: dockerhub_username
       password:
         from_secret: dockerhub_password
-      daemon_dns: "8.8.8.8"
     when:
       branch: main
