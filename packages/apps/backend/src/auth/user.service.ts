@@ -104,7 +104,7 @@ export class UsersService {
   }
 
   async updateUserRefreshToken(id:string,refreshToken:string|null) : Promise<number>{
-    const refreshTokenHash : string | undefined = refreshToken ? await bcrypt.hash(refreshToken, 12) : undefined
+    const refreshTokenHash : string | null = refreshToken ? await bcrypt.hash(refreshToken, 12) : null
     const updateResults :UpdateResult = await this.userRepo.update(id,{refreshTokenHash})
     if(!updateResults || updateResults.affected==0) throw new NotFoundException('User not found')
     return updateResults.affected ?? 0
