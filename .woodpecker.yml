@@ -38,6 +38,7 @@ steps:
       - "registry.npmjs.org:104.16.9.34" 
     commands:
       - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund --loglevel info
+    depends_on: [restore-npm-cache]
 
   - name: rebuild-npm-cache
     image: meltwater/drone-cache
@@ -69,15 +70,16 @@ steps:
   # ── 2. Lint & Test (Parallel) ───────────────────────────────────
   - name: lint
     image: node:22-bookworm-slim
-    depends_on: [install]
+    depends_on: [install,restore-nx-cache]
     commands:
       - npx nx affected --target=lint --base=origin/main --parallel=3
     when:
       branch: [main, dev]
+      
 
   - name: test
     image: node:22-bookworm-slim
-    depends_on: [install]
+    depends_on: [install,restore-nx-cache]
     commands:
       - npx nx affected --target=test --base=origin/main --passWithNoTests --parallel=3
     when:
