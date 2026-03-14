@@ -132,6 +132,9 @@ steps:
     image: docker:dind
     privileged: true
     depends_on: [build]
+    extra_hosts:
+      - "registry-1.docker.io:34.226.132.191"
+      - "auth.docker.io:104.18.43.178"
     environment:
       DOCKER_USERNAME:
         from_secret: dockerhub_username
