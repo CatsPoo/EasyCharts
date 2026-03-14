@@ -1,11 +1,13 @@
 import { type Chart, type ChartVersion, type ChartVersionMeta } from "@easy-charts/easycharts-types";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ChartVersionEntity } from "./entities/chartVersion.entity";
 
 @Injectable()
 export class ChartVersionsService {
+  private readonly logger = new Logger(ChartVersionsService.name);
+
   constructor(
     @InjectRepository(ChartVersionEntity)
     private readonly repo: Repository<ChartVersionEntity>,
@@ -32,6 +34,7 @@ export class ChartVersionsService {
       label: label ?? null,
       savedByUserId: userId,
     });
+    this.logger.debug(`Chart "${chartId}" version ${nextVersion} saved by userId "${userId}"${label ? ` (label: "${label}")` : ''}`);
   }
 
   async listVersions(chartId: string): Promise<ChartVersionMeta[]> {
