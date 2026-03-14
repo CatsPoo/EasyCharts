@@ -37,7 +37,6 @@ steps:
     extra_hosts:
       - "registry.npmjs.org:104.16.9.34" 
     commands:
-      - npm config set maxsockets 1
       - npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund --loglevel info
 
   - name: rebuild-npm-cache
@@ -59,7 +58,6 @@ steps:
     image: node:22-bookworm-slim
     depends_on: [install]
     commands:
-      - git fetch origin main
       - CURRENT_VERSION=$(node -p "require('./package.json').version")
       - LAST_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
       - echo "Checking version... Branch ($CURRENT_VERSION) vs Main ($LAST_VERSION)"
@@ -73,7 +71,6 @@ steps:
     image: node:22-bookworm-slim
     depends_on: [install]
     commands:
-      - git fetch origin main
       - npx nx affected --target=lint --base=origin/main --parallel=3
     when:
       branch: [main, dev]
@@ -82,7 +79,6 @@ steps:
     image: node:22-bookworm-slim
     depends_on: [install]
     commands:
-      - git fetch origin main
       - npx nx affected --target=test --base=origin/main --passWithNoTests --parallel=3
     when:
       branch: [main, dev]
