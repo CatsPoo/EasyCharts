@@ -84,12 +84,12 @@ export function ChartsPage() {
       setLockAvailableOpen(true);
     }
 
-    if (prev === LockState.MINE && lockState === LockState.UNLOCKED) {
+    if (prev === LockState.MINE && (lockState === LockState.UNLOCKED || lockState === LockState.OTHERs)) {
       if (intentionalUnlockRef.current) {
         intentionalUnlockRef.current = false;
         return;
       }
-      // Lock was auto-released by the server — discard unsaved changes and exit edit mode
+      // Lock expired and was either released or taken by another user
       setEditMode(false);
       setEditorMadeChanges(false);
       setEditChart(selectedChart ? structuredClone(selectedChart) : undefined);
