@@ -109,7 +109,7 @@ steps:
     commands:
       - apt-get update -qq && apt-get install -y --no-install-recommends python3 make g++ git
       - git fetch origin main
-      - npx nx affected --target=build --base=origin/main --parallel=3
+      - npx nx run-many --target=build --projects=backend,frontend --parallel=3
     when:
       branch: main
 
