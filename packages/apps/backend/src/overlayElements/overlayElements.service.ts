@@ -48,7 +48,7 @@ export class OverlayElementsService {
   }
 
   async update(id: string, dto: OverlayElementUpdate, updatedByUserId: string): Promise<OverlayElement> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { isSystem: _ignored, ...safe } = dto as any;
     await this.repo.update(id, { ...safe, updatedByUserId });
     return this.getById(id);
