@@ -1,0 +1,10 @@
+{
+  "name": "@easy-charts/frontend",
+  "targets": {
+    "build": {
+      "options": {
+        "outputPath": "packages/apps/frontend/dist"
+      }
+    }
+  }
+}

@@ -14,7 +14,7 @@ COPY packages/apps/backend/dist .
 
 # Copy pre-built frontend static files into the public folder
 # NestJS ServeStaticModule reads from process.cwd()/public = /app/public
-COPY dist/apps/frontend ./public
+COPY packages/apps/frontend/dist ./public
 
 # Install only production deps from the webpack-generated package.json
 RUN npm install --omit=dev \
