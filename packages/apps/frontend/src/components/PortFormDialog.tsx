@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -94,7 +94,7 @@ export function PortFormDialog({
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
 
   const { data: portTypesData, isLoading: loadingTypes } = useListAssets("portTypes");
-  const portTypes = portTypesData?.rows ?? [];
+  const portTypes = useMemo(() => portTypesData?.rows ?? [], [portTypesData?.rows]);
 
   useEffect(() => {
     if (open) {
