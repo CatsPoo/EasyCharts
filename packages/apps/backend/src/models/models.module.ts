@@ -8,11 +8,13 @@ import { ModelsController } from './models.controller';
 import { ModelSeeder } from './model.seeder';
 import { AssetVersionsService } from '../assetVersions/assetVersions.service';
 import { AuthModule } from '../auth/auth.module';
+import { VendorsModule } from '../vendors/vendors.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([ModelEntity, VendorEntity, AssetVersionEntity]),
     AuthModule,
+    VendorsModule,
   ],
   controllers: [ModelsController],
   providers: [ModelsService, ModelSeeder, AssetVersionsService],

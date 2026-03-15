@@ -33,6 +33,10 @@ export class VendorSeeder implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
+    await this.seed();
+  }
+
+  async seed() {
     const count = await this.vendorsRepo.count();
     if (count === 0) {
       const users = await this.usersService.getAllUsers();
