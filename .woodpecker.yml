@@ -145,8 +145,6 @@ steps:
       - echo "nameserver 8.8.8.8" > /etc/resolv.conf
       - dockerd &
       - sleep 5
-      - find packages/apps/frontend -type d -name dist
-      - find packages/apps/backend -type d -name dist
       - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       - docker build -t rongorlik/easy-charts:latest .
       - docker push rongorlik/easy-charts:latest

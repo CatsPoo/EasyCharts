@@ -1,0 +1,10 @@
+{
+  "name": "easycharts-types",
+  "targets": {
+    "build": {
+      "options": {
+        "outputPath": "packages/libs/easycharts-types/dist"
+      }
+    }
+  }
+}
