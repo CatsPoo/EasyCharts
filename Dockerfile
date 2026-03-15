@@ -17,7 +17,7 @@ COPY packages/apps/backend/dist .
 COPY packages/apps/frontend/dist ./public
 
 # Install only production deps from the webpack-generated package.json
-RUN npm install --omit=dev \
+RUN npm install --omit=dev --legacy-peer-deps \
     && apk del python3 make g++ \
     && rm -rf /var/cache/apk/*
 
