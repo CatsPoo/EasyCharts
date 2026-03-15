@@ -69,7 +69,7 @@ steps:
       # Wrap the command in quotes so the colon doesn't break YAML
       - "npx semver $CURRENT_VERSION --range \">$LAST_VERSION\" || (echo \"❌ VERSION ERROR: You must bump the version in package.json before pushing to dev!\" && exit 1)"
     when:
-      branch: [dev]
+      branch: [main]
 
   # ── 2. Lint & Test (Parallel) ───────────────────────────────────
   - name: lint
