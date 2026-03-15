@@ -15,6 +15,6 @@ import { AuthModule } from '../auth/auth.module';
   ],
   controllers: [VendorsController],
   providers: [VendorsService, VendorSeeder, AssetVersionsService],
-  exports: [VendorsService],
+  exports: [VendorsService, VendorSeeder],
 })
 export class VendorsModule {}
