@@ -17,7 +17,7 @@ import { join } from 'path';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'public'),
+      rootPath: join(__dirname, 'public'),
       exclude: ['/api/(.*)'],
     }),
     UploadModule,

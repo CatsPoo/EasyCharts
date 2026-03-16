@@ -166,6 +166,7 @@ const schemas = {
   }),
   types: z.object({
     name: z.string().min(1),
+    iconUrl: z.string().optional(),
   }),
   models: z.object({
     name: z.string().min(1),
@@ -359,6 +360,13 @@ export function AssetForm<K extends AssetKind>({
                 currentUrl={(initial as any)?.iconUrl}
                 onUploaded={(url) => setValue("iconUrl", url)}
                 folder="vendors"
+              />
+            )}
+            {kind === "types" && (
+              <ImageUploadField
+                currentUrl={(initial as any)?.iconUrl}
+                onUploaded={(url) => setValue("iconUrl", url)}
+                folder="device-types"
               />
             )}
             {kind === "models" && (

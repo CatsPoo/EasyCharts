@@ -9,7 +9,13 @@ import {
 } from "@easy-charts/easycharts-types";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
+import ComputerIcon from "@mui/icons-material/Computer";
+import PhoneIcon from "@mui/icons-material/Phone";
+import RouterIcon from "@mui/icons-material/Router";
+import SettingsEthernetIcon from "@mui/icons-material/SettingsEthernet";
+import StorageIcon from "@mui/icons-material/Storage";
 import { IconButton } from "@mui/material";
+import type { SvgIconComponent } from "@mui/icons-material";
 import { PortFormDialog } from "../PortFormDialog";
 import { useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
@@ -20,6 +26,14 @@ import { useThemeMode } from "../../contexts/ThemeModeContext";
 import type { SidesOffset } from "./interfaces/sidesOffset.interface";
 import { InlineEditor } from "./InlineEditor";
 import DeviceHandle from "./DeviceHandle";
+
+const DEVICE_TYPE_ICONS: Record<string, SvgIconComponent> = {
+  Router: RouterIcon,
+  Switch: SettingsEthernetIcon,
+  Computer: ComputerIcon,
+  Server: StorageIcon,
+  Phone: PhoneIcon,
+};
 
 function initials(text?: string) {
   if (!text) return "Unknow";
@@ -239,7 +253,7 @@ export default function DeviceNode({
       {/* Image banner */}
       <div
         className={[
-          "w-full h-24 rounded-t-xl overflow-hidden flex items-center justify-center",
+          "relative w-full h-24 rounded-t-xl overflow-hidden flex items-center justify-center",
           isDark ? "bg-slate-800" : "bg-slate-100",
         ].join(" ")}
       >
@@ -253,10 +267,28 @@ export default function DeviceNode({
             decoding="async"
             draggable={false}
           />
-        ) : (
-          <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-indigo-200 to-indigo-400 text-indigo-900 flex items-center justify-center text-2xl font-bold select-none">
-            {initials(name)}
-          </div>
+        ) : device.type?.iconUrl ? (
+          <img
+            src={device.type.iconUrl}
+            alt={device.type.name}
+            className={["w-14 h-14 object-contain select-none", isDark ? "opacity-60" : "opacity-50"].join(" ")}
+            draggable={false}
+          />
+        ) : (() => {
+          const DeviceTypeIcon = DEVICE_TYPE_ICONS[device.type?.name];
+          return DeviceTypeIcon
+            ? <DeviceTypeIcon sx={{ fontSize: 56 }} className={isDark ? "!text-slate-500" : "!text-slate-400"} />
+            : <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-indigo-200 to-indigo-400 text-indigo-900 flex items-center justify-center text-2xl font-bold select-none">{initials(name)}</div>;
+        })()}
+
+        {/* Vendor icon badge */}
+        {vendor?.iconUrl && (
+          <img
+            src={vendor.iconUrl}
+            alt={vendorName ?? "Vendor"}
+            className="absolute bottom-1 right-2 h-5 w-auto max-w-[56px] object-contain opacity-75 select-none"
+            draggable={false}
+          />
         )}
       </div>
 
@@ -267,15 +299,15 @@ export default function DeviceNode({
           isDark ? "border-slate-700" : "border-slate-200",
         ].join(" ")}
       >
-        <div className="text-sm font-semibold truncate leading-5">{name ?? "Device"}</div>
+        <div className="text-base font-semibold truncate leading-5">{name ?? "Device"}</div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
           <div className="min-w-0">
-            <span className="text-xs font-medium truncate">{modelName ?? "Model"}</span>
+            <span className="text-sm font-medium truncate">{modelName ?? "Model"}</span>
             {vendorName ? (
-              <span className="text-[11px] text-slate-500 truncate"> · {vendorName}</span>
+              <span className="text-xs text-slate-500 truncate"> · {vendorName}</span>
             ) : null}
           </div>
-          <div className="text-[11px] text-slate-400 shrink-0 font-mono">
+          <div className="text-xs text-slate-400 shrink-0 font-mono">
             {ipAddress ?? "—"}
           </div>
         </div>

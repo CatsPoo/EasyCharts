@@ -41,7 +41,7 @@ export default defineConfig(() => ({
   //  plugins: [ nxViteTsPaths() ],
   // },
   build: {
-    outDir: path.join(__dirname, 'dist'),
+    outDir: path.join(__dirname, '../../backend/dist/public'),
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: {
