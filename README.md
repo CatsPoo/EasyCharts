@@ -1,109 +1,237 @@
 # EasyCharts
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+> **Interactive network infrastructure diagram editor** — build, visualize, and collaborate on complex network topologies with a drag-and-drop canvas.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+---
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## What is EasyCharts?
 
-## Generate a library
+EasyCharts is a full-stack web application for designing and managing network infrastructure diagrams. Place devices on a canvas, define ports, draw connections, annotate with overlays, and share charts across your team — all in a browser.
 
-```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
+**Core capabilities:**
+
+- **Visual editor** — drag-and-drop devices onto an interactive canvas, connect ports with bonds, annotate with notes and zones
+- **Device catalog** — pre-defined device types with icons; attach images and model metadata
+- **Chart versioning** — every save is recorded; browse and restore previous versions
+- **Collaborative locking** — lock a chart while editing so teammates don't overwrite your work
+- **Role-based access control** — `CHART_READ`, `CHART_WRITE`, and `USER_MANAGE` permissions per user
+- **Organized directories** — hierarchical folder structure to keep charts tidy
+- **Self-hosted** — runs entirely on your own infrastructure via Docker
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 19, React Flow, MUI, TailwindCSS, Vite |
+| **Backend** | NestJS, TypeORM, Passport.js, JWT |
+| **Database** | PostgreSQL 16 |
+| **Shared types** | Zod schemas → TypeScript types |
+| **Monorepo** | Nx |
+| **Containerization** | Docker, Docker Compose |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Docker & Docker Compose** — for the recommended production setup
+- **Node.js 22+** and **npm** — for local development
+
+---
+
+### Option A — Docker Compose (Recommended)
+
+The fastest way to run the full stack.
+
+**1. Clone and configure**
+
+```bash
+git clone <repo-url>
+cd EasyCharts
+cp .env.example .env
 ```
 
-## Run tasks
+**2. Edit `.env`** and set your secrets:
 
-To build the library use:
+```ini
+# Database
+DB_USER=postgres
+DB_PASS=your-strong-password
+DB_NAME=EasyCharts
 
-```sh
-npx nx build pkg1
+# JWT secrets — change these to long random strings!
+JWT_SECRET=replace-with-a-long-random-secret
+JWT_EXPIRE_IN=30m
+REFRESH_JWT_SECRET=replace-with-a-different-long-random-secret
+REFRESH_JWT_EXPIRE_IN=1d
+
+# Default admin account created on first run
+DEFAULT_ADMIN_USERNAME=admin
+DEFAULT_ADMIN_PASSWORD=change-me-in-production
 ```
 
-To run any task with Nx use:
+**3. Start the stack**
 
-```sh
-npx nx <target> <project-name>
+```bash
+docker-compose up -d
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+| Service | URL |
+|---|---|
+| Web UI | `http://localhost` |
+| API | `http://localhost/api` |
+| PostgreSQL | `localhost:5432` |
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Log in with the admin credentials you set in `.env`.
 
-## Versioning and releasing
+**4. Stop**
 
-To version and release the library use
-
-```
-npx nx release
-```
-
-Pass `--dry-run` to see what would happen without actually releasing the library.
-
-[Learn more about Nx release &raquo;](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Keep TypeScript project references up to date
-
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
-
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
-
-```sh
-npx nx sync
+```bash
+docker-compose down
 ```
 
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
+---
 
-```sh
-npx nx sync:check
+### Option B — Local Development
+
+Run the frontend and backend in watch mode for hot reloading.
+
+**1. Install dependencies**
+
+```bash
+npm install
 ```
 
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
+**2. Start a PostgreSQL instance**
 
-## Set up CI!
+You can use the database from Docker Compose while running the apps locally:
 
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
+```bash
+docker-compose up -d db
 ```
 
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+**3. Start the backend**
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
+```bash
+npx nx serve @easy-charts/backend --configuration development
+# Runs on http://localhost:3000
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+**4. Start the frontend** (in a second terminal)
 
-## Install Nx Console
+```bash
+npx nx serve @easy-charts/frontend
+# Runs on http://localhost:4200
+```
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+---
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Nx Commands
 
-## Useful links
+```bash
+# Build all packages
+npx nx run-many --all --target=build
 
-Learn more:
+# Build a single app
+npx nx build @easy-charts/backend
+npx nx build @easy-charts/frontend
 
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+# Run tests
+npx nx test @easy-charts/backend
+npx nx test @easy-charts/frontend
 
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+# Type check
+npx nx typecheck
+
+# Lint
+npx nx lint
+
+# Visualize the dependency graph
+npx nx graph
+```
+
+---
+
+## Project Structure
+
+```
+EasyCharts/
+├── packages/
+│   ├── apps/
+│   │   ├── backend/           # NestJS API (port 3000)
+│   │   │   └── src/
+│   │   │       ├── auth/          # JWT + refresh token auth
+│   │   │       ├── charts/        # Chart CRUD, locking, versioning
+│   │   │       ├── chartsDirectories/
+│   │   │       ├── devices/       # Device catalog & instances
+│   │   │       ├── ports/
+│   │   │       ├── lines/         # Bonds between ports
+│   │   │       ├── overlayElements/
+│   │   │       ├── models/
+│   │   │       └── upload/        # Image asset service
+│   │   │
+│   │   └── frontend/          # React 19 SPA (port 4200 / 80)
+│   │       └── src/
+│   │           ├── pages/
+│   │           │   ├── ChartsPage     # Dashboard
+│   │           │   ├── LoginPage
+│   │           │   └── UsersPage      # Admin panel
+│   │           └── components/
+│   │               ├── ChartEditor/   # React Flow canvas
+│   │               ├── AssetsList/    # Device management
+│   │               └── VersionHistory/
+│   │
+│   └── libs/
+│       └── easycharts-types/  # Shared Zod schemas + TS types
+│
+├── docker-compose.yml
+├── Dockerfile
+└── .env.example
+```
+
+---
+
+## Features Overview
+
+### Chart Editor
+
+The heart of EasyCharts — an interactive canvas powered by React Flow.
+
+- Add devices from a searchable sidebar catalog
+- Drag, resize, and arrange devices freely
+- Connect device ports with labeled bond lines
+- Add freeform notes and colored zone overlays
+- Lock the chart to block concurrent edits while you work
+
+### Device Catalog
+
+Manage the library of devices available for use in charts.
+
+- Create device types with custom icons and images
+- Define port layouts (network interfaces) per device type
+- Assign device model metadata
+
+### Version History
+
+Every chart save creates a snapshot.
+
+- Browse the full version timeline
+- Restore any previous version
+
+### User Management
+
+Admins can manage the user base from a dedicated panel.
+
+- Create, edit, and deactivate users
+- Assign per-user permissions: `CHART_READ`, `CHART_WRITE`, `USER_MANAGE`
+
+---
+
+## Authentication
+
+- Login with username and password → receive a short-lived **JWT access token** and a **refresh token**
+- Access tokens are refreshed automatically in the background
+- Passwords are hashed with **bcrypt**; refresh tokens are stored as **bcrypt** hashes
