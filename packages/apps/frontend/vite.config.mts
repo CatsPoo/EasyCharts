@@ -24,6 +24,16 @@ export default defineConfig(() => ({
   preview: {
     port: 4200,
     host: 'localhost',
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [react(),tailwindcss()],
   // Uncomment this if you are using workers.

@@ -10,6 +10,9 @@ export class VendorEntity extends AuditableEntity{
   @Column({ unique: true })
   name!: string;
 
+  @Column({ nullable: true, type: 'text' })
+  iconUrl?: string | null;
+
   @OneToMany(() => ModelEntity, (model) => model.vendor)
   models?: ModelEntity[];
 }

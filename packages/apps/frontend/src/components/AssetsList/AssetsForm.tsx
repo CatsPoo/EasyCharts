@@ -174,6 +174,7 @@ const schemas = {
   }),
   vendors: z.object({
     name: z.string().min(1),
+    iconUrl: z.string().optional(),
   }),
   portTypes: z.object({
     name: z.string().min(1).max(50),
@@ -352,6 +353,13 @@ export function AssetForm<K extends AssetKind>({
                   disabled={!(initial as any)?.id}
                 />
               </>
+            )}
+            {kind === "vendors" && (
+              <ImageUploadField
+                currentUrl={(initial as any)?.iconUrl}
+                onUploaded={(url) => setValue("iconUrl", url)}
+                folder="vendors"
+              />
             )}
             {kind === "models" && (
               <>
