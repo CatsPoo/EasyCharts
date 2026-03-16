@@ -19,13 +19,13 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useCreateAsset, useListAssets } from "../../hooks/assetsHooks";
-import { http } from "../../api/http";
 import z from "zod";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
 import { DevicePortsTable } from "./DevicePortsTable";
+import { ImageUploadField } from "./ImageUploadField";
 
 function CableTypeFields({ register, errors, control, setValue }: { register: any; errors: any; control: any; setValue: any }) {
   const { data: portTypesData } = useListAssets("portTypes");
