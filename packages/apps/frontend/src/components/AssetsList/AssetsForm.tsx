@@ -170,7 +170,7 @@ const schemas = {
   }),
   models: z.object({
     name: z.string().min(1),
-    vendorId: z.string().min(1),
+    vendorId: z.string().optional(),
     iconUrl: z.string().optional(),
   }),
   vendors: z.object({
@@ -241,7 +241,8 @@ export function AssetForm<K extends AssetKind>({
     if (!initial) return {};
     const d: any = { ...initial };
     if (kind === "models") {
-      d.vendorId = d.vendorId ?? d.vendor?.id ?? "";
+      d.vendorId = d.vendor?.id ?? undefined;
+      d.iconUrl = d.iconUrl ?? undefined;
       delete d.vendor;
     }
     if (kind === "devices") {
