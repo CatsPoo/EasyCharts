@@ -326,7 +326,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         payload: { node },
         canConnectPaired,
       });
-    }, [chart.devicesOnChart, chart.overlayElementsOnChart, chart.bondsOnChart]);
+    }, [chart.devicesOnChart, chart.bondsOnChart]);
 
     const onEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
       e.preventDefault();
@@ -390,12 +390,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       );
     }, [setChart]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     useEffect(() => {
       actionsHistory.current = [chart];
       actionsHistoryIndex.current = 0;
       setCanRedo(false);
       setCanRedo(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chart.id]); // intentionally omit `chart` — only reset on chart ID change
 
     const convertLineToEdge = useCallback((lineonChart: LineOnChart): Edge => {
