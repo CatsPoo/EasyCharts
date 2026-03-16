@@ -19,13 +19,13 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useCreateAsset, useListAssets } from "../../hooks/assetsHooks";
-import { http } from "../../api/http";
 import z from "zod";
 import { AssetsSelectionList } from "./AsetsSelectionList.component";
 import { DevicePortsTable } from "./DevicePortsTable";
+import { ImageUploadField } from "./ImageUploadField";
 
 function CableTypeFields({ register, errors, control, setValue }: { register: any; errors: any; control: any; setValue: any }) {
   const { data: portTypesData } = useListAssets("portTypes");
@@ -80,79 +80,6 @@ function CableTypeFields({ register, errors, control, setValue }: { register: an
   );
 }
 
-function ImageUploadField({
-  currentUrl,
-  onUploaded,
-  folder = "custom-elements",
-}: {
-  currentUrl?: string;
-  onUploaded: (url: string) => void;
-  folder?: string;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | undefined>(currentUrl);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPreview(currentUrl);
-  }, [currentUrl]);
-
-  async function handleFile(file: File) {
-    setError(null);
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const { data } = await http.post<{ url: string }>(
-        `/upload?folder=${folder}`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-      setPreview(data.url);
-      onUploaded(data.url);
-    } catch {
-      setError("Upload failed. Please try again.");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  return (
-    <Box>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
-        }}
-      />
-      <Stack direction="row" spacing={2} alignItems="center">
-        {preview && (
-          <Box
-            component="img"
-            src={preview}
-            alt="preview"
-            sx={{ width: 64, height: 64, objectFit: "contain", border: "1px solid", borderColor: "divider", borderRadius: 1 }}
-          />
-        )}
-        <Button
-          variant="outlined"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          startIcon={uploading ? <CircularProgress size={16} /> : undefined}
-        >
-          {uploading ? "Uploading…" : preview ? "Change Image" : "Upload Image"}
-        </Button>
-      </Stack>
-      {error && <Typography color="error" variant="caption" sx={{ mt: 0.5 }}>{error}</Typography>}
-    </Box>
-  );
-}
-
 const schemas = {
   overlayElements: z.object({
     name: z.string().min(1),
@@ -166,10 +93,11 @@ const schemas = {
   }),
   types: z.object({
     name: z.string().min(1),
+    iconUrl: z.string().optional(),
   }),
   models: z.object({
     name: z.string().min(1),
-    vendorId: z.string().min(1),
+    vendorId: z.string().optional(),
     iconUrl: z.string().optional(),
   }),
   vendors: z.object({
@@ -240,7 +168,8 @@ export function AssetForm<K extends AssetKind>({
     if (!initial) return {};
     const d: any = { ...initial };
     if (kind === "models") {
-      d.vendorId = d.vendorId ?? d.vendor?.id ?? "";
+      d.vendorId = d.vendor?.id ?? undefined;
+      d.iconUrl = d.iconUrl ?? undefined;
       delete d.vendor;
     }
     if (kind === "devices") {
@@ -361,6 +290,13 @@ export function AssetForm<K extends AssetKind>({
                 folder="vendors"
               />
             )}
+            {kind === "types" && (
+              <ImageUploadField
+                currentUrl={(initial as any)?.iconUrl}
+                onUploaded={(url) => setValue("iconUrl", url)}
+                folder="device-types"
+              />
+            )}
             {kind === "models" && (
               <>
                 <AssetsSelectionList
@@ -375,6 +311,8 @@ export function AssetForm<K extends AssetKind>({
                   currentUrl={(initial as any)?.iconUrl}
                   onUploaded={(url) => setValue("iconUrl", url)}
                   folder="models"
+                  allowRemove
+                  onRemoved={() => setValue("iconUrl", "")}
                 />
               </>
             )}

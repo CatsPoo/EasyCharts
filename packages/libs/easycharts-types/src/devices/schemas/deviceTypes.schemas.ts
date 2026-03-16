@@ -3,6 +3,7 @@ import z from "zod";
 
 export const DeviceTypeBaseSchema = z.object({
   name: z.string().min(1),
+  iconUrl: z.string().optional(),
 });
 
 export const DeviceTypeCreateSchema = DeviceTypeBaseSchema;

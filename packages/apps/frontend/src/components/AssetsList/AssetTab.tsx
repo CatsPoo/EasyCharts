@@ -200,8 +200,9 @@ export default function AssetTab() {
         </RequirePermissions>
       </Toolbar>
 
-      <Box sx={{ flex: 1 }}>
+      <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         <DataGrid
+          style={{ height: "100%" }}
           loading={isLoading}
           rows={data?.rows ?? []}
           columns={cols as any}
