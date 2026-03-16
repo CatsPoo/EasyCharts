@@ -83,6 +83,7 @@ import type { ChartEditorHandle } from "./interfaces/chartEditorHandle.interface
 import type { DeleteSets } from "./interfaces/deleteSets.interfaces";
 import type { EditLineDialogFormResponse } from "./interfaces/editLineDialogForm.interfaces";
 import type { CtxState } from "./interfaces/ctsMenu.interfaces";
+import { useAiChat } from "../../contexts/AiChatContext";
 
 /** Returns true if the given node ID is an overlay element (cloud or custom element). */
 function isFreeNode(
@@ -125,9 +126,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     } | null>(null);
     const [editDeviceTarget, setEditDeviceTarget] =
       useState<DeviceOnChart | null>(null);
-    const [editOverlayElementTarget, setEditOverlayElementTarget] = useState<OverlayElement | null>(null);
+    const [editOverlayElementTarget, setEditOverlayElementTarget] =
+      useState<OverlayElement | null>(null);
     const [createDeviceOpen, setCreateDeviceOpen] = useState(false);
-    const [createOverlayElementOpen, setCreateOverlayElementOpen] = useState(false);
+    const [createOverlayElementOpen, setCreateOverlayElementOpen] =
+      useState(false);
     const [selectedEditLine, setSelectedEditLine] = useState<Edge | null>(null);
 
     const [portTypeMismatch, setPortTypeMismatch] = useState(false);
@@ -158,22 +161,34 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const [confimDialogTitle, setConfirmDialogTitle] = useState<string>("");
     const [confimDialogDescription, setConfirmDialogDescription] =
       useState<string>("");
-    const [colorPickerNoteId, setColorPickerNoteId] = useState<string | null>(null);
+    const [colorPickerNoteId, setColorPickerNoteId] = useState<string | null>(
+      null
+    );
     const [colorPickerValue, setColorPickerValue] = useState<string>("#4ade80");
-    const [colorPickerLineId, setColorPickerLineId] = useState<string | null>(null);
-    const [colorPickerLineValue, setColorPickerLineValue] = useState<string>("#ffffff");
+    const [colorPickerLineId, setColorPickerLineId] = useState<string | null>(
+      null
+    );
+    const [colorPickerLineValue, setColorPickerLineValue] =
+      useState<string>("#ffffff");
     const [createCableTypeOpen, setCreateCableTypeOpen] = useState(false);
     const [createCableTypeName, setCreateCableTypeName] = useState("");
     const [createCableTypeColor, setCreateCableTypeColor] = useState("#888888");
     const createCableTypeMut = useCreateAsset("cableTypes");
     const queryClient = useQueryClient();
-    const [editBondTarget, setEditBondTarget] = useState<{ bondId: string; bondName: string } | null>(null);
-    const [editOverlayElementTextTarget, setEditOverlayElementTextTarget] = useState<{ id: string; currentText: string } | null>(null);
+    const [editBondTarget, setEditBondTarget] = useState<{
+      bondId: string;
+      bondName: string;
+    } | null>(null);
+    const [editOverlayElementTextTarget, setEditOverlayElementTextTarget] =
+      useState<{ id: string; currentText: string } | null>(null);
 
     const { data: cableTypesData } = useCableTypes();
     const allCableTypes = useMemo(() => cableTypesData ?? [], [cableTypesData]);
-    const [zoneStyleDialogZoneId, setZoneStyleDialogZoneId] = useState<string | null>(null);
+    const [zoneStyleDialogZoneId, setZoneStyleDialogZoneId] = useState<
+      string | null
+    >(null);
 
+    const { setCurrentChartStateOnEditor,setPendingUiAction,pendingUiAction } = useAiChat();
     const actionsHistory = useRef<Chart[]>([chart]);
     const actionsHistoryIndex = useRef<number>(
       actionsHistory.current.length - 1
@@ -202,7 +217,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [addChartToHistory, setChart, setMadeChanges]
     );
 
-
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
 
@@ -213,17 +227,22 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const createOverlayElementMut = useCreateAsset("overlayElements");
     const deleteOverlayElementMut = useDeleteAsset("overlayElements");
     const { project, fitView } = useReactFlow();
-    const {devicePos} = useDevices({chart})
-    const {pickOrientation,getBondCenterPos,createBond} = useBonds({chart,applyChartChange})
-    
-    
+    const { devicePos } = useDevices({ chart });
+    const { pickOrientation, getBondCenterPos, createBond } = useBonds({
+      chart,
+      applyChartChange,
+    });
+
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { isDark } = useThemeMode();
 
-
     const devicesByIdRef = useRef<Map<string, Device>>(new Map());
     const chartRef = useRef<Chart>(chart);
-    const pendingBondRef = useRef<{ bondId: string; bondName: string; lineMap: Map<string, string> } | null>(null);
+    const pendingBondRef = useRef<{
+      bondId: string;
+      bondName: string;
+      lineMap: Map<string, string>;
+    } | null>(null);
 
     const deleteSetsRef = useRef<DeleteSets>({
       devices: new Set(),
@@ -231,15 +250,18 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       lines: new Set(),
     });
     const applyChartChangeRef = useRef(applyChartChange);
-    useEffect(() => { applyChartChangeRef.current = applyChartChange; }, [applyChartChange]);
+    useEffect(() => {
+      applyChartChangeRef.current = applyChartChange;
+    }, [applyChartChange]);
 
     const dirtyRef = useRef(false);
     const setDirty = useCallback(
       (v: boolean) => {
         dirtyRef.current = v;
         setMadeChanges(v);
+        setCurrentChartStateOnEditor(chart)
       },
-      [setMadeChanges]
+      [chart, setCurrentChartStateOnEditor, setMadeChanges]
     );
 
     const [ctx, setCtx] = useState<CtxState>({
@@ -280,53 +302,93 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       });
     }, []);
 
+    const onNodeContextMenu = useCallback(
+      (e: React.MouseEvent, node: Node) => {
+        e.preventDefault();
+        if (node.type === "note") {
+          setCtx({
+            open: true,
+            x: e.clientX,
+            y: e.clientY,
+            kind: "note",
+            payload: { noteId: node.id },
+          });
+          return;
+        }
+        if (node.type === "zone") {
+          setCtx({
+            open: true,
+            x: e.clientX,
+            y: e.clientY,
+            kind: "zone",
+            payload: { zoneId: node.id },
+          });
+          return;
+        }
+        if (node.type === "overlayElement") {
+          const oeOnChart = (
+            chartRef.current.overlayElementsOnChart ?? []
+          ).find((oe) => oe.id === node.id);
+          setCtx({
+            open: true,
+            x: e.clientX,
+            y: e.clientY,
+            kind: "customElement",
+            payload: {
+              instanceId: node.id,
+              currentText: oeOnChart?.freeText ?? "",
+            },
+          });
+          return;
+        }
+        if (node.type === "bridge") {
+          const bondId = node.id.replace("bridge-", "");
+          const bondOnChart = chart.bondsOnChart.find(
+            (b) => b.bond.id === bondId
+          );
+          setCtx({
+            open: true,
+            x: e.clientX,
+            y: e.clientY,
+            kind: "bond",
+            payload: { bondId, bondName: bondOnChart?.bond.name ?? "" },
+          });
+          return;
+        }
+        const doc = chart.devicesOnChart.find((d) => d.device.id === node.id);
+        const canConnectPaired =
+          doc?.device.ports.some((p) => greenPortIdsRef.current.has(p.id)) ??
+          false;
+        setCtx({
+          open: true,
+          x: e.clientX,
+          y: e.clientY,
+          kind: "node",
+          payload: { node },
+          canConnectPaired,
+        });
+      },
+      [chart.devicesOnChart, chart.overlayElementsOnChart, chart.bondsOnChart]
+    );
 
-    const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
-      e.preventDefault();
-      if (node.type === "note") {
-        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "note", payload: { noteId: node.id } });
-        return;
-      }
-      if (node.type === "zone") {
-        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "zone", payload: { zoneId: node.id } });
-        return;
-      }
-      if (node.type === "overlayElement") {
-        const oeOnChart = (chartRef.current.overlayElementsOnChart ?? []).find((oe) => oe.id === node.id);
-        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "customElement", payload: { instanceId: node.id, currentText: oeOnChart?.freeText ?? "" } });
-        return;
-      }
-      if (node.type === "bridge") {
-        const bondId = node.id.replace("bridge-", "");
-        const bondOnChart = chart.bondsOnChart.find((b) => b.bond.id === bondId);
-        setCtx({ open: true, x: e.clientX, y: e.clientY, kind: "bond", payload: { bondId, bondName: bondOnChart?.bond.name ?? "" } });
-        return;
-      }
-      const doc = chart.devicesOnChart.find((d) => d.device.id === node.id);
-      const canConnectPaired = doc?.device.ports.some((p) => greenPortIdsRef.current.has(p.id)) ?? false;
-      setCtx({
-        open: true,
-        x: e.clientX,
-        y: e.clientY,
-        kind: "node",
-        payload: { node },
-        canConnectPaired,
-      });
-    }, [chart.devicesOnChart, chart.overlayElementsOnChart, chart.bondsOnChart]);
-
-    const onEdgeContextMenu = useCallback((e: React.MouseEvent, edge: Edge) => {
-      e.preventDefault();
-      const allPorts = chart.devicesOnChart.flatMap((doc) => doc.device.ports);
-      const srcType = allPorts.find((p) => p.id === edge.sourceHandle)?.type;
-      const tgtType = allPorts.find((p) => p.id === edge.targetHandle)?.type;
-      setCtx({
-        open: true,
-        x: e.clientX,
-        y: e.clientY,
-        kind: "edge",
-        payload: { edge, srcPortType: srcType, tgtPortType: tgtType },
-      });
-    }, [chart.devicesOnChart]);
+    const onEdgeContextMenu = useCallback(
+      (e: React.MouseEvent, edge: Edge) => {
+        e.preventDefault();
+        const allPorts = chart.devicesOnChart.flatMap(
+          (doc) => doc.device.ports
+        );
+        const srcType = allPorts.find((p) => p.id === edge.sourceHandle)?.type;
+        const tgtType = allPorts.find((p) => p.id === edge.targetHandle)?.type;
+        setCtx({
+          open: true,
+          x: e.clientX,
+          y: e.clientY,
+          kind: "edge",
+          payload: { edge, srcPortType: srcType, tgtPortType: tgtType },
+        });
+      },
+      [chart.devicesOnChart]
+    );
 
     // this one will be passed down to DeviceNode and called from each <Handle>
     const onHandleContextMenu = useCallback(
@@ -352,7 +414,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       },
       []
     );
-
 
     const onUndoClick = useCallback(() => {
       if (actionsHistoryIndex.current === 0) return;
@@ -384,23 +445,29 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       setCanRedo(false);
     }, [chart.id]); // intentionally omit `chart` — only reset on chart ID change
 
-    const convertLineToEdge = useCallback((lineonChart: LineOnChart): Edge => {
-      const cableColor = lineonChart.line.cableType
-        ? allCableTypes.find((ct) => ct.name === lineonChart.line.cableType)?.defaultColor
-        : undefined;
-      const edgeColor = lineonChart.color ?? cableColor;
-      return {
-        id: lineonChart.line.id,
-        source: lineonChart.line.sourcePort.deviceId,
-        target: lineonChart.line.targetPort.deviceId,
-        sourceHandle: lineonChart.line.sourcePort.id,
-        targetHandle: lineonChart.line.targetPort.id,
-        label: lineonChart.label,
-        type: lineonChart.type,
-        animated: false,
-        style: edgeColor ? { stroke: edgeColor, strokeWidth: 2,color:lineonChart.color } : undefined,
-      };
-    }, [allCableTypes]);
+    const convertLineToEdge = useCallback(
+      (lineonChart: LineOnChart): Edge => {
+        const cableColor = lineonChart.line.cableType
+          ? allCableTypes.find((ct) => ct.name === lineonChart.line.cableType)
+              ?.defaultColor
+          : undefined;
+        const edgeColor = lineonChart.color ?? cableColor;
+        return {
+          id: lineonChart.line.id,
+          source: lineonChart.line.sourcePort.deviceId,
+          target: lineonChart.line.targetPort.deviceId,
+          sourceHandle: lineonChart.line.sourcePort.id,
+          targetHandle: lineonChart.line.targetPort.id,
+          label: lineonChart.label,
+          type: lineonChart.type,
+          animated: false,
+          style: edgeColor
+            ? { stroke: edgeColor, strokeWidth: 2, color: lineonChart.color }
+            : undefined,
+        };
+      },
+      [allCableTypes]
+    );
 
     const [nodes, setNodes, onNodesChangeRF] = useNodesState<Node[]>([]);
     const [edges, setEdges, onEdgesChangeRF] = useEdgesState<Edge[]>([]);
@@ -440,7 +507,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           );
           if (overlayEdge) {
             const releasedPortIds = new Set(
-              [overlayEdge.sourcePortId, overlayEdge.targetPortId].filter(Boolean) as string[]
+              [overlayEdge.sourcePortId, overlayEdge.targetPortId].filter(
+                Boolean
+              ) as string[]
             );
             const remainingEdges = (prev.overlayEdgesOnChart ?? []).filter(
               (e) => e.id !== edgeToRemove.id
@@ -454,17 +523,20 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               ...prev,
               overlayEdgesOnChart: remainingEdges,
               devicesOnChart: releasedPortIds.size
-                ? prev.devicesOnChart.map((doc) => ({
-                    ...doc,
-                    device: {
-                      ...doc.device,
-                      ports: doc.device.ports.map((p) =>
-                        releasedPortIds.has(p.id) && !stillUsed.has(p.id)
-                          ? { ...p, inUse: false }
-                          : p
-                      ),
-                    },
-                  } as DeviceOnChart))
+                ? prev.devicesOnChart.map(
+                    (doc) =>
+                      ({
+                        ...doc,
+                        device: {
+                          ...doc.device,
+                          ports: doc.device.ports.map((p) =>
+                            releasedPortIds.has(p.id) && !stillUsed.has(p.id)
+                              ? { ...p, inUse: false }
+                              : p
+                          ),
+                        },
+                      } as DeviceOnChart)
+                  )
                 : prev.devicesOnChart,
             } as Chart;
           }
@@ -477,15 +549,18 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             linesOnChart: prev.linesOnChart.filter(
               (l) => l.line.id !== edgeToRemove.id
             ),
-            devicesOnChart: prev.devicesOnChart.map((doc) => ({
-              ...doc,
-              device: {
-                ...doc.device,
-                ports: doc.device.ports.map((p) =>
-                  used.has(p.id) ? { ...p, inUse: false } : p
-                ),
-              },
-            } as DeviceOnChart)),
+            devicesOnChart: prev.devicesOnChart.map(
+              (doc) =>
+                ({
+                  ...doc,
+                  device: {
+                    ...doc.device,
+                    ports: doc.device.ports.map((p) =>
+                      used.has(p.id) ? { ...p, inUse: false } : p
+                    ),
+                  },
+                } as DeviceOnChart)
+            ),
           } as Chart;
         });
       },
@@ -600,10 +675,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onUnbondPorts = useCallback(
       (bondId: string) => {
-        applyChartChange((prev) => ({
-          ...prev,
-          bondsOnChart: (prev.bondsOnChart ?? []).filter((b) => b.bond.id !== bondId),
-        } as Chart));
+        applyChartChange(
+          (prev) =>
+            ({
+              ...prev,
+              bondsOnChart: (prev.bondsOnChart ?? []).filter(
+                (b) => b.bond.id !== bondId
+              ),
+            } as Chart)
+        );
         setNodes((nds) => nds.filter((n) => n.id !== `bridge-${bondId}`));
       },
       [applyChartChange, setNodes]
@@ -611,7 +691,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onRemoveBondFromChart = useCallback(
       (bondId: string) => {
-        const bondOnChart = chart.bondsOnChart.find((b) => b.bond.id === bondId);
+        const bondOnChart = chart.bondsOnChart.find(
+          (b) => b.bond.id === bondId
+        );
         if (!bondOnChart) return;
         const memberLineIds = new Set(bondOnChart.bond.membersLines);
         const usedPortIds = new Set<string>();
@@ -621,26 +703,35 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             usedPortIds.add(loc.line.targetPort.id);
           }
         }
-        applyChartChange((prev) => ({
-          ...prev,
-          bondsOnChart: (prev.bondsOnChart ?? []).filter((b) => b.bond.id !== bondId),
-          linesOnChart: prev.linesOnChart.filter((l) => !memberLineIds.has(l.line.id)),
-          devicesOnChart: prev.devicesOnChart.map((doc) => ({
-            ...doc,
-            device: {
-              ...doc.device,
-              ports: doc.device.ports.map((p) =>
-                usedPortIds.has(p.id) ? { ...p, inUse: false } : p
+        applyChartChange(
+          (prev) =>
+            ({
+              ...prev,
+              bondsOnChart: (prev.bondsOnChart ?? []).filter(
+                (b) => b.bond.id !== bondId
               ),
-            },
-          })),
-        } as Chart));
+              linesOnChart: prev.linesOnChart.filter(
+                (l) => !memberLineIds.has(l.line.id)
+              ),
+              devicesOnChart: prev.devicesOnChart.map((doc) => ({
+                ...doc,
+                device: {
+                  ...doc.device,
+                  ports: doc.device.ports.map((p) =>
+                    usedPortIds.has(p.id) ? { ...p, inUse: false } : p
+                  ),
+                },
+              })),
+            } as Chart)
+        );
         setNodes((nds) => nds.filter((n) => n.id !== `bridge-${bondId}`));
-        setEdges((eds) => eds.filter((e) =>
-          !e.id.endsWith("-a") && !e.id.endsWith("-b")
-            ? true
-            : !memberLineIds.has(e.id.replace(/-[ab]$/, ""))
-        ));
+        setEdges((eds) =>
+          eds.filter((e) =>
+            !e.id.endsWith("-a") && !e.id.endsWith("-b")
+              ? true
+              : !memberLineIds.has(e.id.replace(/-[ab]$/, ""))
+          )
+        );
       },
       [chart, applyChartChange, setNodes, setEdges]
     );
@@ -662,26 +753,34 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         // editor), the updatePort call below will fail — that is expected and
         // the correct name/type will be persisted the next time the chart is
         // saved (via upsertPortsForDevice in syncPlacementsAndHandles).
-        applyChartChange((prev) => ({
-          ...prev,
-          devicesOnChart: prev.devicesOnChart.map((doc) => {
-            if (doc.device.id !== deviceId) return doc;
-            const updatedPort = (p: Port) =>
-              p.id === port.id ? { ...p, name, type } : p;
-            const updatedHandle = (h: { port: Port }) =>
-              h.port.id === port.id ? { ...h, port: { ...h.port, name, type } } : h;
-            return {
-              ...doc,
-              device: { ...doc.device, ports: doc.device.ports.map(updatedPort) },
-              handles: {
-                left: (doc.handles.left ?? []).map(updatedHandle),
-                right: (doc.handles.right ?? []).map(updatedHandle),
-                top: (doc.handles.top ?? []).map(updatedHandle),
-                bottom: (doc.handles.bottom ?? []).map(updatedHandle),
-              },
-            };
-          }),
-        } as Chart));
+        applyChartChange(
+          (prev) =>
+            ({
+              ...prev,
+              devicesOnChart: prev.devicesOnChart.map((doc) => {
+                if (doc.device.id !== deviceId) return doc;
+                const updatedPort = (p: Port) =>
+                  p.id === port.id ? { ...p, name, type } : p;
+                const updatedHandle = (h: { port: Port }) =>
+                  h.port.id === port.id
+                    ? { ...h, port: { ...h.port, name, type } }
+                    : h;
+                return {
+                  ...doc,
+                  device: {
+                    ...doc.device,
+                    ports: doc.device.ports.map(updatedPort),
+                  },
+                  handles: {
+                    left: (doc.handles.left ?? []).map(updatedHandle),
+                    right: (doc.handles.right ?? []).map(updatedHandle),
+                    top: (doc.handles.top ?? []).map(updatedHandle),
+                    bottom: (doc.handles.bottom ?? []).map(updatedHandle),
+                  },
+                };
+              }),
+            } as Chart)
+        );
         setDirty(true);
         setEditPortTarget(null);
         // Try to persist immediately for ports that already exist in the DB.
@@ -705,19 +804,37 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           onDeleteLine(pandingDelete.value as Edge);
         }
         if (pandingDelete.kind === "ports") {
-          const { portId, deviceId } = pandingDelete.value as unknown as { portId: string; deviceId: string };
+          const { portId, deviceId } = pandingDelete.value as unknown as {
+            portId: string;
+            deviceId: string;
+          };
           onDeletePort(portId, deviceId);
         }
         if (pandingDelete.kind === "overlayElements") {
-          const { instanceId, overlayElementId } = pandingDelete.value as unknown as { instanceId: string; overlayElementId: string };
-          setEdges((eds) => eds.filter((e) => e.source !== instanceId && e.target !== instanceId));
-          applyChartChange((prev) => ({
-            ...prev,
-            overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).filter((oe) => oe.id !== instanceId),
-            overlayEdgesOnChart: (prev.overlayEdgesOnChart ?? []).filter(
-              (e) => e.sourceNodeId !== instanceId && e.targetNodeId !== instanceId
-            ),
-          } as Chart));
+          const { instanceId, overlayElementId } =
+            pandingDelete.value as unknown as {
+              instanceId: string;
+              overlayElementId: string;
+            };
+          setEdges((eds) =>
+            eds.filter(
+              (e) => e.source !== instanceId && e.target !== instanceId
+            )
+          );
+          applyChartChange(
+            (prev) =>
+              ({
+                ...prev,
+                overlayElementsOnChart: (
+                  prev.overlayElementsOnChart ?? []
+                ).filter((oe) => oe.id !== instanceId),
+                overlayEdgesOnChart: (prev.overlayEdgesOnChart ?? []).filter(
+                  (e) =>
+                    e.sourceNodeId !== instanceId &&
+                    e.targetNodeId !== instanceId
+                ),
+              } as Chart)
+          );
           deleteOverlayElementMut.mutate(overlayElementId);
         }
       } catch (e) {
@@ -725,7 +842,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       }
       setPandingDelete({ value: null });
       setConfirmDeleteOpen(false);
-    }, [onDeleteDevice, onDeleteLine, onDeletePort, pandingDelete.kind, pandingDelete.value, setEdges, applyChartChange, deleteOverlayElementMut]);
+    }, [
+      onDeleteDevice,
+      onDeleteLine,
+      onDeletePort,
+      pandingDelete.kind,
+      pandingDelete.value,
+      setEdges,
+      applyChartChange,
+      deleteOverlayElementMut,
+    ]);
 
     const onconfigDialofClose = useCallback(() => {
       setPandingDelete({ value: null });
@@ -805,18 +931,30 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       async (formData: any) => {
         if (!editOverlayElementTarget) return;
         try {
-          const updated: OverlayElement = await updateOverlayElementMut.mutateAsync({
-            ...formData,
-            id: editOverlayElementTarget.id,
-          } as OverlayElement);
-          applyChartChange((prev) => ({
-            ...prev,
-            overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map((oe) =>
-              oe.overlayElementId === editOverlayElementTarget.id
-                ? { ...oe, overlayElement: { ...oe.overlayElement, name: updated.name, imageUrl: updated.imageUrl } }
-                : oe
-            ),
-          } as Chart));
+          const updated: OverlayElement =
+            await updateOverlayElementMut.mutateAsync({
+              ...formData,
+              id: editOverlayElementTarget.id,
+            } as OverlayElement);
+          applyChartChange(
+            (prev) =>
+              ({
+                ...prev,
+                overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map(
+                  (oe) =>
+                    oe.overlayElementId === editOverlayElementTarget.id
+                      ? {
+                          ...oe,
+                          overlayElement: {
+                            ...oe.overlayElement,
+                            name: updated.name,
+                            imageUrl: updated.imageUrl,
+                          },
+                        }
+                      : oe
+                ),
+              } as Chart)
+          );
         } catch (e) {
           console.error("Failed to update overlay element:", e);
         }
@@ -840,7 +978,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     const onCreateOverlayElementSubmit = useCallback(
       async (formData: any) => {
         try {
-          await createOverlayElementMut.mutateAsync({ ...formData, isSystem: false });
+          await createOverlayElementMut.mutateAsync({
+            ...formData,
+            isSystem: false,
+          });
         } catch (e) {
           console.error("Failed to create overlay element:", e);
         }
@@ -882,7 +1023,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     // These are still connectable to devices here — shown orange instead of red.
     const overlayPortIds = useMemo(() => {
       const linePortIds = new Set<string>(
-        chart.linesOnChart.flatMap((l) => [l.line.sourcePort.id, l.line.targetPort.id])
+        chart.linesOnChart.flatMap((l) => [
+          l.line.sourcePort.id,
+          l.line.targetPort.id,
+        ])
       );
       const result = new Set<string>();
       for (const doc of chart.devicesOnChart) {
@@ -902,24 +1046,42 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const connectPairedPorts = useCallback(
       (specificPortIds?: string[]) => {
-        const idsToProcess = specificPortIds ? new Set(specificPortIds) : greenPortIds;
+        const idsToProcess = specificPortIds
+          ? new Set(specificPortIds)
+          : greenPortIds;
         const newLines: LineOnChart[] = [];
         const processed = new Set<string>();
 
         for (const doc of chart.devicesOnChart) {
           for (const port of doc.device.ports) {
-            if (!idsToProcess.has(port.id) || processed.has(port.id) || !port.connectedPortId) continue;
+            if (
+              !idsToProcess.has(port.id) ||
+              processed.has(port.id) ||
+              !port.connectedPortId
+            )
+              continue;
             let targetPort: Port | undefined;
             for (const doc2 of chart.devicesOnChart) {
-              targetPort = doc2.device.ports.find((p) => p.id === port.connectedPortId);
+              targetPort = doc2.device.ports.find(
+                (p) => p.id === port.connectedPortId
+              );
               if (targetPort) break;
             }
             if (!targetPort) continue;
-            const existingLineId = pendingBondRef.current?.lineMap.get(`${port.id}:${targetPort.id}`)
-              ?? pendingBondRef.current?.lineMap.get(`${targetPort.id}:${port.id}`);
+            const existingLineId =
+              pendingBondRef.current?.lineMap.get(
+                `${port.id}:${targetPort.id}`
+              ) ??
+              pendingBondRef.current?.lineMap.get(
+                `${targetPort.id}:${port.id}`
+              );
             const newLine: LineOnChart = {
               chartId: chart.id,
-              line: { id: existingLineId ?? uuidv4(), sourcePort: port, targetPort } as Line,
+              line: {
+                id: existingLineId ?? uuidv4(),
+                sourcePort: port,
+                targetPort,
+              } as Line,
               type: "step",
               label: "",
             };
@@ -939,120 +1101,172 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         pendingBondRef.current = null;
 
         applyChartChange((prev) => {
-          const next: Chart = { ...prev, linesOnChart: [...prev.linesOnChart, ...newLines] };
+          const next: Chart = {
+            ...prev,
+            linesOnChart: [...prev.linesOnChart, ...newLines],
+          };
           if (!pendingBond) return next;
 
           const newLineIds = newLines.map((l) => l.line.id);
           // Check if this bond is already on the chart
-          const existingBoc = next.bondsOnChart.find((b) => b.bond.id === pendingBond.bondId);
+          const existingBoc = next.bondsOnChart.find(
+            (b) => b.bond.id === pendingBond.bondId
+          );
           if (existingBoc) {
             return {
               ...next,
               bondsOnChart: next.bondsOnChart.map((b) =>
                 b.bond.id === pendingBond.bondId
-                  ? { ...b, bond: { ...b.bond, membersLines: [...b.bond.membersLines, ...newLineIds] } }
+                  ? {
+                      ...b,
+                      bond: {
+                        ...b.bond,
+                        membersLines: [...b.bond.membersLines, ...newLineIds],
+                      },
+                    }
                   : b
               ),
             } as Chart;
           }
 
           // Compute bridge position: average midpoint of all connected device pairs
-          const docByDeviceId = new Map(prev.devicesOnChart.map((d) => [d.device.id, d]));
-          let cx = 0, cy = 0, cnt = 0;
+          const docByDeviceId = new Map(
+            prev.devicesOnChart.map((d) => [d.device.id, d])
+          );
+          let cx = 0,
+            cy = 0,
+            cnt = 0;
           for (const loc of newLines) {
-            const src = docByDeviceId.get(loc.line.sourcePort.deviceId)?.position;
-            const tgt = docByDeviceId.get(loc.line.targetPort.deviceId)?.position;
+            const src = docByDeviceId.get(
+              loc.line.sourcePort.deviceId
+            )?.position;
+            const tgt = docByDeviceId.get(
+              loc.line.targetPort.deviceId
+            )?.position;
             if (!src || !tgt) continue;
             cx += (src.x + tgt.x) / 2;
             cy += (src.y + tgt.y) / 2;
             cnt++;
           }
-          if (cnt > 0) { cx /= cnt; cy /= cnt; }
+          if (cnt > 0) {
+            cx /= cnt;
+            cy /= cnt;
+          }
 
           const bondOnChart: BondOnChart = {
             chartId: prev.id,
-            bond: { id: pendingBond.bondId, name: pendingBond.bondName, membersLines: newLineIds } as Bond,
+            bond: {
+              id: pendingBond.bondId,
+              name: pendingBond.bondName,
+              membersLines: newLineIds,
+            } as Bond,
             position: { x: cx - 42, y: cy - 24 },
           };
-          return { ...next, bondsOnChart: [...(next.bondsOnChart ?? []), bondOnChart] } as Chart;
+          return {
+            ...next,
+            bondsOnChart: [...(next.bondsOnChart ?? []), bondOnChart],
+          } as Chart;
         });
       },
-      [chart, greenPortIds, convertLineToEdge, setEdges, setMadeChanges, applyChartChange]
+      [
+        chart,
+        greenPortIds,
+        convertLineToEdge,
+        setEdges,
+        setMadeChanges,
+        applyChartChange,
+      ]
     );
 
-    const onPortAdded = useCallback(async (portId: string, deviceId: string, side: Side) => {
-      const [bondResult, connectedPort] = await Promise.all([
-        fetchBondPortSiblings(portId, deviceId),
-        fetchConnectedPortInfo(portId),
-      ]);
+    const onPortAdded = useCallback(
+      async (portId: string, deviceId: string, side: Side) => {
+        const [bondResult, connectedPort] = await Promise.all([
+          fetchBondPortSiblings(portId, deviceId),
+          fetchConnectedPortInfo(portId),
+        ]);
 
-      if (bondResult && bondResult.sameSide.length > 0) {
-        setBondSiblingToast({ result: bondResult, deviceId, side });
-        return;
-      }
-
-      if (connectedPort) {
-        const currentChart = chartRef.current;
-        const alreadyOnChart = currentChart.devicesOnChart.some((doc) =>
-          (["left", "right", "top", "bottom"] as Side[]).some((s) =>
-            doc.handles[s]?.some((h) => h.port.id === connectedPort.id)
-          )
-        );
-        if (!alreadyOnChart) {
-          const deviceName =
-            devicesByIdRef.current.get(connectedPort.deviceId)?.name ??
-            "Unknown Device";
-          setConnectedPortToast({
-            connectedPort,
-            triggeredPortId: portId,
-            triggeredDeviceId: deviceId,
-            deviceName,
-            side,
-          });
+        if (bondResult && bondResult.sameSide.length > 0) {
+          setBondSiblingToast({ result: bondResult, deviceId, side });
+          return;
         }
-      }
-    }, []);
+
+        if (connectedPort) {
+          const currentChart = chartRef.current;
+          const alreadyOnChart = currentChart.devicesOnChart.some((doc) =>
+            (["left", "right", "top", "bottom"] as Side[]).some((s) =>
+              doc.handles[s]?.some((h) => h.port.id === connectedPort.id)
+            )
+          );
+          if (!alreadyOnChart) {
+            const deviceName =
+              devicesByIdRef.current.get(connectedPort.deviceId)?.name ??
+              "Unknown Device";
+            setConnectedPortToast({
+              connectedPort,
+              triggeredPortId: portId,
+              triggeredDeviceId: deviceId,
+              deviceName,
+              side,
+            });
+          }
+        }
+      },
+      []
+    );
 
     const onBondSiblingAdd = useCallback(() => {
       if (!bondSiblingToast) return;
       const { result, deviceId, side } = bondSiblingToast;
 
-      applyChartChange((prev) => ({
-        ...prev,
-        devicesOnChart: prev.devicesOnChart.map((doc) => {
-          if (doc.device.id !== deviceId) return doc;
-          const existingHandleIds = new Set([
-            ...(doc.handles.left ?? []).map((h) => h.port.id),
-            ...(doc.handles.right ?? []).map((h) => h.port.id),
-            ...(doc.handles.top ?? []).map((h) => h.port.id),
-            ...(doc.handles.bottom ?? []).map((h) => h.port.id),
-          ]);
-          const newHandles = result.sameSide
-            .filter((p) => !existingHandleIds.has(p.id))
-            .map((p) => ({ port: p }));
-          return {
-            ...doc,
-            device: {
-              ...doc.device,
-              ports: doc.device.ports.map((p) => {
-                const updated = result.sameSide.find((s) => s.id === p.id);
-                return updated ? { ...p, connectedPortId: updated.connectedPortId } : p;
-              }),
-            },
-            handles: {
-              ...doc.handles,
-              [side]: [...(doc.handles[side] ?? []), ...newHandles],
-            },
-          };
-        }),
-      } as Chart));
+      applyChartChange(
+        (prev) =>
+          ({
+            ...prev,
+            devicesOnChart: prev.devicesOnChart.map((doc) => {
+              if (doc.device.id !== deviceId) return doc;
+              const existingHandleIds = new Set([
+                ...(doc.handles.left ?? []).map((h) => h.port.id),
+                ...(doc.handles.right ?? []).map((h) => h.port.id),
+                ...(doc.handles.top ?? []).map((h) => h.port.id),
+                ...(doc.handles.bottom ?? []).map((h) => h.port.id),
+              ]);
+              const newHandles = result.sameSide
+                .filter((p) => !existingHandleIds.has(p.id))
+                .map((p) => ({ port: p }));
+              return {
+                ...doc,
+                device: {
+                  ...doc.device,
+                  ports: doc.device.ports.map((p) => {
+                    const updated = result.sameSide.find((s) => s.id === p.id);
+                    return updated
+                      ? { ...p, connectedPortId: updated.connectedPortId }
+                      : p;
+                  }),
+                },
+                handles: {
+                  ...doc.handles,
+                  [side]: [...(doc.handles[side] ?? []), ...newHandles],
+                },
+              };
+            }),
+          } as Chart)
+      );
 
       const lineMap = new Map<string, string>();
-      for (const { lineId, sourcePortId, targetPortId } of result.memberLinePairs) {
+      for (const {
+        lineId,
+        sourcePortId,
+        targetPortId,
+      } of result.memberLinePairs) {
         lineMap.set(`${sourcePortId}:${targetPortId}`, lineId);
         lineMap.set(`${targetPortId}:${sourcePortId}`, lineId);
       }
-      pendingBondRef.current = { bondId: result.bondId, bondName: result.bondName, lineMap };
+      pendingBondRef.current = {
+        bondId: result.bondId,
+        bondName: result.bondName,
+        lineMap,
+      };
       setBondSiblingToast(null);
       if (result.otherSide.length > 0) {
         setBondOtherSideToast({ result, side });
@@ -1065,8 +1279,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
       applyChartChange((prev) => {
         let next = { ...prev, devicesOnChart: [...prev.devicesOnChart] };
-        for (const { deviceId: otherDeviceId, ports: otherPorts } of result.otherSide) {
-          const existing = next.devicesOnChart.find((d) => d.device.id === otherDeviceId);
+        for (const {
+          deviceId: otherDeviceId,
+          ports: otherPorts,
+        } of result.otherSide) {
+          const existing = next.devicesOnChart.find(
+            (d) => d.device.id === otherDeviceId
+          );
           if (existing) {
             const existingHandleIds = new Set([
               ...(existing.handles.left ?? []).map((h) => h.port.id),
@@ -1086,8 +1305,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                       device: {
                         ...doc.device,
                         ports: doc.device.ports.map((p) => {
-                          const updated = otherPorts.find((op) => op.id === p.id);
-                          return updated ? { ...p, connectedPortId: updated.connectedPortId } : p;
+                          const updated = otherPorts.find(
+                            (op) => op.id === p.id
+                          );
+                          return updated
+                            ? { ...p, connectedPortId: updated.connectedPortId }
+                            : p;
                         }),
                       },
                       handles: {
@@ -1105,7 +1328,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               ...device,
               ports: device.ports.map((p) => {
                 const bondPort = otherPorts.find((op) => op.id === p.id);
-                return bondPort ? { ...p, connectedPortId: bondPort.connectedPortId } : p;
+                return bondPort
+                  ? { ...p, connectedPortId: bondPort.connectedPortId }
+                  : p;
               }),
             };
             next = {
@@ -1115,7 +1340,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 {
                   chartId: prev.id,
                   device: enrichedDevice,
-                  position: { x: 150 + Math.random() * 300, y: 150 + Math.random() * 300 },
+                  position: {
+                    x: 150 + Math.random() * 300,
+                    y: 150 + Math.random() * 300,
+                  },
                   handles: {
                     left: [],
                     right: [],
@@ -1137,8 +1365,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onConnectedPortAdd = useCallback(() => {
       if (!connectedPortToast) return;
-      const { connectedPort, triggeredPortId, triggeredDeviceId, side } = connectedPortToast;
-      const enrichedConnectedPort: Port = { ...connectedPort, connectedPortId: triggeredPortId };
+      const { connectedPort, triggeredPortId, triggeredDeviceId, side } =
+        connectedPortToast;
+      const enrichedConnectedPort: Port = {
+        ...connectedPort,
+        connectedPortId: triggeredPortId,
+      };
 
       applyChartChange((prev) => {
         // 1) Set connectedPortId on the port that was just added
@@ -1151,7 +1383,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               device: {
                 ...doc.device,
                 ports: doc.device.ports.map((p) =>
-                  p.id === triggeredPortId ? { ...p, connectedPortId: connectedPort.id } : p
+                  p.id === triggeredPortId
+                    ? { ...p, connectedPortId: connectedPort.id }
+                    : p
                 ),
               },
             };
@@ -1159,7 +1393,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         } as Chart;
 
         // 2) Add the connected port — either to an existing device or a new one
-        const existingDoc = next.devicesOnChart.find((d) => d.device.id === connectedPort.deviceId);
+        const existingDoc = next.devicesOnChart.find(
+          (d) => d.device.id === connectedPort.deviceId
+        );
         if (existingDoc) {
           const existingHandleIds = new Set([
             ...(existingDoc.handles.left ?? []).map((h) => h.port.id),
@@ -1177,12 +1413,17 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 device: {
                   ...doc.device,
                   ports: doc.device.ports.map((p) =>
-                    p.id === connectedPort.id ? { ...p, connectedPortId: triggeredPortId } : p
+                    p.id === connectedPort.id
+                      ? { ...p, connectedPortId: triggeredPortId }
+                      : p
                   ),
                 },
                 handles: {
                   ...doc.handles,
-                  [side]: [...(doc.handles[side] ?? []), { port: enrichedConnectedPort }],
+                  [side]: [
+                    ...(doc.handles[side] ?? []),
+                    { port: enrichedConnectedPort },
+                  ],
                 },
               };
             }),
@@ -1193,7 +1434,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           const enrichedDevice: Device = {
             ...device,
             ports: device.ports.map((p) =>
-              p.id === connectedPort.id ? { ...p, connectedPortId: triggeredPortId } : p
+              p.id === connectedPort.id
+                ? { ...p, connectedPortId: triggeredPortId }
+                : p
             ),
           };
           next = {
@@ -1203,7 +1446,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               {
                 chartId: prev.id,
                 device: enrichedDevice,
-                position: { x: 150 + Math.random() * 300, y: 150 + Math.random() * 300 },
+                position: {
+                  x: 150 + Math.random() * 300,
+                  y: 150 + Math.random() * 300,
+                },
                 handles: {
                   left: [],
                   right: [],
@@ -1241,41 +1487,58 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         };
         return node;
       },
-      [editMode, onHandleContextMenu, onRemoveNode, updateDeviceOnChart, greenPortIds, overlayPortIds, onPortAdded]
+      [
+        editMode,
+        onHandleContextMenu,
+        onRemoveNode,
+        updateDeviceOnChart,
+        greenPortIds,
+        overlayPortIds,
+        onPortAdded,
+      ]
     );
 
     const updateNoteContent = useCallback(
       (id: string, content: string) => {
-        applyChartChange((prev) => ({
-          ...prev,
-          notesOnChart: (prev.notesOnChart ?? []).map((n) =>
-            n.id === id ? { ...n, content } : n
-          ),
-        } as Chart));
+        applyChartChange(
+          (prev) =>
+            ({
+              ...prev,
+              notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+                n.id === id ? { ...n, content } : n
+              ),
+            } as Chart)
+        );
       },
       [applyChartChange]
     );
 
     const updateNoteSize = useCallback(
       (id: string, width: number, height: number) => {
-        applyChartChange((prev) => ({
-          ...prev,
-          notesOnChart: (prev.notesOnChart ?? []).map((n) =>
-            n.id === id ? { ...n, size: { width, height } } : n
-          ),
-        } as Chart));
+        applyChartChange(
+          (prev) =>
+            ({
+              ...prev,
+              notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+                n.id === id ? { ...n, size: { width, height } } : n
+              ),
+            } as Chart)
+        );
       },
       [applyChartChange]
     );
 
     const onNoteColorChange = useCallback(
       (noteId: string, colorKey: string) => {
-        applyChartChange((prev) => ({
-          ...prev,
-          notesOnChart: (prev.notesOnChart ?? []).map((n) =>
-            n.id === noteId ? { ...n, color: colorKey } : n
-          ),
-        } as Chart));
+        applyChartChange(
+          (prev) =>
+            ({
+              ...prev,
+              notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+                n.id === noteId ? { ...n, color: colorKey } : n
+              ),
+            } as Chart)
+        );
         closeCtx();
       },
       [applyChartChange, closeCtx]
@@ -1364,40 +1627,58 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onRemoveOverlayElement = useCallback(
       (instanceId: string) => {
-        setEdges((eds) => eds.filter((e) => e.source !== instanceId && e.target !== instanceId));
+        setEdges((eds) =>
+          eds.filter((e) => e.source !== instanceId && e.target !== instanceId)
+        );
         applyChartChange((prev) => {
           // Collect port IDs that are being freed by removing this instance's edges.
           const removedEdges = (prev.overlayEdgesOnChart ?? []).filter(
-            (e) => e.sourceNodeId === instanceId || e.targetNodeId === instanceId
+            (e) =>
+              e.sourceNodeId === instanceId || e.targetNodeId === instanceId
           );
           const removedPortIds = new Set<string>(
-            removedEdges.flatMap((e) => [e.sourcePortId, e.targetPortId].filter(Boolean) as string[])
+            removedEdges.flatMap(
+              (e) =>
+                [e.sourcePortId, e.targetPortId].filter(Boolean) as string[]
+            )
           );
           // A port can be reset only if it won't appear in any remaining connection.
           const remainingOverlayEdges = (prev.overlayEdgesOnChart ?? []).filter(
-            (e) => e.sourceNodeId !== instanceId && e.targetNodeId !== instanceId
+            (e) =>
+              e.sourceNodeId !== instanceId && e.targetNodeId !== instanceId
           );
           const stillUsedPortIds = new Set<string>([
-            ...prev.linesOnChart.flatMap((l) => [l.line.sourcePort.id, l.line.targetPort.id]),
-            ...remainingOverlayEdges.flatMap((e) =>
-              [e.sourcePortId, e.targetPortId].filter(Boolean) as string[]
+            ...prev.linesOnChart.flatMap((l) => [
+              l.line.sourcePort.id,
+              l.line.targetPort.id,
+            ]),
+            ...remainingOverlayEdges.flatMap(
+              (e) =>
+                [e.sourcePortId, e.targetPortId].filter(Boolean) as string[]
             ),
           ]);
-          const portsToFree = new Set([...removedPortIds].filter((id) => !stillUsedPortIds.has(id)));
+          const portsToFree = new Set(
+            [...removedPortIds].filter((id) => !stillUsedPortIds.has(id))
+          );
           return {
             ...prev,
-            overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).filter((oe) => oe.id !== instanceId),
+            overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).filter(
+              (oe) => oe.id !== instanceId
+            ),
             overlayEdgesOnChart: remainingOverlayEdges,
             devicesOnChart: portsToFree.size
-              ? prev.devicesOnChart.map((doc) => ({
-                  ...doc,
-                  device: {
-                    ...doc.device,
-                    ports: doc.device.ports.map((p) =>
-                      portsToFree.has(p.id) ? { ...p, inUse: false } : p
-                    ),
-                  },
-                } as DeviceOnChart))
+              ? prev.devicesOnChart.map(
+                  (doc) =>
+                    ({
+                      ...doc,
+                      device: {
+                        ...doc.device,
+                        ports: doc.device.ports.map((p) =>
+                          portsToFree.has(p.id) ? { ...p, inUse: false } : p
+                        ),
+                      },
+                    } as DeviceOnChart)
+                )
               : prev.devicesOnChart,
           } as Chart;
         });
@@ -1407,12 +1688,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const updateOverlayElementSize = useCallback(
       (instanceId: string, width: number, height: number) => {
-        applyChartChange((prev) => ({
-          ...prev,
-          overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map((oe) =>
-            oe.id === instanceId ? { ...oe, size: { width, height } } : oe
-          ),
-        } as Chart));
+        applyChartChange(
+          (prev) =>
+            ({
+              ...prev,
+              overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map(
+                (oe) =>
+                  oe.id === instanceId ? { ...oe, size: { width, height } } : oe
+              ),
+            } as Chart)
+        );
       },
       [applyChartChange]
     );
@@ -1482,145 +1767,153 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
     devicesByIdRef.current = devicesById;
     chartRef.current = chart;
 
-    const buildBridgeView = useCallback((bondsOnChart : BondOnChart[],linesOnChart:LineOnChart[]) => {
-      const bridgeNodes: Node<BondBridgeNodeData>[] = [];
-      const splitEdges: Edge[] = [];
-      const bridgedLineIds = new Set<string>();
+    const buildBridgeView = useCallback(
+      (bondsOnChart: BondOnChart[], linesOnChart: LineOnChart[]) => {
+        const bridgeNodes: Node<BondBridgeNodeData>[] = [];
+        const splitEdges: Edge[] = [];
+        const bridgedLineIds = new Set<string>();
 
-      // stable order for handles
-      const byAngle = (
-        cx: number,
-        cy: number,
-        devA: { x: number; y: number },
-        devB: { x: number; y: number }
-      ) => {
-        const mx = (devA.x + devB.x) / 2,
-          my = (devA.y + devB.y) / 2;
-        return Math.atan2(my - cy, mx - cx);
-      };
+        // stable order for handles
+        const byAngle = (
+          cx: number,
+          cy: number,
+          devA: { x: number; y: number },
+          devB: { x: number; y: number }
+        ) => {
+          const mx = (devA.x + devB.x) / 2,
+            my = (devA.y + devB.y) / 2;
+          return Math.atan2(my - cy, mx - cx);
+        };
 
-      for (const b of bondsOnChart) {
-        console.log(b)
-        const members: LineOnChart[] = linesOnChart.filter((loc) =>
-          b.bond.membersLines.includes(loc.line.id)
-        );
-        if (members.length < 2) continue;
+        for (const b of bondsOnChart) {
+          console.log(b);
+          const members: LineOnChart[] = linesOnChart.filter((loc) =>
+            b.bond.membersLines.includes(loc.line.id)
+          );
+          if (members.length < 2) continue;
 
-        const orientation: Orientation = pickOrientation(b.bond);
-        // auto position: average of member midpoints
-        const {x:cx,y:cy} = getBondCenterPos(members)
-        const nodeId = `bridge-${b.bond.id}`;
+          const orientation: Orientation = pickOrientation(b.bond);
+          // auto position: average of member midpoints
+          const { x: cx, y: cy } = getBondCenterPos(members);
+          const nodeId = `bridge-${b.bond.id}`;
 
-        // order handles by angle around bridge center for nicer bundling
-        const membersSorted = [...members].sort((L1, L2) => {
-          const a1 = devicePos.get(L1.line.sourcePort.deviceId)!;
-          const b1 = devicePos.get(L1.line.targetPort.deviceId)!;
-          const a2 = devicePos.get(L2.line.sourcePort.deviceId)!;
-          const b2 = devicePos.get(L2.line.targetPort.deviceId)!;
-          return byAngle(cx, cy, a1, b1) - byAngle(cx, cy, a2, b2);
-        });
+          // order handles by angle around bridge center for nicer bundling
+          const membersSorted = [...members].sort((L1, L2) => {
+            const a1 = devicePos.get(L1.line.sourcePort.deviceId)!;
+            const b1 = devicePos.get(L1.line.targetPort.deviceId)!;
+            const a2 = devicePos.get(L2.line.sourcePort.deviceId)!;
+            const b2 = devicePos.get(L2.line.targetPort.deviceId)!;
+            return byAngle(cx, cy, a1, b1) - byAngle(cx, cy, a2, b2);
+          });
 
-        // create node
-        bridgeNodes.push({
-          id: nodeId,
-          type: "bridge",
-          position: b.position,
-          draggable: true,
-          selectable: true,
-          zIndex: 10,
-          data: {
-            bond: b.bond,
-            orientation,
-            onRename: (txt: string) => {
-              const bondId = b.bond.id;
-              applyChartChangeRef.current((prev) => ({
-                ...prev,
-                bondsOnChart: (prev.bondsOnChart ?? []).map((boc) =>
-                  boc.bond.id === bondId ? { ...boc, bond: { ...boc.bond, name: txt } } : boc
-                ),
-              } as Chart));
+          // create node
+          bridgeNodes.push({
+            id: nodeId,
+            type: "bridge",
+            position: b.position,
+            draggable: true,
+            selectable: true,
+            zIndex: 10,
+            data: {
+              bond: b.bond,
+              orientation,
+              onRename: (txt: string) => {
+                const bondId = b.bond.id;
+                applyChartChangeRef.current(
+                  (prev) =>
+                    ({
+                      ...prev,
+                      bondsOnChart: (prev.bondsOnChart ?? []).map((boc) =>
+                        boc.bond.id === bondId
+                          ? { ...boc, bond: { ...boc.bond, name: txt } }
+                          : boc
+                      ),
+                    } as Chart)
+                );
+              },
             },
-          },
-        } as Node);
+          } as Node);
 
-        // per-member split edges
-        membersSorted.forEach((loc, idx) => {
-          bridgedLineIds.add(loc.line.id);
+          // per-member split edges
+          membersSorted.forEach((loc, idx) => {
+            bridgedLineIds.add(loc.line.id);
 
-          const A = devicePos.get(loc.line.sourcePort.deviceId)!;
-          const B = devicePos.get(loc.line.targetPort.deviceId)!;
+            const A = devicePos.get(loc.line.sourcePort.deviceId)!;
+            const B = devicePos.get(loc.line.targetPort.deviceId)!;
 
-          // Decide which end goes to the “first side” based on orientation:
-          //  - "lr": smaller x → Left; larger x → Right
-          //  - "tb": smaller y → Top;  larger y → Bottom
-          const sourceFirst =
-            orientation === Orientation.LeftToright ? A.x <= B.x : A.y <= B.y;
+            // Decide which end goes to the “first side” based on orientation:
+            //  - "lr": smaller x → Left; larger x → Right
+            //  - "tb": smaller y → Top;  larger y → Bottom
+            const sourceFirst =
+              orientation === Orientation.LeftToright ? A.x <= B.x : A.y <= B.y;
 
-          const leftOrTopHandle =
-            orientation === Orientation.LeftToright
-              ? `${nodeId}-L-${idx}`
-              : `${nodeId}-T-${idx}`;
-          const rightOrBottomHandle =
-            orientation === Orientation.LeftToright
-              ? `${nodeId}-R-${idx}`
-              : `${nodeId}-B-${idx}`;
+            const leftOrTopHandle =
+              orientation === Orientation.LeftToright
+                ? `${nodeId}-L-${idx}`
+                : `${nodeId}-T-${idx}`;
+            const rightOrBottomHandle =
+              orientation === Orientation.LeftToright
+                ? `${nodeId}-R-${idx}`
+                : `${nodeId}-B-${idx}`;
 
-          const edgeA: Edge = sourceFirst
-            ? {
-                id: `${loc.line.id}-a`,
-                source: loc.line.sourcePort.deviceId,
-                sourceHandle: loc.line.sourcePort.id,
-                target: nodeId,
-                targetHandle: leftOrTopHandle,
-                type: "step",
-                data: { lineId: loc.line.id },
-                // avoid editing reconnection on split view
-                updatable: false,
-              } as Edge
-            : {
-                id: `${loc.line.id}-a`,
-                source: loc.line.targetPort.deviceId,
-                sourceHandle: loc.line.targetPort.id,
-                target: nodeId,
-                targetHandle: leftOrTopHandle,
-                type: "step",
-                data: { lineId: loc.line.id },
-                updatable: false,
-              } as Edge;
+            const edgeA: Edge = sourceFirst
+              ? ({
+                  id: `${loc.line.id}-a`,
+                  source: loc.line.sourcePort.deviceId,
+                  sourceHandle: loc.line.sourcePort.id,
+                  target: nodeId,
+                  targetHandle: leftOrTopHandle,
+                  type: "step",
+                  data: { lineId: loc.line.id },
+                  // avoid editing reconnection on split view
+                  updatable: false,
+                } as Edge)
+              : ({
+                  id: `${loc.line.id}-a`,
+                  source: loc.line.targetPort.deviceId,
+                  sourceHandle: loc.line.targetPort.id,
+                  target: nodeId,
+                  targetHandle: leftOrTopHandle,
+                  type: "step",
+                  data: { lineId: loc.line.id },
+                  updatable: false,
+                } as Edge);
 
-          const edgeB: Edge = sourceFirst
-            ? {
-                id: `${loc.line.id}-b`,
-                source: nodeId,
-                sourceHandle: rightOrBottomHandle,
-                target: loc.line.targetPort.deviceId,
-                targetHandle: loc.line.targetPort.id,
-                type: "step",
-                data: { lineId: loc.line.id },
-                updatable: false,
-              } as Edge
-            : {
-                id: `${loc.line.id}-b`,
-                source: nodeId,
-                sourceHandle: rightOrBottomHandle,
-                target: loc.line.sourcePort.deviceId,
-                targetHandle: loc.line.sourcePort.id,
-                type: "step",
-                data: { lineId: loc.line.id },
-                updatable: false,
-              } as Edge;
+            const edgeB: Edge = sourceFirst
+              ? ({
+                  id: `${loc.line.id}-b`,
+                  source: nodeId,
+                  sourceHandle: rightOrBottomHandle,
+                  target: loc.line.targetPort.deviceId,
+                  targetHandle: loc.line.targetPort.id,
+                  type: "step",
+                  data: { lineId: loc.line.id },
+                  updatable: false,
+                } as Edge)
+              : ({
+                  id: `${loc.line.id}-b`,
+                  source: nodeId,
+                  sourceHandle: rightOrBottomHandle,
+                  target: loc.line.sourcePort.deviceId,
+                  targetHandle: loc.line.sourcePort.id,
+                  type: "step",
+                  data: { lineId: loc.line.id },
+                  updatable: false,
+                } as Edge);
 
-          splitEdges.push(edgeA, edgeB);
-        });
-      }
+            splitEdges.push(edgeA, edgeB);
+          });
+        }
 
-      // Non-bridged lines render as usual
-      const plainEdges = linesOnChart
-        .filter((l) => !bridgedLineIds.has(l.line.id))
-        .map(convertLineToEdge);
+        // Non-bridged lines render as usual
+        const plainEdges = linesOnChart
+          .filter((l) => !bridgedLineIds.has(l.line.id))
+          .map(convertLineToEdge);
 
-      return { bridgeNodes, displayEdges: [...plainEdges, ...splitEdges] };
-    }, [devicePos, getBondCenterPos, pickOrientation, convertLineToEdge]);
+        return { bridgeNodes, displayEdges: [...plainEdges, ...splitEdges] };
+      },
+      [devicePos, getBondCenterPos, pickOrientation, convertLineToEdge]
+    );
 
     useEffect(() => {
       setNodes((prev) => {
@@ -1638,28 +1931,68 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               }
             : base;
         });
-        const { bridgeNodes } = buildBridgeView(chart.bondsOnChart,chart.linesOnChart);
-        const noteNodes: Node[] = (chart.notesOnChart ?? []).map(convertNoteToNode);
-        const zoneNodes: Node[] = (chart.zonesOnChart ?? []).map(convertZoneToNode);
-        const overlayNodes: Node[] = (chart.overlayElementsOnChart ?? []).map(convertOverlayElementToNode);
-        return [...zoneNodes, ...devicesNodes, ...bridgeNodes, ...noteNodes, ...overlayNodes];
+        const { bridgeNodes } = buildBridgeView(
+          chart.bondsOnChart,
+          chart.linesOnChart
+        );
+        const noteNodes: Node[] = (chart.notesOnChart ?? []).map(
+          convertNoteToNode
+        );
+        const zoneNodes: Node[] = (chart.zonesOnChart ?? []).map(
+          convertZoneToNode
+        );
+        const overlayNodes: Node[] = (chart.overlayElementsOnChart ?? []).map(
+          convertOverlayElementToNode
+        );
+        return [
+          ...zoneNodes,
+          ...devicesNodes,
+          ...bridgeNodes,
+          ...noteNodes,
+          ...overlayNodes,
+        ];
       });
-    }, [buildBridgeView, chart.bondsOnChart, chart.overlayElementsOnChart, chart.devicesOnChart, chart.linesOnChart, chart.notesOnChart, chart.zonesOnChart, convertOverlayElementToNode, convertDeviceToNode, convertNoteToNode, convertZoneToNode, setNodes]);
+    }, [
+      buildBridgeView,
+      chart.bondsOnChart,
+      chart.overlayElementsOnChart,
+      chart.devicesOnChart,
+      chart.linesOnChart,
+      chart.notesOnChart,
+      chart.zonesOnChart,
+      convertOverlayElementToNode,
+      convertDeviceToNode,
+      convertNoteToNode,
+      convertZoneToNode,
+      setNodes,
+    ]);
 
     useEffect(() => {
-      const { displayEdges } = buildBridgeView(chart.bondsOnChart, chart.linesOnChart);
+      const { displayEdges } = buildBridgeView(
+        chart.bondsOnChart,
+        chart.linesOnChart
+      );
 
-      const overlayEdges: Edge[] = (chart.overlayEdgesOnChart ?? []).map((e) => ({
-        id: e.id,
-        source: e.sourceNodeId,
-        sourceHandle: e.sourceHandle,
-        target: e.targetNodeId,
-        targetHandle: e.targetHandle,
-        type: "step",
-      } as Edge));
+      const overlayEdges: Edge[] = (chart.overlayEdgesOnChart ?? []).map(
+        (e) =>
+          ({
+            id: e.id,
+            source: e.sourceNodeId,
+            sourceHandle: e.sourceHandle,
+            target: e.targetNodeId,
+            targetHandle: e.targetHandle,
+            type: "step",
+          } as Edge)
+      );
 
       setEdges([...displayEdges, ...overlayEdges]);
-    }, [buildBridgeView, chart.bondsOnChart, chart.overlayEdgesOnChart, chart.linesOnChart, setEdges]);
+    }, [
+      buildBridgeView,
+      chart.bondsOnChart,
+      chart.overlayEdgesOnChart,
+      chart.linesOnChart,
+      setEdges,
+    ]);
 
     const onNodesChange = useCallback(
       (changes: NodeChange[]) => {
@@ -1678,20 +2011,33 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       (c: Connection) => {
         // Build set of port IDs already wired on THIS chart (device↔device or overlay↔device).
         const chartUsedPortIds = new Set<string>([
-          ...(chart.linesOnChart ?? []).flatMap((l) => [l.line.sourcePort.id, l.line.targetPort.id]),
-          ...(chart.overlayEdgesOnChart ?? []).flatMap((e) =>
-            [e.sourcePortId, e.targetPortId].filter(Boolean) as string[]
+          ...(chart.linesOnChart ?? []).flatMap((l) => [
+            l.line.sourcePort.id,
+            l.line.targetPort.id,
+          ]),
+          ...(chart.overlayEdgesOnChart ?? []).flatMap(
+            (e) => [e.sourcePortId, e.targetPortId].filter(Boolean) as string[]
           ),
         ]);
 
         // ── Free-node connection: overlay element on either/both sides ──
-        const isSourceFree = isFreeNode(c.source, chart.overlayElementsOnChart ?? []);
-        const isTargetFree = isFreeNode(c.target, chart.overlayElementsOnChart ?? []);
+        const isSourceFree = isFreeNode(
+          c.source,
+          chart.overlayElementsOnChart ?? []
+        );
+        const isTargetFree = isFreeNode(
+          c.target,
+          chart.overlayElementsOnChart ?? []
+        );
         if ((isSourceFree || isTargetFree) && c.source && c.target) {
           const sourceHandle = c.sourceHandle ?? "left";
           const targetHandle = c.targetHandle ?? "left";
-          const sourcePortId = !isSourceFree ? c.sourceHandle ?? undefined : undefined;
-          const targetPortId = !isTargetFree ? c.targetHandle ?? undefined : undefined;
+          const sourcePortId = !isSourceFree
+            ? c.sourceHandle ?? undefined
+            : undefined;
+          const targetPortId = !isTargetFree
+            ? c.targetHandle ?? undefined
+            : undefined;
           // Block if the device port is already connected on this chart.
           const devicePortId = sourcePortId ?? targetPortId;
           if (devicePortId && chartUsedPortIds.has(devicePortId)) {
@@ -1707,30 +2053,44 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             sourcePortId,
             targetPortId,
           };
-          setEdges((eds) => [...eds, {
-            id: newEdge.id,
-            source: c.source!,
-            sourceHandle,
-            target: c.target!,
-            targetHandle,
-            type: "step",
-          } as Edge]);
-          const portIds = new Set([sourcePortId, targetPortId].filter(Boolean) as string[]);
-          applyChartChange((prev) => ({
-            ...prev,
-            overlayEdgesOnChart: [...(prev.overlayEdgesOnChart ?? []), newEdge],
-            devicesOnChart: portIds.size
-              ? prev.devicesOnChart.map((doc) => ({
-                  ...doc,
-                  device: {
-                    ...doc.device,
-                    ports: doc.device.ports.map((p) =>
-                      portIds.has(p.id) ? { ...p, inUse: true } : p
-                    ),
-                  },
-                } as DeviceOnChart))
-              : prev.devicesOnChart,
-          } as Chart));
+          setEdges((eds) => [
+            ...eds,
+            {
+              id: newEdge.id,
+              source: c.source!,
+              sourceHandle,
+              target: c.target!,
+              targetHandle,
+              type: "step",
+            } as Edge,
+          ]);
+          const portIds = new Set(
+            [sourcePortId, targetPortId].filter(Boolean) as string[]
+          );
+          applyChartChange(
+            (prev) =>
+              ({
+                ...prev,
+                overlayEdgesOnChart: [
+                  ...(prev.overlayEdgesOnChart ?? []),
+                  newEdge,
+                ],
+                devicesOnChart: portIds.size
+                  ? prev.devicesOnChart.map(
+                      (doc) =>
+                        ({
+                          ...doc,
+                          device: {
+                            ...doc.device,
+                            ports: doc.device.ports.map((p) =>
+                              portIds.has(p.id) ? { ...p, inUse: true } : p
+                            ),
+                          },
+                        } as DeviceOnChart)
+                    )
+                  : prev.devicesOnChart,
+              } as Chart)
+          );
           setMadeChanges(true);
           return;
         }
@@ -1744,7 +2104,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           .find((d) => d.device.id === c.target)!
           .device.ports.find((p) => p.id === c.targetHandle)!;
         // Block if either port is already wired on this chart.
-        if (chartUsedPortIds.has(sourcePort?.id) || chartUsedPortIds.has(targetPort?.id)) {
+        if (
+          chartUsedPortIds.has(sourcePort?.id) ||
+          chartUsedPortIds.has(targetPort?.id)
+        ) {
           setPortChartUsed(true);
           return;
         }
@@ -1758,11 +2121,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             id: newId,
             sourcePort,
             targetPort,
-            cableType: sourcePort.type === "rj45" && targetPort.type === "rj45" ? "copper" : undefined,
+            cableType:
+              sourcePort.type === "rj45" && targetPort.type === "rj45"
+                ? "copper"
+                : undefined,
           } as Line,
           type: "step",
           label: "",
-          
         };
         sourcePort.inUse = true;
         targetPort.inUse = true;
@@ -1899,16 +2264,17 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onNodeDragStop = useCallback(
       (_e: React.MouseEvent, node: Node) => {
-
         if (node.type === "bridge") {
           const bondId = node.id.replace("bridge-", "");
-          applyChartChange((prev) => ({
-            ...prev,
-            bondsOnChart: (prev.bondsOnChart ?? []).map((b) =>
-              b.bond.id === bondId ? { ...b, position: node.position } : b
-            ),
-          } as Chart));
-
+          applyChartChange(
+            (prev) =>
+              ({
+                ...prev,
+                bondsOnChart: (prev.bondsOnChart ?? []).map((b) =>
+                  b.bond.id === bondId ? { ...b, position: node.position } : b
+                ),
+              } as Chart)
+          );
         } else if (node.type === "device") {
           applyChartChange(
             (prev) =>
@@ -1922,26 +2288,36 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               } as Chart)
           );
         } else if (node.type === "note") {
-          applyChartChange((prev) => ({
-            ...prev,
-            notesOnChart: (prev.notesOnChart ?? []).map((n) =>
-              n.id === node.id ? { ...n, position: node.position } : n
-            ),
-          } as Chart));
+          applyChartChange(
+            (prev) =>
+              ({
+                ...prev,
+                notesOnChart: (prev.notesOnChart ?? []).map((n) =>
+                  n.id === node.id ? { ...n, position: node.position } : n
+                ),
+              } as Chart)
+          );
         } else if (node.type === "zone") {
-          applyChartChange((prev) => ({
-            ...prev,
-            zonesOnChart: (prev.zonesOnChart ?? []).map((z) =>
-              z.id === node.id ? { ...z, position: node.position } : z
-            ),
-          } as Chart));
+          applyChartChange(
+            (prev) =>
+              ({
+                ...prev,
+                zonesOnChart: (prev.zonesOnChart ?? []).map((z) =>
+                  z.id === node.id ? { ...z, position: node.position } : z
+                ),
+              } as Chart)
+          );
         } else if (node.type === "overlayElement") {
-          applyChartChange((prev) => ({
-            ...prev,
-            overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map((oe) =>
-              oe.id === node.id ? { ...oe, position: node.position } : oe
-            ),
-          } as Chart));
+          applyChartChange(
+            (prev) =>
+              ({
+                ...prev,
+                overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map(
+                  (oe) =>
+                    oe.id === node.id ? { ...oe, position: node.position } : oe
+                ),
+              } as Chart)
+          );
         }
       },
       [applyChartChange]
@@ -1953,7 +2329,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         e.preventDefault();
 
         // ── Chart element drop (e.g. Note) ──
-        const elementRaw = e.dataTransfer.getData("application/reactflow-element");
+        const elementRaw = e.dataTransfer.getData(
+          "application/reactflow-element"
+        );
         if (elementRaw) {
           try {
             const { type } = JSON.parse(elementRaw) as { type: string };
@@ -1970,10 +2348,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 position,
                 size: { width: 220, height: 130 },
               };
-              applyChartChange((prev) => ({
-                ...prev,
-                notesOnChart: [...(prev.notesOnChart ?? []), newNote],
-              } as Chart));
+              applyChartChange(
+                (prev) =>
+                  ({
+                    ...prev,
+                    notesOnChart: [...(prev.notesOnChart ?? []), newNote],
+                  } as Chart)
+              );
             } else if (type === "zone") {
               const bounds = reactFlowWrapper.current.getBoundingClientRect();
               const position = project({
@@ -1992,10 +2373,13 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 position,
                 size: { width: 300, height: 200 },
               };
-              applyChartChange((prev) => ({
-                ...prev,
-                zonesOnChart: [...(prev.zonesOnChart ?? []), newZone],
-              } as Chart));
+              applyChartChange(
+                (prev) =>
+                  ({
+                    ...prev,
+                    zonesOnChart: [...(prev.zonesOnChart ?? []), newZone],
+                  } as Chart)
+              );
             }
           } catch {
             // ignore malformed element data
@@ -2004,26 +2388,42 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         }
 
         // ── Overlay element drop (cloud or custom element) ──
-        const overlayRaw = e.dataTransfer.getData("application/reactflow-overlay-element");
+        const overlayRaw = e.dataTransfer.getData(
+          "application/reactflow-overlay-element"
+        );
         if (overlayRaw) {
           try {
-            const { overlayElementId } = JSON.parse(overlayRaw) as { overlayElementId: string };
+            const { overlayElementId } = JSON.parse(overlayRaw) as {
+              overlayElementId: string;
+            };
             const oe = overlayElementsById.get(overlayElementId);
             if (!oe) return;
             const bounds = reactFlowWrapper.current.getBoundingClientRect();
-            const position = project({ x: e.clientX - bounds.left, y: e.clientY - bounds.top });
+            const position = project({
+              x: e.clientX - bounds.left,
+              y: e.clientY - bounds.top,
+            });
             const newOeOnChart: OverlayElementOnChart = {
               id: uuidv4(),
               overlayElementId,
               overlayElement: oe as any,
               position,
               freeText: "",
-              size: { width: oe.isSystem ? 180 : 120, height: oe.isSystem ? 90 : 120 },
+              size: {
+                width: oe.isSystem ? 180 : 120,
+                height: oe.isSystem ? 90 : 120,
+              },
             };
-            applyChartChange((prev) => ({
-              ...prev,
-              overlayElementsOnChart: [...(prev.overlayElementsOnChart ?? []), newOeOnChart],
-            } as Chart));
+            applyChartChange(
+              (prev) =>
+                ({
+                  ...prev,
+                  overlayElementsOnChart: [
+                    ...(prev.overlayElementsOnChart ?? []),
+                    newOeOnChart,
+                  ],
+                } as Chart)
+            );
           } catch {
             // ignore malformed data
           }
@@ -2124,7 +2524,6 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       },
       [setEdges]
     );
-    
 
     const onCtxAction = useCallback(
       (action: EditorMenuListKeys) => {
@@ -2151,7 +2550,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.EDIT_DEVICE: {
-            const doc = chart.devicesOnChart.find(d => d.device.id === payload.node.id);
+            const doc = chart.devicesOnChart.find(
+              (d) => d.device.id === payload.node.id
+            );
             if (doc) setEditDeviceTarget(doc);
             break;
           }
@@ -2190,12 +2591,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.BOND_LINES:
-            createBond()
+            createBond();
             break;
 
           case EditorMenuListKeys.EDIT_PORT: {
-            const doc = chart.devicesOnChart.find(d => d.device.id === payload.deviceId);
-            const port = doc?.device.ports.find(p => p.id === payload.portId);
+            const doc = chart.devicesOnChart.find(
+              (d) => d.device.id === payload.deviceId
+            );
+            const port = doc?.device.ports.find((p) => p.id === payload.portId);
             if (port) setEditPortTarget({ port, deviceId: payload.deviceId });
             break;
           }
@@ -2205,11 +2608,21 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.DELETE_PORT: {
-            const doc = chart.devicesOnChart.find(d => d.device.id === payload.deviceId);
-            const port = doc?.device.ports.find(p => p.id === payload.portId);
-            setPandingDelete({ value: { portId: payload.portId, deviceId: payload.deviceId } as unknown as Node, kind: "ports" });
+            const doc = chart.devicesOnChart.find(
+              (d) => d.device.id === payload.deviceId
+            );
+            const port = doc?.device.ports.find((p) => p.id === payload.portId);
+            setPandingDelete({
+              value: {
+                portId: payload.portId,
+                deviceId: payload.deviceId,
+              } as unknown as Node,
+              kind: "ports",
+            });
             setConfirmDialogTitle("Delete Port?");
-            setConfirmDialogDescription(`Permanently delete port "${port?.name ?? payload.portId}"?`);
+            setConfirmDialogDescription(
+              `Permanently delete port "${port?.name ?? payload.portId}"?`
+            );
             setConfirmDeleteOpen(true);
             break;
           }
@@ -2218,48 +2631,78 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.CONNECT_PAIRED_PORTS:
-            if (ctx.kind === 'handle') {
+            if (ctx.kind === "handle") {
               connectPairedPorts([payload.portId]);
-            } else if (ctx.kind === 'node') {
-              const doc = chart.devicesOnChart.find(d => d.device.id === payload.node.id);
-              const deviceGreenPorts = doc?.device.ports
-                .filter(p => greenPortIdsRef.current.has(p.id))
-                .map(p => p.id) ?? [];
+            } else if (ctx.kind === "node") {
+              const doc = chart.devicesOnChart.find(
+                (d) => d.device.id === payload.node.id
+              );
+              const deviceGreenPorts =
+                doc?.device.ports
+                  .filter((p) => greenPortIdsRef.current.has(p.id))
+                  .map((p) => p.id) ?? [];
               connectPairedPorts(deviceGreenPorts);
             }
             break;
 
           case EditorMenuListKeys.MOVE_HANDLE_TO_LEFT:
-            onMoveHandle(payload.deviceId, payload.portId, payload.side, 'left');
+            onMoveHandle(
+              payload.deviceId,
+              payload.portId,
+              payload.side,
+              "left"
+            );
             break;
           case EditorMenuListKeys.MOVE_HANDLE_TO_RIGHT:
-            onMoveHandle(payload.deviceId, payload.portId, payload.side, 'right');
+            onMoveHandle(
+              payload.deviceId,
+              payload.portId,
+              payload.side,
+              "right"
+            );
             break;
           case EditorMenuListKeys.MOVE_HANDLE_TO_TOP:
-            onMoveHandle(payload.deviceId, payload.portId, payload.side, 'top');
+            onMoveHandle(payload.deviceId, payload.portId, payload.side, "top");
             break;
           case EditorMenuListKeys.MOVE_HANDLE_TO_BOTTOM:
-            onMoveHandle(payload.deviceId, payload.portId, payload.side, 'bottom');
+            onMoveHandle(
+              payload.deviceId,
+              payload.portId,
+              payload.side,
+              "bottom"
+            );
             break;
 
           case EditorMenuListKeys.DELETE_NOTE:
-            applyChartChange((prev) => ({
-              ...prev,
-              notesOnChart: (prev.notesOnChart ?? []).filter((n) => n.id !== payload.noteId),
-            } as Chart));
+            applyChartChange(
+              (prev) =>
+                ({
+                  ...prev,
+                  notesOnChart: (prev.notesOnChart ?? []).filter(
+                    (n) => n.id !== payload.noteId
+                  ),
+                } as Chart)
+            );
             setNodes((nds) => nds.filter((n) => n.id !== payload.noteId));
             break;
 
           case EditorMenuListKeys.EDIT_NOTE_COLOR: {
-            const note = (chart.notesOnChart ?? []).find((n) => n.id === payload.noteId);
+            const note = (chart.notesOnChart ?? []).find(
+              (n) => n.id === payload.noteId
+            );
             const currentColor = note?.color ?? "green";
-            setColorPickerValue(currentColor.startsWith("#") ? currentColor : "#4ade80");
+            setColorPickerValue(
+              currentColor.startsWith("#") ? currentColor : "#4ade80"
+            );
             setColorPickerNoteId(payload.noteId);
             break;
           }
 
           case EditorMenuListKeys.EDIT_BOND:
-            setEditBondTarget({ bondId: payload.bondId, bondName: payload.bondName });
+            setEditBondTarget({
+              bondId: payload.bondId,
+              bondName: payload.bondName,
+            });
             break;
 
           case EditorMenuListKeys.UNBOND_PORTS:
@@ -2271,10 +2714,15 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.DELETE_ZONE:
-            applyChartChange((prev) => ({
-              ...prev,
-              zonesOnChart: (prev.zonesOnChart ?? []).filter((z) => z.id !== payload.zoneId),
-            } as Chart));
+            applyChartChange(
+              (prev) =>
+                ({
+                  ...prev,
+                  zonesOnChart: (prev.zonesOnChart ?? []).filter(
+                    (z) => z.id !== payload.zoneId
+                  ),
+                } as Chart)
+            );
             setNodes((nds) => nds.filter((n) => n.id !== payload.zoneId));
             break;
 
@@ -2283,23 +2731,35 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.SET_CABLE_NONE:
-            applyChartChange((prev) => ({
-              ...prev,
-              linesOnChart: prev.linesOnChart.map((loc) =>
-                loc.line.id === payload.edge.id
-                  ? { ...loc, color: undefined, line: { ...loc.line, cableType: undefined } }
-                  : loc
-              ),
-            } as Chart));
-            setEdges((eds) => eds.map((e) =>
-              e.id === payload.edge.id ? { ...e, style: undefined } : e
-            ));
+            applyChartChange(
+              (prev) =>
+                ({
+                  ...prev,
+                  linesOnChart: prev.linesOnChart.map((loc) =>
+                    loc.line.id === payload.edge.id
+                      ? {
+                          ...loc,
+                          color: undefined,
+                          line: { ...loc.line, cableType: undefined },
+                        }
+                      : loc
+                  ),
+                } as Chart)
+            );
+            setEdges((eds) =>
+              eds.map((e) =>
+                e.id === payload.edge.id ? { ...e, style: undefined } : e
+              )
+            );
             break;
 
           case EditorMenuListKeys.SET_LINE_COLOR: {
-            const loc = chart.linesOnChart.find((l) => l.line.id === payload.edge.id);
+            const loc = chart.linesOnChart.find(
+              (l) => l.line.id === payload.edge.id
+            );
             const cableDefaultColor = loc?.line.cableType
-              ? allCableTypes.find((ct) => ct.name === loc.line.cableType)?.defaultColor
+              ? allCableTypes.find((ct) => ct.name === loc.line.cableType)
+                  ?.defaultColor
               : undefined;
             const current = loc?.color ?? cableDefaultColor ?? "#ffffff";
             setColorPickerLineValue(current);
@@ -2307,9 +2767,11 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
           }
 
-
           case EditorMenuListKeys.EDIT_CUSTOM_ELEMENT_TEXT:
-            setEditOverlayElementTextTarget({ id: payload.instanceId, currentText: payload.currentText });
+            setEditOverlayElementTextTarget({
+              id: payload.instanceId,
+              currentText: payload.currentText,
+            });
             break;
 
           case EditorMenuListKeys.REMOVE_CUSTOM_ELEMENT_FROM_CHART:
@@ -2319,33 +2781,75 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
         closeCtx();
       },
-      [ctx, setMadeChanges, closeCtx, onRemoveNode, onEditLine, onRemoveEdge, connectPairedPorts, onMoveHandle, onUndoClick, onRedoClick, createBond, chart.devicesOnChart, chart.notesOnChart, chart.linesOnChart, onRemoveHandle, setEditPortTarget, setEditDeviceTarget, applyChartChange, setNodes, setEdges, setColorPickerNoteId, setColorPickerValue, setColorPickerLineId, setColorPickerLineValue, setZoneStyleDialogZoneId, onUnbondPorts, onRemoveBondFromChart, onRemoveOverlayElement, allCableTypes]
+      [
+        ctx,
+        setMadeChanges,
+        closeCtx,
+        onRemoveNode,
+        onEditLine,
+        onRemoveEdge,
+        connectPairedPorts,
+        onMoveHandle,
+        onUndoClick,
+        onRedoClick,
+        createBond,
+        chart.devicesOnChart,
+        chart.notesOnChart,
+        chart.linesOnChart,
+        onRemoveHandle,
+        setEditPortTarget,
+        setEditDeviceTarget,
+        applyChartChange,
+        setNodes,
+        setEdges,
+        setColorPickerNoteId,
+        setColorPickerValue,
+        setColorPickerLineId,
+        setColorPickerLineValue,
+        setZoneStyleDialogZoneId,
+        onUnbondPorts,
+        onRemoveBondFromChart,
+        onRemoveOverlayElement,
+        allCableTypes,
+      ]
     );
 
     const onCableTypeSelect = useCallback(
       (cableType: CableTypeOption) => {
         const edgeId = ctx?.payload?.edge?.id;
         if (!edgeId) return;
-        applyChartChange((prev) => ({
-          ...prev,
-          linesOnChart: prev.linesOnChart.map((loc) =>
-            loc.line.id === edgeId
-              ? { ...loc, color: undefined, line: { ...loc.line, cableType: cableType.name } }
-              : loc
-          ),
-        } as Chart));
-        setEdges((eds) => eds.map((e) =>
-          e.id === edgeId
-            ? { ...e, style: { ...e.style, stroke: cableType.defaultColor } }
-            : e
-        ));
+        applyChartChange(
+          (prev) =>
+            ({
+              ...prev,
+              linesOnChart: prev.linesOnChart.map((loc) =>
+                loc.line.id === edgeId
+                  ? {
+                      ...loc,
+                      color: undefined,
+                      line: { ...loc.line, cableType: cableType.name },
+                    }
+                  : loc
+              ),
+            } as Chart)
+        );
+        setEdges((eds) =>
+          eds.map((e) =>
+            e.id === edgeId
+              ? { ...e, style: { ...e.style, stroke: cableType.defaultColor } }
+              : e
+          )
+        );
         closeCtx();
       },
       [ctx, applyChartChange, setEdges, closeCtx]
     );
 
     const onSave = useCallback(
-      async (e?: React.MouseEvent<HTMLButtonElement>, versionLabel?: string) => {
+      async (
+        e?: React.MouseEvent<HTMLButtonElement>,
+        versionLabel?: string
+      ) => {
         // prevent form submit refresh if inside a <form>
         e?.preventDefault();
 
@@ -2379,7 +2883,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       const handler = (e: KeyboardEvent) => {
         const tag = (e.target as HTMLElement)?.tagName;
         // Don't intercept shortcuts while the user is typing in an input/textarea
-        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          (e.target as HTMLElement)?.isContentEditable
+        )
+          return;
         if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
           e.preventDefault();
           onUndoClick();
@@ -2404,6 +2913,118 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
       [onSave]
     );
 
+    useEffect(() => {
+    if (!pendingUiAction?.length) return;
+    // If any action needs a device lookup but the device list hasn't loaded yet, wait.
+    // devicesById is in the deps so this effect re-runs once devices arrive.
+    const hasAddDevice = pendingUiAction.some((a) => a.type === "add_device");
+    if (hasAddDevice && devicesById.size === 0) return;
+
+    const removedDeviceIds: string[] = [];
+    const movedDevices: { id: string; position: { x: number; y: number } }[] = [];
+    const newLines: LineOnChart[] = [];
+    const removedLineIds: string[] = [];
+
+    applyChartChangeRef.current((prev) => {
+      const next: Chart = {
+        ...prev,
+        devicesOnChart: [...prev.devicesOnChart],
+        linesOnChart: [...prev.linesOnChart],
+      };
+
+      for (const act of pendingUiAction) {
+        switch (act.type) {
+          case "add_device": {
+            const device = devicesByIdRef.current.get(act.device.deviceId);
+            if (!device) break;
+            if (next.devicesOnChart.some((d) => d.device.id === device.id)) break;
+            const newDoc: DeviceOnChart = {
+              chartId: next.id,
+              device,
+              position: act.device.position,
+              handles: { left: [], right: [], top: [], bottom: [] },
+            };
+            next.devicesOnChart = [...next.devicesOnChart, newDoc];
+            break;
+          }
+          case "remove_device": {
+            removedDeviceIds.push(act.deviceId);
+            next.devicesOnChart = next.devicesOnChart.filter((d) => d.device.id !== act.deviceId);
+            next.linesOnChart = next.linesOnChart.filter(
+              (l) =>
+                l.line.sourcePort.deviceId !== act.deviceId &&
+                l.line.targetPort.deviceId !== act.deviceId
+            );
+            break;
+          }
+          case "move_device": {
+            movedDevices.push({ id: act.device.deviceId, position: act.device.position });
+            next.devicesOnChart = next.devicesOnChart.map((d) =>
+              d.device.id === act.device.deviceId ? { ...d, position: act.device.position } : d
+            );
+            break;
+          }
+          case "connect_ports": {
+            const { sourceDeviceId, sourcePortId, targetDeviceId, targetPortId } = act.connection;
+            const sourceDoc = next.devicesOnChart.find((d) => d.device.id === sourceDeviceId);
+            const targetDoc = next.devicesOnChart.find((d) => d.device.id === targetDeviceId);
+            if (!sourceDoc || !targetDoc) break;
+            const sourcePort = sourceDoc.device.ports.find((p) => p.id === sourcePortId);
+            const targetPort = targetDoc.device.ports.find((p) => p.id === targetPortId);
+            if (!sourcePort || !targetPort) break;
+            const newLine: LineOnChart = {
+              chartId: next.id,
+              line: { id: uuidv4(), sourcePort, targetPort } as Line,
+              type: "step",
+              label: "",
+            };
+            newLines.push(newLine);
+            next.linesOnChart = [...next.linesOnChart, newLine];
+            break;
+          }
+          case "disconnect_ports": {
+            const { sourcePortId, targetPortId } = act.connection;
+            const lineToRemove = next.linesOnChart.find(
+              (l) =>
+                (l.line.sourcePort.id === sourcePortId && l.line.targetPort.id === targetPortId) ||
+                (l.line.sourcePort.id === targetPortId && l.line.targetPort.id === sourcePortId)
+            );
+            if (!lineToRemove) break;
+            removedLineIds.push(lineToRemove.line.id);
+            next.linesOnChart = next.linesOnChart.filter((l) => l.line.id !== lineToRemove.line.id);
+            break;
+          }
+        }
+      }
+
+      return next as Chart;
+    });
+
+    if (removedDeviceIds.length > 0) {
+      setNodes((ns) => ns.filter((n) => !removedDeviceIds.includes(n.id)));
+      setEdges((es) =>
+        es.filter((e) => !removedDeviceIds.includes(e.source) && !removedDeviceIds.includes(e.target))
+      );
+    }
+    if (movedDevices.length > 0) {
+      setNodes((ns) =>
+        ns.map((n) => {
+          const moved = movedDevices.find((m) => m.id === n.id);
+          return moved ? { ...n, position: moved.position } : n;
+        })
+      );
+    }
+    if (newLines.length > 0) {
+      setEdges((eds) => [...eds, ...newLines.map(convertLineToEdge)]);
+    }
+    if (removedLineIds.length > 0) {
+      setEdges((es) => es.filter((e) => !removedLineIds.includes(e.id)));
+    }
+
+    setMadeChanges(true);
+    setPendingUiAction([]);
+  }, [pendingUiAction, devicesById, convertLineToEdge, setNodes, setEdges, setMadeChanges, setPendingUiAction]);
+
     return (
       <div className="flex flex-1 h-full">
         <AnimatePresence initial={false}>
@@ -2419,8 +3040,12 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             >
               <DevicesSidebar
                 devicesList={unusedDevices}
-                systemElementsList={allOverlayElements.filter((oe) => oe.isSystem)}
-                customElementsList={allOverlayElements.filter((oe) => !oe.isSystem)}
+                systemElementsList={allOverlayElements.filter(
+                  (oe) => oe.isSystem
+                )}
+                customElementsList={allOverlayElements.filter(
+                  (oe) => !oe.isSystem
+                )}
                 onCreateDevice={() => setCreateDeviceOpen(true)}
                 onCreateCustomElement={() => setCreateOverlayElementOpen(true)}
               />
@@ -2454,25 +3079,39 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 <MenuList
                   kind={ctx.kind}
                   onAction={onCtxAction}
-                  onNoteColorChange={ctx.kind === "note"
-                    ? (colorKey) => onNoteColorChange(ctx.payload?.noteId, colorKey)
-                    : undefined}
+                  onNoteColorChange={
+                    ctx.kind === "note"
+                      ? (colorKey) =>
+                          onNoteColorChange(ctx.payload?.noteId, colorKey)
+                      : undefined
+                  }
                   isRedoEnabled={canRedo}
                   isUndoEnabled={canUndo}
                   canConnectPaired={ctx.canConnectPaired ?? false}
-                  availableCableTypes={ctx.kind === "edge"
-                    ? allCableTypes.filter((ct) => {
-                        const srcType = ctx.payload?.srcPortType;
-                        const tgtType = ctx.payload?.tgtPortType;
-                        if (!srcType && !tgtType) return true;
-                        const names = ct.compatiblePortTypes?.map((p: { name: string }) => p.name) ?? [];
-                        if (srcType && !names.includes(srcType)) return false;
-                        if (tgtType && !names.includes(tgtType)) return false;
-                        return true;
-                      })
-                    : undefined}
-                  onCableTypeSelect={ctx.kind === "edge" ? onCableTypeSelect : undefined}
-                  onCreateCableType={ctx.kind === "edge" ? () => setCreateCableTypeOpen(true) : undefined}
+                  availableCableTypes={
+                    ctx.kind === "edge"
+                      ? allCableTypes.filter((ct) => {
+                          const srcType = ctx.payload?.srcPortType;
+                          const tgtType = ctx.payload?.tgtPortType;
+                          if (!srcType && !tgtType) return true;
+                          const names =
+                            ct.compatiblePortTypes?.map(
+                              (p: { name: string }) => p.name
+                            ) ?? [];
+                          if (srcType && !names.includes(srcType)) return false;
+                          if (tgtType && !names.includes(tgtType)) return false;
+                          return true;
+                        })
+                      : undefined
+                  }
+                  onCableTypeSelect={
+                    ctx.kind === "edge" ? onCableTypeSelect : undefined
+                  }
+                  onCreateCableType={
+                    ctx.kind === "edge"
+                      ? () => setCreateCableTypeOpen(true)
+                      : undefined
+                  }
                 />
               </div>
             </>
@@ -2481,7 +3120,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           {/* Quick-create cable type dialog */}
           {createCableTypeOpen && (
             <div className="fixed inset-0 z-[100000] flex items-center justify-center">
-              <div className="fixed inset-0 bg-black/40" onClick={() => setCreateCableTypeOpen(false)} />
+              <div
+                className="fixed inset-0 bg-black/40"
+                onClick={() => setCreateCableTypeOpen(false)}
+              />
               <div
                 className={[
                   "relative rounded-xl border shadow-2xl p-5 flex flex-col gap-4 min-w-[260px]",
@@ -2494,7 +3136,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 <input
                   className={[
                     "w-full px-2 py-1 text-sm rounded border",
-                    isDark ? "bg-slate-700 border-slate-600 text-slate-100" : "border-slate-300",
+                    isDark
+                      ? "bg-slate-700 border-slate-600 text-slate-100"
+                      : "border-slate-300",
                   ].join(" ")}
                   placeholder="Name"
                   value={createCableTypeName}
@@ -2509,19 +3153,28 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                     onChange={(e) => setCreateCableTypeColor(e.target.value)}
                     className="w-10 h-8 cursor-pointer rounded"
                   />
-                  <span className="text-xs text-slate-400">{createCableTypeColor}</span>
+                  <span className="text-xs text-slate-400">
+                    {createCableTypeColor}
+                  </span>
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button
                     size="small"
-                    onClick={() => { setCreateCableTypeOpen(false); setCreateCableTypeName(""); setCreateCableTypeColor("#888888"); }}
+                    onClick={() => {
+                      setCreateCableTypeOpen(false);
+                      setCreateCableTypeName("");
+                      setCreateCableTypeColor("#888888");
+                    }}
                   >
                     Cancel
                   </Button>
                   <Button
                     size="small"
                     variant="contained"
-                    disabled={!createCableTypeName.trim() || createCableTypeMut.isPending}
+                    disabled={
+                      !createCableTypeName.trim() ||
+                      createCableTypeMut.isPending
+                    }
                     onClick={async () => {
                       if (!createCableTypeName.trim()) return;
                       try {
@@ -2530,7 +3183,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                           defaultColor: createCableTypeColor,
                           compatiblePortTypeIds: [],
                         } as Parameters<typeof createCableTypeMut.mutateAsync>[0]);
-                        await queryClient.invalidateQueries({ queryKey: ["cableTypes"] });
+                        await queryClient.invalidateQueries({
+                          queryKey: ["cableTypes"],
+                        });
                         setCreateCableTypeOpen(false);
                         setCreateCableTypeName("");
                         setCreateCableTypeColor("#888888");
@@ -2549,15 +3204,24 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           {/* Zone style dialog */}
           <EditZoneStyleDialog
             open={zoneStyleDialogZoneId !== null}
-            zone={(chart.zonesOnChart ?? []).find((z) => z.id === zoneStyleDialogZoneId) ?? null}
+            zone={
+              (chart.zonesOnChart ?? []).find(
+                (z) => z.id === zoneStyleDialogZoneId
+              ) ?? null
+            }
             onClose={() => setZoneStyleDialogZoneId(null)}
-            onSubmit={(values) => updateZoneStyle(zoneStyleDialogZoneId!, values)}
+            onSubmit={(values) =>
+              updateZoneStyle(zoneStyleDialogZoneId!, values)
+            }
           />
 
           {/* Custom note colour picker dialog */}
           {colorPickerNoteId && (
             <div className="fixed inset-0 z-[100000] flex items-center justify-center">
-              <div className="fixed inset-0 bg-black/40" onClick={() => setColorPickerNoteId(null)} />
+              <div
+                className="fixed inset-0 bg-black/40"
+                onClick={() => setColorPickerNoteId(null)}
+              />
               <div
                 className={[
                   "relative rounded-xl border shadow-2xl p-5 flex flex-col gap-4 min-w-[220px]",
@@ -2602,7 +3266,10 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           {/* Custom line colour picker dialog */}
           {colorPickerLineId && (
             <div className="fixed inset-0 z-[100000] flex items-center justify-center">
-              <div className="fixed inset-0 bg-black/40" onClick={() => setColorPickerLineId(null)} />
+              <div
+                className="fixed inset-0 bg-black/40"
+                onClick={() => setColorPickerLineId(null)}
+              />
               <div
                 className={[
                   "relative rounded-xl border shadow-2xl p-5 flex flex-col gap-4 min-w-[220px]",
@@ -2635,19 +3302,24 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                     onClick={() => {
                       const lineId = colorPickerLineId;
                       const color = colorPickerLineValue;
-                      applyChartChange((prev) => ({
-                        ...prev,
-                        linesOnChart: prev.linesOnChart.map((loc) =>
-                          loc.line.id === lineId
-                            ? { ...loc, color, cableType: undefined }
-                            : loc
-                        ),
-                      } as Chart));
-                      setEdges((eds) => eds.map((e) =>
-                        e.id === lineId
-                          ? { ...e, style: { stroke: color, strokeWidth: 2 } }
-                          : e
-                      ));
+                      applyChartChange(
+                        (prev) =>
+                          ({
+                            ...prev,
+                            linesOnChart: prev.linesOnChart.map((loc) =>
+                              loc.line.id === lineId
+                                ? { ...loc, color, cableType: undefined }
+                                : loc
+                            ),
+                          } as Chart)
+                      );
+                      setEdges((eds) =>
+                        eds.map((e) =>
+                          e.id === lineId
+                            ? { ...e, style: { stroke: color, strokeWidth: 2 } }
+                            : e
+                        )
+                      );
                       setColorPickerLineId(null);
                     }}
                   >
@@ -2659,54 +3331,109 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           )}
 
           {/* Floating editor toolbar — undo / redo / fit view */}
-          {editMode && (() => {
-            const btnBase     = "flex items-center justify-center w-7 h-7 rounded transition-colors";
-            const btnEnabled  = isDark ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-indigo-600 hover:bg-indigo-500 text-white";
-            const btnDisabled = isDark ? "bg-slate-700 text-slate-500 cursor-not-allowed" : "bg-slate-200 text-slate-400 cursor-not-allowed";
-            const btnFit      = isDark ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-indigo-700 hover:bg-indigo-600 text-white";
-            return (
-              <div
-                className={[
-                  "absolute top-3 left-3 z-10 flex items-center gap-1 p-0.5 rounded-lg shadow-lg select-none",
-                  isDark ? "bg-slate-800" : "bg-white border border-slate-200 shadow-md",
-                ].join(" ")}
-              >
-                <button
-                  title="Undo (Ctrl+Z)"
-                  disabled={!canUndo}
-                  onClick={onUndoClick}
-                  className={[btnBase, canUndo ? btnEnabled : btnDisabled].join(" ")}
+          {editMode &&
+            (() => {
+              const btnBase =
+                "flex items-center justify-center w-7 h-7 rounded transition-colors";
+              const btnEnabled = isDark
+                ? "bg-indigo-600 hover:bg-indigo-500 text-white"
+                : "bg-indigo-600 hover:bg-indigo-500 text-white";
+              const btnDisabled = isDark
+                ? "bg-slate-700 text-slate-500 cursor-not-allowed"
+                : "bg-slate-200 text-slate-400 cursor-not-allowed";
+              const btnFit = isDark
+                ? "bg-indigo-600 hover:bg-indigo-500 text-white"
+                : "bg-indigo-700 hover:bg-indigo-600 text-white";
+              return (
+                <div
+                  className={[
+                    "absolute top-3 left-3 z-10 flex items-center gap-1 p-0.5 rounded-lg shadow-lg select-none",
+                    isDark
+                      ? "bg-slate-800"
+                      : "bg-white border border-slate-200 shadow-md",
+                  ].join(" ")}
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    style={{ stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
-                    <path d="M3 7v6h6"/><path d="M3 13A9 9 0 1 0 6 6.7"/>
-                  </svg>
-                </button>
-                <button
-                  title="Redo (Ctrl+Y)"
-                  disabled={!canRedo}
-                  onClick={onRedoClick}
-                  className={[btnBase, canRedo ? btnEnabled : btnDisabled].join(" ")}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    style={{ stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
-                    <path d="M21 7v6h-6"/><path d="M21 13A9 9 0 1 1 18 6.7"/>
-                  </svg>
-                </button>
-                <div style={{ width: 1, height: 20, margin: "0 2px", background: isDark ? "#334155" : "#e2e8f0" }} />
-                <button
-                  title="Fit view"
-                  onClick={() => fitView({ padding: 0.1 })}
-                  className={[btnBase, btnFit].join(" ")}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    style={{ stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" }}>
-                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-                  </svg>
-                </button>
-              </div>
-            );
-          })()}
+                  <button
+                    title="Undo (Ctrl+Z)"
+                    disabled={!canUndo}
+                    onClick={onUndoClick}
+                    className={[
+                      btnBase,
+                      canUndo ? btnEnabled : btnDisabled,
+                    ].join(" ")}
+                  >
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      style={{
+                        stroke: "currentColor",
+                        strokeWidth: 2.5,
+                        strokeLinecap: "round",
+                        strokeLinejoin: "round",
+                      }}
+                    >
+                      <path d="M3 7v6h6" />
+                      <path d="M3 13A9 9 0 1 0 6 6.7" />
+                    </svg>
+                  </button>
+                  <button
+                    title="Redo (Ctrl+Y)"
+                    disabled={!canRedo}
+                    onClick={onRedoClick}
+                    className={[
+                      btnBase,
+                      canRedo ? btnEnabled : btnDisabled,
+                    ].join(" ")}
+                  >
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      style={{
+                        stroke: "currentColor",
+                        strokeWidth: 2.5,
+                        strokeLinecap: "round",
+                        strokeLinejoin: "round",
+                      }}
+                    >
+                      <path d="M21 7v6h-6" />
+                      <path d="M21 13A9 9 0 1 1 18 6.7" />
+                    </svg>
+                  </button>
+                  <div
+                    style={{
+                      width: 1,
+                      height: 20,
+                      margin: "0 2px",
+                      background: isDark ? "#334155" : "#e2e8f0",
+                    }}
+                  />
+                  <button
+                    title="Fit view"
+                    onClick={() => fitView({ padding: 0.1 })}
+                    className={[btnBase, btnFit].join(" ")}
+                  >
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      style={{
+                        stroke: "currentColor",
+                        strokeWidth: 2.5,
+                        strokeLinecap: "round",
+                        strokeLinejoin: "round",
+                      }}
+                    >
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                    </svg>
+                  </button>
+                </div>
+              );
+            })()}
 
           <ReactFlow
             nodeTypes={NODE_TYPES}
@@ -2753,14 +3480,17 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           onClose={() => setEditBondTarget(null)}
           onSubmit={(name) => {
             if (!editBondTarget) return;
-            applyChartChange((prev) => ({
-              ...prev,
-              bondsOnChart: (prev.bondsOnChart ?? []).map((b) =>
-                b.bond.id === editBondTarget.bondId
-                  ? { ...b, bond: { ...b.bond, name } }
-                  : b
-              ),
-            } as Chart));
+            applyChartChange(
+              (prev) =>
+                ({
+                  ...prev,
+                  bondsOnChart: (prev.bondsOnChart ?? []).map((b) =>
+                    b.bond.id === editBondTarget.bondId
+                      ? { ...b, bond: { ...b.bond, name } }
+                      : b
+                  ),
+                } as Chart)
+            );
             setEditBondTarget(null);
           }}
         />
@@ -2776,7 +3506,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         <PortFormDialog
           open={editPortTarget !== null}
           title="Edit Port"
-          initial={editPortTarget ? { name: editPortTarget.port.name, type: editPortTarget.port.type } : undefined}
+          initial={
+            editPortTarget
+              ? {
+                  name: editPortTarget.port.name,
+                  type: editPortTarget.port.type,
+                }
+              : undefined
+          }
           onClose={() => setEditPortTarget(null)}
           onSubmit={onEditPortSubmit}
         />
@@ -2812,12 +3549,19 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
           onClose={() => setEditOverlayElementTextTarget(null)}
           onSave={(text) => {
             if (!editOverlayElementTextTarget) return;
-            applyChartChange((prev) => ({
-              ...prev,
-              overlayElementsOnChart: (prev.overlayElementsOnChart ?? []).map((oe) =>
-                oe.id === editOverlayElementTextTarget.id ? { ...oe, freeText: text } : oe
-              ),
-            } as Chart));
+            applyChartChange(
+              (prev) =>
+                ({
+                  ...prev,
+                  overlayElementsOnChart: (
+                    prev.overlayElementsOnChart ?? []
+                  ).map((oe) =>
+                    oe.id === editOverlayElementTextTarget.id
+                      ? { ...oe, freeText: text }
+                      : oe
+                  ),
+                } as Chart)
+            );
             setEditOverlayElementTextTarget(null);
           }}
         />
@@ -2863,14 +3607,19 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 <Button color="inherit" size="small" onClick={onBondSiblingAdd}>
                   Add
                 </Button>
-                <Button color="inherit" size="small" onClick={() => setBondSiblingToast(null)}>
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => setBondSiblingToast(null)}
+                >
                   Cancel
                 </Button>
               </>
             }
           >
-            Port is part of bond &ldquo;{bondSiblingToast?.result.bondName}&rdquo;.
-            Add {bondSiblingToast?.result.sameSide.length} sibling port(s) to this device?
+            Port is part of bond &ldquo;{bondSiblingToast?.result.bondName}
+            &rdquo;. Add {bondSiblingToast?.result.sameSide.length} sibling
+            port(s) to this device?
           </Alert>
         </Snackbar>
         <Snackbar
@@ -2882,16 +3631,25 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             onClose={() => setBondOtherSideToast(null)}
             action={
               <>
-                <Button color="inherit" size="small" onClick={onBondOtherSideAdd}>
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={onBondOtherSideAdd}
+                >
                   Add
                 </Button>
-                <Button color="inherit" size="small" onClick={() => setBondOtherSideToast(null)}>
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => setBondOtherSideToast(null)}
+                >
                   Cancel
                 </Button>
               </>
             }
           >
-            Add the other side of bond &ldquo;{bondOtherSideToast?.result.bondName}&rdquo; to the chart?
+            Add the other side of bond &ldquo;
+            {bondOtherSideToast?.result.bondName}&rdquo; to the chart?
           </Alert>
         </Snackbar>
         <Snackbar
@@ -2903,18 +3661,26 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             onClose={() => setConnectedPortToast(null)}
             action={
               <>
-                <Button color="inherit" size="small" onClick={onConnectedPortAdd}>
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={onConnectedPortAdd}
+                >
                   Add
                 </Button>
-                <Button color="inherit" size="small" onClick={() => setConnectedPortToast(null)}>
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => setConnectedPortToast(null)}
+                >
                   Cancel
                 </Button>
               </>
             }
           >
             Port &ldquo;{connectedPortToast?.connectedPort.name}&rdquo; on{" "}
-            &ldquo;{connectedPortToast?.deviceName}&rdquo; is connected to this port.
-            Add it to the chart?
+            &ldquo;{connectedPortToast?.deviceName}&rdquo; is connected to this
+            port. Add it to the chart?
           </Alert>
         </Snackbar>
         <Snackbar
@@ -2929,11 +3695,18 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 <Button
                   color="inherit"
                   size="small"
-                  onClick={() => { connectPairedPorts(); setPairedToastOpen(false); }}
+                  onClick={() => {
+                    connectPairedPorts();
+                    setPairedToastOpen(false);
+                  }}
                 >
                   Connect
                 </Button>
-                <Button color="inherit" size="small" onClick={() => setPairedToastOpen(false)}>
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => setPairedToastOpen(false)}
+                >
                   Cancel
                 </Button>
               </>

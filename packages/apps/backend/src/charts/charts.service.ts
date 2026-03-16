@@ -66,7 +66,7 @@ export class ChartsService {
     private readonly notesOnChartService: NotesOnChartService,
     private readonly zonesOnChartService: ZonesOnChartService,
     private readonly overlayElementsOnChartService: OverlayElementsOnChartService,
-    private readonly chartVersionsService: ChartVersionsService,
+    private readonly chartVersionsService: ChartVersionsService
   ) {}
 
   getLockFromChartEntity = (chartEntiy: ChartLockFeilds): ChartLock => {
@@ -103,15 +103,37 @@ export class ChartsService {
   convertChartEntityToChart = async (
     chartEnrity: ChartEntity
   ): Promise<Chart> => {
-    const { devicesOnChart, linesOnChart, bondOnChart, notesOnChart, zonesOnChart, overlayElementsOnChart, overlayEdgesOnChart, createdAt, createdByUserId, updatedAt, updatedByUserId, ...chartData } = chartEnrity;
+    const {
+      devicesOnChart,
+      linesOnChart,
+      bondOnChart,
+      notesOnChart,
+      zonesOnChart,
+      overlayElementsOnChart,
+      overlayEdgesOnChart,
+      createdAt,
+      createdByUserId,
+      updatedAt,
+      updatedByUserId,
+      ...chartData
+    } = chartEnrity;
     const convertedDeviceOnCharts: DeviceOnChart[] = [];
-    for (const dl of devicesOnChart) convertedDeviceOnCharts.push(await this.devicesOnChartService.convertDeviceOnChartEntity(dl));
+    for (const dl of devicesOnChart)
+      convertedDeviceOnCharts.push(
+        await this.devicesOnChartService.convertDeviceOnChartEntity(dl)
+      );
 
     const convertedLinesOnChart: LineOnChart[] = [];
-    for (const ll of linesOnChart ?? []) convertedLinesOnChart.push(await this.linesOnChartService.convertLineonChartEntity(ll));
+    for (const ll of linesOnChart ?? [])
+      convertedLinesOnChart.push(
+        await this.linesOnChartService.convertLineonChartEntity(ll)
+      );
 
     const convertedBondOnChart: BondOnChart[] = [];
-    for (const b of bondOnChart ?? []) convertedBondOnChart.push(this.bondsOnChartService.convertBondOnChartEntity(b));
+    for (const b of bondOnChart ?? [])
+      convertedBondOnChart.push(
+        this.bondsOnChartService.convertBondOnChartEntity(b)
+      );
 
     const convertedNotesOnChart = (notesOnChart ?? []).map((n) =>
       this.notesOnChartService.convertNoteOnChartEntity(n)
@@ -121,19 +143,21 @@ export class ChartsService {
       this.zonesOnChartService.convertZoneOnChartEntity(z)
     );
 
-    const convertedOverlayElementsOnChart: OverlayElementOnChart[] = (overlayElementsOnChart ?? []).map((oe) =>
-      this.overlayElementsOnChartService.convertEntity(oe)
-    );
+    const convertedOverlayElementsOnChart: OverlayElementOnChart[] = (
+      overlayElementsOnChart ?? []
+    ).map((oe) => this.overlayElementsOnChartService.convertEntity(oe));
 
-    const convertedOverlayEdgesOnChart = (overlayEdgesOnChart ?? []).map((e) => ({
-      id: e.id,
-      sourceNodeId: e.sourceNodeId,
-      sourceHandle: e.sourceHandle,
-      targetNodeId: e.targetNodeId,
-      targetHandle: e.targetHandle,
-      sourcePortId: e.sourcePortId ?? undefined,
-      targetPortId: e.targetPortId ?? undefined,
-    }));
+    const convertedOverlayEdgesOnChart = (overlayEdgesOnChart ?? []).map(
+      (e) => ({
+        id: e.id,
+        sourceNodeId: e.sourceNodeId,
+        sourceHandle: e.sourceHandle,
+        targetNodeId: e.targetNodeId,
+        targetHandle: e.targetHandle,
+        sourcePortId: e.sourcePortId ?? undefined,
+        targetPortId: e.targetPortId ?? undefined,
+      })
+    );
 
     return {
       devicesOnChart: convertedDeviceOnCharts,
@@ -156,7 +180,8 @@ export class ChartsService {
   async getAllCharts(): Promise<Chart[]> {
     const convertedCharts: Chart[] = [];
     const charts = await this.chartRepo.find({});
-    for (const c of charts) convertedCharts.push(await this.convertChartEntityToChart(c));
+    for (const c of charts)
+      convertedCharts.push(await this.convertChartEntityToChart(c));
     return convertedCharts;
   }
 
@@ -182,7 +207,7 @@ export class ChartsService {
     return this.enrichPortsWithConnectedPortIds(converted);
   }
 
-  async createChart(dto: ChartCreate,createdByUserId:string): Promise<Chart> {
+  async createChart(dto: ChartCreate, createdByUserId: string): Promise<Chart> {
     const chart: ChartEntity = this.chartRepo.create({
       name: dto.name,
       description: dto.description,
@@ -194,14 +219,19 @@ export class ChartsService {
       bondOnChart: [],
     });
     const newChart: ChartEntity = await this.chartRepo.save(chart);
-    const result = await this.convertChartEntityToChart(newChart);
-    await this.chartVersionsService.saveVersion(result.id, result, createdByUserId);
+    // Re-fetch with all relations populated before converting — save() does not load relations.
+    const result = await this.getChartById(newChart.id);
+    await this.chartVersionsService.saveVersion(
+      result.id,
+      result,
+      createdByUserId
+    );
     return result;
   }
 
   convertChartToChartMetadata(
     chartEntity: ChartEntity,
-    myPrivileges?: { canEdit: boolean; canDelete: boolean; canShare: boolean },
+    myPrivileges?: { canEdit: boolean; canDelete: boolean; canShare: boolean }
   ): ChartMetadata {
     const { createdAt, createdByUserId, description, id, name } = chartEntity;
     return {
@@ -218,7 +248,7 @@ export class ChartsService {
   private computePrivileges(
     chart: ChartEntity,
     userId: string,
-    shareMap: Map<string, ChartShareEntity>,
+    shareMap: Map<string, ChartShareEntity>
   ): { canEdit: boolean; canDelete: boolean; canShare: boolean } {
     if (chart.createdByUserId === userId) {
       return { canEdit: true, canDelete: true, canShare: true };
@@ -233,30 +263,44 @@ export class ChartsService {
 
   private async buildShareMap(
     chartIds: string[],
-    userId: string,
+    userId: string
   ): Promise<Map<string, ChartShareEntity>> {
     if (chartIds.length === 0) return new Map();
     const shares = await this.chartShareRepo.find({
       where: { chartId: In(chartIds), sharedWithUserId: userId },
     });
-    return new Map(shares.map(s => [s.chartId, s]));
+    return new Map(shares.map((s) => [s.chartId, s]));
   }
 
   async buildChartMetadataWithPrivileges(
     charts: ChartEntity[],
-    userId: string,
+    userId: string
   ): Promise<ChartMetadata[]> {
-    const shareMap = await this.buildShareMap(charts.map(c => c.id), userId);
-    return charts.map(c =>
-      this.convertChartToChartMetadata(c, this.computePrivileges(c, userId, shareMap)),
+    const shareMap = await this.buildShareMap(
+      charts.map((c) => c.id),
+      userId
+    );
+    return charts.map((c) =>
+      this.convertChartToChartMetadata(
+        c,
+        this.computePrivileges(c, userId, shareMap)
+      )
     );
   }
 
   async getAllUserChartsMetadata(userId: string): Promise<ChartMetadata[]> {
     const charts = await this.chartRepo
       .createQueryBuilder("c")
-      .leftJoin(ChartShareEntity, "cs", "cs.chart_id::text = c.id::text AND cs.shared_with_user_id::text = :userId", { userId })
-      .where("c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL", { userId })
+      .leftJoin(
+        ChartShareEntity,
+        "cs",
+        "cs.chart_id::text = c.id::text AND cs.shared_with_user_id::text = :userId",
+        { userId }
+      )
+      .where(
+        "c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL",
+        { userId }
+      )
       .getMany();
     return this.buildChartMetadataWithPrivileges(charts, userId);
   }
@@ -264,9 +308,17 @@ export class ChartsService {
   async getUnassignedChartsMetadata(userId: string): Promise<ChartMetadata[]> {
     const charts = await this.chartRepo
       .createQueryBuilder("c")
-      .leftJoin(ChartShareEntity, "cs", "cs.chart_id::text = c.id::text AND cs.shared_with_user_id::text = :userId", { userId })
+      .leftJoin(
+        ChartShareEntity,
+        "cs",
+        "cs.chart_id::text = c.id::text AND cs.shared_with_user_id::text = :userId",
+        { userId }
+      )
       .leftJoin("charts_in_directories", "cid", "cid.chart_id = c.id::text")
-      .where("(c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL)", { userId })
+      .where(
+        "(c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL)",
+        { userId }
+      )
       .andWhere("cid.chart_id IS NULL")
       .getMany();
     return this.buildChartMetadataWithPrivileges(charts, userId);
@@ -276,33 +328,60 @@ export class ChartsService {
     chartId: string,
     sharedWithUserId: string,
     sharedByUserId: string,
-    permissions: { canEdit: boolean; canDelete: boolean; canShare: boolean },
+    permissions: { canEdit: boolean; canDelete: boolean; canShare: boolean }
   ): Promise<void> {
     // Sharer can only grant privileges they themselves hold (owners have all)
-    const chart = await this.chartRepo.findOne({ where: { id: chartId }, select: { id: true, createdByUserId: true } });
+    const chart = await this.chartRepo.findOne({
+      where: { id: chartId },
+      select: { id: true, createdByUserId: true },
+    });
     if (!chart) throw new NotFoundException(`Chart ${chartId} not found`);
     if (sharedWithUserId === chart.createdByUserId)
       throw new ForbiddenException("Cannot share a chart with its creator");
     if (chart.createdByUserId !== sharedByUserId) {
-      const sharerShare = await this.chartShareRepo.findOne({ where: { chartId, sharedWithUserId: sharedByUserId } });
-      if (permissions.canEdit   && !sharerShare?.canEdit)   throw new ForbiddenException("You cannot grant edit permission you do not have");
-      if (permissions.canDelete && !sharerShare?.canDelete) throw new ForbiddenException("You cannot grant delete permission you do not have");
-      if (permissions.canShare  && !sharerShare?.canShare)  throw new ForbiddenException("You cannot grant share permission you do not have");
+      const sharerShare = await this.chartShareRepo.findOne({
+        where: { chartId, sharedWithUserId: sharedByUserId },
+      });
+      if (permissions.canEdit && !sharerShare?.canEdit)
+        throw new ForbiddenException(
+          "You cannot grant edit permission you do not have"
+        );
+      if (permissions.canDelete && !sharerShare?.canDelete)
+        throw new ForbiddenException(
+          "You cannot grant delete permission you do not have"
+        );
+      if (permissions.canShare && !sharerShare?.canShare)
+        throw new ForbiddenException(
+          "You cannot grant share permission you do not have"
+        );
     }
 
     await this.chartShareRepo.upsert(
       { chartId, sharedWithUserId, sharedByUserId, ...permissions },
-      { conflictPaths: ["chartId", "sharedWithUserId"], skipUpdateIfNoValuesChanged: false },
+      {
+        conflictPaths: ["chartId", "sharedWithUserId"],
+        skipUpdateIfNoValuesChanged: false,
+      }
     );
 
     // Auto-share parent directories (view-only, insert-if-not-exists to avoid downgrading existing permissions)
-    const parentDirs = await this.cidRepo.find({ where: { chartId }, select: ["directoryId"] });
+    const parentDirs = await this.cidRepo.find({
+      where: { chartId },
+      select: ["directoryId"],
+    });
     for (const { directoryId } of parentDirs) {
       await this.shareDirRepo
         .createQueryBuilder()
         .insert()
         .into(DirectoryShareEntity)
-        .values({ directoryId, sharedWithUserId, sharedByUserId, canEdit: false, canDelete: false, canShare: false })
+        .values({
+          directoryId,
+          sharedWithUserId,
+          sharedByUserId,
+          canEdit: false,
+          canDelete: false,
+          canShare: false,
+        })
         .orIgnore()
         .execute();
     }
@@ -316,105 +395,159 @@ export class ChartsService {
     return this.chartShareRepo.find({ where: { chartId } });
   }
 
-  async getChartMetadataById(id: string, userId: string): Promise<ChartMetadata> {
+  async getChartMetadataById(
+    id: string,
+    userId: string
+  ): Promise<ChartMetadata> {
     const chart = await this.chartRepo.findOne({ where: { id } });
     if (!chart) throw new NotFoundException(`Chart with ID ${id} not found`);
     const shareMap = await this.buildShareMap([id], userId);
-    return this.convertChartToChartMetadata(chart, this.computePrivileges(chart, userId, shareMap));
+    return this.convertChartToChartMetadata(
+      chart,
+      this.computePrivileges(chart, userId, shareMap)
+    );
   }
 
-  async updateChart(chartId: string, dto: ChartUpdate, userId: string): Promise<Chart> {
-    const updated = await this.dataSource.transaction(async (manager: EntityManager) => {
-      const chartsRepo = manager.getRepository(ChartEntity);
+  async updateChart(
+    chartId: string,
+    dto: ChartUpdate,
+    userId: string
+  ): Promise<Chart> {
+    const updated = await this.dataSource.transaction(
+      async (manager: EntityManager) => {
+        const chartsRepo = manager.getRepository(ChartEntity);
 
-      // 0) Load + lock check + resource-level permission
-      const chart = await chartsRepo.findOne({
-        where: { id: chartId },
-        relations: { devicesOnChart: true, bondOnChart: true },
-      });
-      if (!chart) throw new ChartNotFoundExeption(chartId);
-      if (chart.createdByUserId !== userId) {
-        const share = await this.chartShareRepo.findOne({ where: { chartId, sharedWithUserId: userId } });
-        if (!share?.canEdit) throw new ForbiddenException("No edit permission on this chart");
-      }
-      if (chart.lockedById && chart.lockedById !== userId)
-        throw new ChartIsLockedExeption(chartId, chart.lockedById);
+        // 0) Load + lock check + resource-level permission
+        const chart = await chartsRepo.findOne({
+          where: { id: chartId },
+          relations: { devicesOnChart: true, bondOnChart: true },
+        });
+        if (!chart) throw new ChartNotFoundExeption(chartId);
+        if (chart.createdByUserId !== userId) {
+          const share = await this.chartShareRepo.findOne({
+            where: { chartId, sharedWithUserId: userId },
+          });
+          if (!share?.canEdit)
+            throw new ForbiddenException("No edit permission on this chart");
+        }
+        if (chart.lockedById && chart.lockedById !== userId)
+          throw new ChartIsLockedExeption(chartId, chart.lockedById);
 
-      // 1) Meta (global)
-      if (dto.name !== undefined) chart.name = dto.name;
-      if (dto.description !== undefined) chart.description = dto.description ?? "";
-      chart.updatedByUserId = userId;
-      if (dto.name !== undefined || dto.description !== undefined) await chartsRepo.save(chart);
+        // 1) Meta (global)
+        if (dto.name !== undefined) chart.name = dto.name;
+        if (dto.description !== undefined)
+          chart.description = dto.description ?? "";
+        chart.updatedByUserId = userId;
+        if (dto.name !== undefined || dto.description !== undefined)
+          await chartsRepo.save(chart);
 
-      // 2) DevicesOnChart (instance only)
-      if (dto.devicesOnChart !== undefined) {
-        await this.devicesOnChartService.syncPlacementsAndHandles(manager, chartId, dto.devicesOnChart,userId);
-      }
+        // 2) DevicesOnChart (instance only)
+        if (dto.devicesOnChart !== undefined) {
+          await this.devicesOnChartService.syncPlacementsAndHandles(
+            manager,
+            chartId,
+            dto.devicesOnChart,
+            userId
+          );
+        }
 
-      // 3) Lines (global) + LineOnChart (instance)
-      if (dto.linesOnChart !== undefined) {
-        const wantedLines = dto.linesOnChart.map(l => l.line);
-        const normalizedLines = await this.linesService.upsertLines(manager, wantedLines, userId); // global
-        // Build a map from old frontend UUID → normalized DB ID so syncLinks uses correct IDs
-        const idMap = new Map(wantedLines.map((l, i) => [l.id, normalizedLines[i]?.id ?? l.id]));
-        const normalizedLinesOnChart = dto.linesOnChart.map(loc => ({
-          ...loc,
-          line: { ...loc.line, id: idMap.get(loc.line.id) ?? loc.line.id },
-        }));
-        await this.linesOnChartService.syncLinks(manager, chartId, normalizedLinesOnChart); // instance
-      }
+        // 3) Lines (global) + LineOnChart (instance)
+        if (dto.linesOnChart !== undefined) {
+          const wantedLines = dto.linesOnChart.map((l) => l.line);
+          const normalizedLines = await this.linesService.upsertLines(
+            manager,
+            wantedLines,
+            userId
+          ); // global
+          // Build a map from old frontend UUID → normalized DB ID so syncLinks uses correct IDs
+          const idMap = new Map(
+            wantedLines.map((l, i) => [l.id, normalizedLines[i]?.id ?? l.id])
+          );
+          const normalizedLinesOnChart = dto.linesOnChart.map((loc) => ({
+            ...loc,
+            line: { ...loc.line, id: idMap.get(loc.line.id) ?? loc.line.id },
+          }));
+          await this.linesOnChartService.syncLinks(
+            manager,
+            chartId,
+            normalizedLinesOnChart
+          ); // instance
+        }
 
-      // 4) Bonds (global) + BondOnChart (instance)
-      if (dto.bondsOnChart !== undefined) {
-        const globalBonds = dto.bondsOnChart.map(b => b.bond);
-        await this.linesService.ensureAndUpdateBonds(manager, globalBonds,userId); // global
-        await this.bondsOnChartService.syncLinks(manager, chartId, dto.bondsOnChart); // instance
-      }
+        // 4) Bonds (global) + BondOnChart (instance)
+        if (dto.bondsOnChart !== undefined) {
+          const globalBonds = dto.bondsOnChart.map((b) => b.bond);
+          await this.linesService.ensureAndUpdateBonds(
+            manager,
+            globalBonds,
+            userId
+          ); // global
+          await this.bondsOnChartService.syncLinks(
+            manager,
+            chartId,
+            dto.bondsOnChart
+          ); // instance
+        }
 
-      // 5) Notes (instance only — no global entity)
-      if (dto.notesOnChart !== undefined) {
-        await this.notesOnChartService.syncNotes(manager, chartId, dto.notesOnChart);
-      }
+        // 5) Notes (instance only — no global entity)
+        if (dto.notesOnChart !== undefined) {
+          await this.notesOnChartService.syncNotes(
+            manager,
+            chartId,
+            dto.notesOnChart
+          );
+        }
 
-      // 5b) Zones on chart (instance only — no global entity)
-      if (dto.zonesOnChart !== undefined) {
-        await this.zonesOnChartService.syncZones(manager, chartId, dto.zonesOnChart);
-      }
+        // 5b) Zones on chart (instance only — no global entity)
+        if (dto.zonesOnChart !== undefined) {
+          await this.zonesOnChartService.syncZones(
+            manager,
+            chartId,
+            dto.zonesOnChart
+          );
+        }
 
-      // 5c) Overlay elements on chart (clouds + custom elements — unified)
-      if (dto.overlayElementsOnChart !== undefined || dto.overlayEdgesOnChart !== undefined) {
-        await this.overlayElementsOnChartService.syncOverlayElementsOnChart(
-          manager,
-          chartId,
-          dto.overlayElementsOnChart ?? [],
-          dto.overlayEdgesOnChart ?? [],
-        );
-      }
+        // 5c) Overlay elements on chart (clouds + custom elements — unified)
+        if (
+          dto.overlayElementsOnChart !== undefined ||
+          dto.overlayEdgesOnChart !== undefined
+        ) {
+          await this.overlayElementsOnChartService.syncOverlayElementsOnChart(
+            manager,
+            chartId,
+            dto.overlayElementsOnChart ?? [],
+            dto.overlayEdgesOnChart ?? []
+          );
+        }
 
-      // 6) Hard deletes (global)
-      if (dto.deletes) {
-        const { devices, lines, ports } = dto.deletes;
-        if (devices?.length) await manager.getRepository(DeviceEntity).delete(devices);
-        if (lines?.length)   await manager.getRepository(LineEntity).delete(lines);
-        if (ports?.length)   await manager.getRepository(PortEntity).delete(ports);
-      }
+        // 6) Hard deletes (global)
+        if (dto.deletes) {
+          const { devices, lines, ports } = dto.deletes;
+          if (devices?.length)
+            await manager.getRepository(DeviceEntity).delete(devices);
+          if (lines?.length)
+            await manager.getRepository(LineEntity).delete(lines);
+          if (ports?.length)
+            await manager.getRepository(PortEntity).delete(ports);
+        }
 
-      // 7) Return fresh chart
-      return chartsRepo.findOneOrFail({
-        where: { id: chartId },
-        relations: {
-          devicesOnChart: {
-            device: { type: true, model: { vendor: true }, ports: true },
-            portPlacements: { port: true },
+        // 7) Return fresh chart
+        return chartsRepo.findOneOrFail({
+          where: { id: chartId },
+          relations: {
+            devicesOnChart: {
+              device: { type: true, model: { vendor: true }, ports: true },
+              portPlacements: { port: true },
+            },
+            linesOnChart: { line: { sourcePort: true, targetPort: true } },
+            bondOnChart: { bond: { members: true } },
+            notesOnChart: true,
+            overlayElementsOnChart: { overlayElement: true },
+            overlayEdgesOnChart: true,
           },
-          linesOnChart: { line: { sourcePort: true, targetPort: true } },
-          bondOnChart: { bond: { members: true } },
-          notesOnChart: true,
-          overlayElementsOnChart: { overlayElement: true },
-          overlayEdgesOnChart: true,
-        },
-      });
-    });
+        });
+      }
+    );
 
     // post-commit maintenance
     await this.linesService.deleteOrphanLines();
@@ -422,7 +555,12 @@ export class ChartsService {
 
     const converted = await this.convertChartEntityToChart(updated);
     const result = await this.enrichPortsWithConnectedPortIds(converted);
-    await this.chartVersionsService.saveVersion(chartId, result, userId, dto.versionLabel);
+    await this.chartVersionsService.saveVersion(
+      chartId,
+      result,
+      userId,
+      dto.versionLabel
+    );
     return result;
   }
 
@@ -431,8 +569,11 @@ export class ChartsService {
     const chart = await this.chartRepo.findOne({ where: { id } });
     if (!chart) throw new ChartNotFoundExeption(id);
     if (chart.createdByUserId !== userId) {
-      const share = await this.chartShareRepo.findOne({ where: { chartId: id, sharedWithUserId: userId } });
-      if (!share?.canDelete) throw new ForbiddenException("No delete permission on this chart");
+      const share = await this.chartShareRepo.findOne({
+        where: { chartId: id, sharedWithUserId: userId },
+      });
+      if (!share?.canDelete)
+        throw new ForbiddenException("No delete permission on this chart");
     }
     if (chart.lockedById && chart.lockedById !== userId)
       throw new ChartIsLockedExeption(id, chart.lockedById);
@@ -442,19 +583,19 @@ export class ChartsService {
   }
 
   async fetchLock(chartId: string, userId: string): Promise<ChartLock> {
-    const chart : ChartLockFeilds | null = await this.chartRepo.findOne({
+    const chart: ChartLockFeilds | null = await this.chartRepo.findOne({
       where: { id: chartId },
       select: { lockedAt: true, id: true, lockedById: true, lockedBy: true },
       relations: { lockedBy: true },
     });
-    if(!chart) throw new ChartNotFoundExeption(chartId)
-    return this.getLockFromChartEntity(chart)
+    if (!chart) throw new ChartNotFoundExeption(chartId);
+    return this.getLockFromChartEntity(chart);
   }
 
   async lockChart(chartId: string, userId: string): Promise<ChartLock> {
     const chart: ChartEntity | null = await this.chartRepo.findOne({
       where: { id: chartId },
-      relations: {lockedBy:true },
+      relations: { lockedBy: true },
     });
     if (!chart) throw new ChartNotFoundExeption(chartId);
     if (chart.lockedById && chart.lockedById !== userId)
@@ -464,19 +605,33 @@ export class ChartsService {
       chart.lockedAt = new Date();
       await this.chartRepo.save(chart);
     }
-    return this.getLockFromChartEntity(chart)
+    return this.getLockFromChartEntity(chart);
   }
 
   async unlockChart(chartId: string, userId: string): Promise<ChartLock> {
-    const chart: ChartEntity | null = await this.chartRepo.findOne({ where: { id: chartId } });
+    const chart: ChartEntity | null = await this.chartRepo.findOne({
+      where: { id: chartId },
+    });
     if (!chart) throw new ChartNotFoundExeption(chartId);
-    if (!chart.lockedById || !chart.lockedAt ) return this.getLockFromChartEntity(chart)
+    if (!chart.lockedById || !chart.lockedAt)
+      return this.getLockFromChartEntity(chart);
     if (chart.lockedById && chart.lockedById !== userId)
-      throw new ChartIsLockedExeption(chartId,chart.lockedById)
+      throw new ChartIsLockedExeption(chartId, chart.lockedById);
 
     await this.chartRepo.update(chartId, { lockedById: null, lockedAt: null });
-    const updatedChart = await this.chartRepo.findOne({ where: { id: chartId }, relations: { lockedBy: true } });
-    if(!updatedChart) throw new Error('Enable to un lock chart')
-    return this.getLockFromChartEntity(updatedChart)
+    const updatedChart = await this.chartRepo.findOne({
+      where: { id: chartId },
+      relations: { lockedBy: true },
+    });
+    if (!updatedChart) throw new Error("Enable to un lock chart");
+    return this.getLockFromChartEntity(updatedChart);
+  }
+
+  async getChartPrivileges(
+    userId: string,
+    chartId: string
+  ): Promise<ChartMetadata | null> {
+    const all = await this.getAllUserChartsMetadata(userId);
+    return all.find((c) => c.id === chartId) ?? null;
   }
 }

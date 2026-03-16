@@ -1,3 +1,4 @@
+import { ChartMetadataSchema } from "../../charts/schemas/chart.schemas.js";
 import { AuditableSchema, IdentifiableSchema } from "../../generic.schema.js";
 import z from "zod";
 
@@ -14,6 +15,10 @@ export const ChartsDirectorySchema = BaseChartsDirectorySchema
   .extend(IdentifiableSchema.shape)
   .extend(AuditableSchema.shape);
 
+export const ChartDirectoryFullContentSchema = z.object({
+  subDirectories:z.array(ChartsDirectorySchema),
+  chartsMetadata:z.array(ChartMetadataSchema)
+})
 // Sharing schemas
 export const ShareWithUserSchema = z.object({
   sharedWithUserId: z.string().uuid(),

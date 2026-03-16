@@ -1,10 +1,14 @@
-import type { ChatChartAction } from "@easy-charts/easycharts-types";
+import { type Chart, type ChatChartAction, type CurrentPage, type UIAction } from "@easy-charts/easycharts-types";
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 
 interface AiChatContextValue {
   /** Chart the AI just created/edited — consumed by ChartsPage to auto-open the editor */
   pendingChartAction: ChatChartAction | null;
   setPendingChartAction: (action: ChatChartAction) => void;
+
+  pendingUiAction: UIAction[];
+  setPendingUiAction: (action: UIAction[]) => void;
+
   clearPendingChartAction: () => void;
 
   /** ID + name of the chart currently open in the editor — sent to the AI as context */
@@ -16,6 +20,12 @@ interface AiChatContextValue {
   editorEditMode: boolean;
   setEditorEditMode: (editMode: boolean) => void;
 
+  /** Which page the user is currently on — set by each page on mount */
+  currentPage: CurrentPage | null;
+  setCurrentPage: (page: CurrentPage | null) => void;
+
+  currentChartStateOnEditor : Chart | null;
+  setCurrentChartStateOnEditor : (chart:Chart) => void
   /** Whether the chat drawer is open */
   chatOpen: boolean;
   openChat: () => void;
@@ -36,16 +46,25 @@ const AI_DISABLED_NOOP: AiChatContextValue = {
   setCurrentEditorChart: noop,
   editorEditMode: false,
   setEditorEditMode: noop,
+  currentPage: null,
+  setCurrentPage: noop,
   chatOpen: false,
   openChat: noop,
   closeChat: noop,
+  currentChartStateOnEditor :null,
+  setCurrentChartStateOnEditor:noop,
+  pendingUiAction:[],
+  setPendingUiAction:noop
 };
 
 export function AiChatProvider({ children }: { children: ReactNode }) {
   const [pendingChartAction, setPendingChartActionState] = useState<ChatChartAction | null>(null);
+  const [pendingUiAction, setPendingUiAction] = useState<UIAction[]>([]);
   const [currentEditorChartId, setCurrentEditorChartId] = useState<string | null>(null);
   const [currentEditorChartName, setCurrentEditorChartName] = useState<string | null>(null);
   const [editorEditMode, setEditorEditMode] = useState(false);
+  const [currentChartStateOnEditor,setCurrentChartStateOnEditor] = useState<Chart | null>(null)
+  const [currentPage, setCurrentPage] = useState<CurrentPage | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
 
   const setPendingChartAction = useCallback((action: ChatChartAction) => {
@@ -75,9 +94,15 @@ export function AiChatProvider({ children }: { children: ReactNode }) {
         setCurrentEditorChart,
         editorEditMode,
         setEditorEditMode,
+        currentPage,
+        setCurrentPage,
         chatOpen,
         openChat,
         closeChat,
+        currentChartStateOnEditor,
+        setCurrentChartStateOnEditor,
+        pendingUiAction,
+        setPendingUiAction
       }}
     >
       {children}

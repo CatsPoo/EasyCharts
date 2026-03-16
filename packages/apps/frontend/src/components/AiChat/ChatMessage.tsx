@@ -1,16 +1,13 @@
-import type { ChatChartAction, ChatMessage as ChatMessageType } from "@easy-charts/easycharts-types";
+import type { ChatMessage as ChatMessageType } from "@easy-charts/easycharts-types";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PersonIcon from "@mui/icons-material/Person";
-import { Avatar, Box, Button, Paper, Typography } from "@mui/material";
+import { Avatar, Box, Paper, Typography } from "@mui/material";
 
 interface ChatMessageProps {
   message: ChatMessageType;
-  chartAction?: ChatChartAction;
-  onOpenChart?: (action: ChatChartAction) => void;
 }
 
-export function ChatMessage({ message, chartAction, onOpenChart }: ChatMessageProps) {
+export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user";
 
   return (
@@ -35,34 +32,21 @@ export function ChatMessage({ message, chartAction, onOpenChart }: ChatMessagePr
         {isUser ? <PersonIcon sx={{ fontSize: 16 }} /> : <AutoFixHighIcon sx={{ fontSize: 16 }} />}
       </Avatar>
 
-      <Box sx={{ maxWidth: "80%", display: "flex", flexDirection: "column", gap: 0.75 }}>
-        <Paper
-          elevation={0}
-          sx={{
-            px: 1.5,
-            py: 1,
-            bgcolor: isUser ? "primary.main" : "action.hover",
-            color: isUser ? "primary.contrastText" : "text.primary",
-            borderRadius: isUser ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
-          }}
-        >
-          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-            {message.content}
-          </Typography>
-        </Paper>
-
-        {chartAction && onOpenChart && (
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<OpenInNewIcon />}
-            onClick={() => onOpenChart(chartAction)}
-            sx={{ alignSelf: "flex-start", textTransform: "none", borderRadius: 2 }}
-          >
-            Open "{chartAction.chartName}" in editor
-          </Button>
-        )}
-      </Box>
+      <Paper
+        elevation={0}
+        sx={{
+          maxWidth: "80%",
+          px: 1.5,
+          py: 1,
+          bgcolor: isUser ? "primary.main" : "action.hover",
+          color: isUser ? "primary.contrastText" : "text.primary",
+          borderRadius: isUser ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+        }}
+      >
+        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+          {message.content}
+        </Typography>
+      </Paper>
     </Box>
   );
 }

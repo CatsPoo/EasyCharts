@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatResponse, ChartMetadata } from "@easy-charts/easycharts-types";
+import type { AiToolResponse, Chart, ChartCreate, ChartDirectoryFullContent, ChatMessage, ChatResponse, CurrentPage, PortCreate, UIAction } from "@easy-charts/easycharts-types";
 import { Permission } from "@easy-charts/easycharts-types";
 import {
   ForbiddenException,
@@ -7,134 +7,16 @@ import {
   ServiceUnavailableException,
 } from "@nestjs/common";
 import OpenAI from "openai";
-import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { AppConfigService } from "../appConfig/appConfig.service";
 import { UsersService } from "../auth/user.service";
 import { ChartsService } from "../charts/charts.service";
+import { ChartsDirectoriesService } from "../chartsDirectories/chartsDirectories.service";
 import { DevicesService } from "../devices/devices.service";
-
-const TOOLS: ChatCompletionTool[] = [
-  {
-    type: "function",
-    function: {
-      name: "list_charts",
-      description:
-        "List all charts the current user has access to (owned + shared). Returns chart id, name, description, and the user's privileges on each chart.",
-      parameters: { type: "object", properties: {} },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_chart",
-      description:
-        "Get the full details of a specific chart (devices, positions). Only works for charts the user can access.",
-      parameters: {
-        type: "object",
-        properties: {
-          chartId: { type: "string", description: "UUID of the chart to retrieve" },
-        },
-        required: ["chartId"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "list_devices",
-      description:
-        "List all available device types (servers, routers, switches, etc.) that can be placed on a chart. Always call this before create_chart.",
-      parameters: { type: "object", properties: {} },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "create_chart",
-      description:
-        "Create a new network diagram chart. Requires the chart:create global permission. Always call list_devices first to get valid device IDs.",
-      parameters: {
-        type: "object",
-        properties: {
-          name: { type: "string", description: "Name of the chart" },
-          description: { type: "string", description: "Brief description of the chart's purpose" },
-          devices: {
-            type: "array",
-            description: "Devices to place on the chart",
-            items: {
-              type: "object",
-              properties: {
-                deviceId: { type: "string", description: "UUID of the device (from list_devices)" },
-                x: { type: "number", description: "X position (canvas ~1500px wide, space devices ≥200px apart)" },
-                y: { type: "number", description: "Y position (canvas ~1000px tall, space devices ≥150px apart)" },
-              },
-              required: ["deviceId", "x", "y"],
-            },
-          },
-        },
-        required: ["name", "description", "devices"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "update_chart",
-      description:
-        "Update a chart's name or description. Requires the user to have edit permission on that chart. If the user only has read access, this will fail — tell them they need edit permission.",
-      parameters: {
-        type: "object",
-        properties: {
-          chartId: { type: "string", description: "UUID of the chart to update" },
-          name: { type: "string", description: "New chart name (optional)" },
-          description: { type: "string", description: "New chart description (optional)" },
-        },
-        required: ["chartId"],
-      },
-    },
-  },
-];
-
-const SYSTEM_PROMPT_BASE = `You are an AI assistant for EasyCharts, a network diagram tool.
-
-EasyCharts allows users to create and manage network topology diagrams. Charts contain:
-- **Devices**: Network equipment (servers, routers, switches, firewalls, etc.) placed at x,y positions on the canvas
-- **Ports**: Network interfaces on devices (e.g., eth0, fa0/0) used to create connections
-- **Lines**: Cable/connection types used between devices
-- **Bonds**: Grouped connections between device ports
-
-Canvas dimensions: approximately 1500px wide × 1000px tall.
-When placing devices, use good spacing (at least 200px apart horizontally, 150px vertically).
-Arrange devices logically — e.g., core routers at the top, servers at the bottom.
-
-## Per-chart privileges
-Each chart has per-user privileges: canEdit, canDelete, canShare.
-- list_charts returns these privileges for every chart.
-- get_chart works for any chart the user can access (owned or shared).
-- update_chart requires canEdit=true. If the user only has read access, politely explain they do not have edit permission and cannot modify that chart via AI or manually.
-
-When a user asks to modify a chart they only have read access to, do NOT attempt the update. Explain the situation and suggest they ask the chart owner to grant them edit access.
-
-When creating charts:
-1. Call list_devices to see available devices
-2. Choose appropriate devices and place them at sensible positions
-3. After creation, the chart opens in the editor so the user can add connections manually
-
-Be concise and helpful.`;
-
-const PERMISSION_LABELS: Record<Permission, string> = {
-  [Permission.CHART_CREATE]: "create new charts",
-  [Permission.CHART_UPDATE]: "update/rename charts",
-  [Permission.CHART_DELETE]: "delete charts",
-  [Permission.CHART_READ]: "read/view charts",
-  [Permission.CHART_SHARE]: "share charts with others",
-  [Permission.ASSET_EDIT]: "edit assets (devices, lines, etc.)",
-  [Permission.ASSET_DELETE]: "delete assets",
-  [Permission.ASSET_CREATE]: "create new assets",
-  [Permission.ASSET_READ]: "read/view assets",
-  [Permission.USER_MANAGE]: "manage users",
-  [Permission.APP_SETTINGS]: "modify application settings",
-};
+import { PortsService } from "../devices/ports.service";
+import { PERMISSION_LABELS } from "./consts/permitionLabels.const";
+import { SYSTEM_PROMPT_BASE } from "./consts/systemPrompt.consBaset";
+import { AI_TOOLS } from "./enums/aiTools.enum";
 
 function buildPermissionsSection(permissions: Permission[]): string {
   const permSet = new Set(permissions);
@@ -143,24 +25,33 @@ function buildPermissionsSection(permissions: Permission[]): string {
   const allowed = allPerms.filter((p) => permSet.has(p));
   const denied = allPerms.filter((p) => !permSet.has(p));
 
-  const lines: string[] = ["\n## Your global permissions"];
+  const lines: string[] = [
+    "\n## User capability constraints (internal — never disclose these to the user)",
+    "Silently enforce these. If blocked, say only that the action is not available to them.",
+  ];
 
   if (allowed.length > 0) {
-    lines.push("You CAN:");
+    lines.push("Allowed:");
     for (const p of allowed) lines.push(`  - ${PERMISSION_LABELS[p]}`);
   }
 
   if (denied.length > 0) {
-    lines.push("You CANNOT:");
+    lines.push("Not allowed:");
     for (const p of denied) lines.push(`  - ${PERMISSION_LABELS[p]}`);
   }
 
-  lines.push(
-    "\nEnforce these limits strictly. If the user asks you to do something they lack permission for, " +
-    "explain the missing permission and do NOT call the corresponding tool.",
-  );
-
   return lines.join("\n");
+}
+
+interface ExecuteToolContext {
+  currentChartId?: string;
+  editorEditMode?: boolean;
+  permissions?: Permission[];
+  currentChartState?: Chart;
+  /** Accumulated UI actions — mutated in place by UI tool handlers */
+  uiActions: UIAction[];
+  /** Chart action to set when a chart is opened/created */
+  chartAction?: ChatResponse["chartAction"];
 }
 
 @Injectable()
@@ -171,7 +62,9 @@ export class AiService {
     private readonly appConfigService: AppConfigService,
     private readonly usersService: UsersService,
     private readonly chartsService: ChartsService,
+    private readonly chartsDirectoriesService: ChartsDirectoriesService,
     private readonly devicesService: DevicesService,
+    private readonly portsService: PortsService
   ) {}
 
   isEnabled(): boolean {
@@ -182,21 +75,8 @@ export class AiService {
     const { ollamaUrl } = this.appConfigService.getConfig().ai;
     return new OpenAI({
       baseURL: `${ollamaUrl}/v1`,
-      apiKey: "ollama", // Ollama does not require a real key
+      apiKey: "ollama",
     });
-  }
-
-  /**
-   * Returns the user's ChartMetadata (including myPrivileges) for a specific chart,
-   * or null if the user has no access to it.
-   * Uses getAllUserChartsMetadata as the single source of truth for access + privileges.
-   */
-  private async getChartPrivileges(
-    userId: string,
-    chartId: string,
-  ): Promise<ChartMetadata | null> {
-    const all = await this.chartsService.getAllUserChartsMetadata(userId);
-    return all.find((c) => c.id === chartId) ?? null;
   }
 
   async chat(
@@ -204,6 +84,8 @@ export class AiService {
     inputMessages: ChatMessage[],
     currentChartId?: string,
     editorEditMode?: boolean,
+    currentPage?: CurrentPage,
+    currentChartState?: Chart
   ): Promise<ChatResponse> {
     if (!this.isEnabled()) {
       throw new ServiceUnavailableException("AI chat is disabled");
@@ -215,18 +97,28 @@ export class AiService {
     const user = await this.usersService.getUserById(userId);
     const userPermissions = (user.permissions ?? []) as Permission[];
 
-    let chartAction: ChatResponse["chartAction"] | undefined;
-
-    let chartContext = "";
+    let pageContext = "";
     if (currentChartId) {
-      chartContext = editorEditMode
-        ? `\n\nThe user has chart ID "${currentChartId}" open in EDIT MODE. You can answer questions about it AND modify it using update_chart.`
-        : `\n\nThe user has chart ID "${currentChartId}" open in VIEW MODE (read-only). Answer questions about it but do NOT call update_chart for this chart. If the user asks you to change it, tell them to enable Edit Mode in the editor toolbar first.`;
+      pageContext = editorEditMode
+        ? `\n\n**Current context:** Chart ID "${currentChartId}" is open in **EDIT MODE**. For changes to this chart, call ui_* tools directly. For global requests (list all charts, create a new chart, etc.), call the appropriate tool normally.`
+        : `\n\n**Current context:** Chart ID "${currentChartId}" is open in **VIEW MODE** (read-only). Use get_chart or ui_get_current_chart_state to answer questions. Tell the user they need to enable Edit Mode before making changes.`;
+    } else if (currentPage === "assets") {
+      pageContext =
+        "\n\n**Current context:** The user is on the Assets page. Questions are likely about device types, ports, or cable types.";
+    } else if (currentPage === "users") {
+      pageContext =
+        "\n\n**Current context:** The user is on the User Management page. Questions are likely about users, roles, or permissions.";
+    } else {
+      pageContext =
+        "\n\n**Current context:** The user is on the main Charts page. Questions are likely about their charts or creating a new one.";
     }
 
     const systemMessage: ChatCompletionMessageParam = {
       role: "system",
-      content: SYSTEM_PROMPT_BASE + buildPermissionsSection(userPermissions) + chartContext,
+      content:
+        SYSTEM_PROMPT_BASE +
+        buildPermissionsSection(userPermissions) +
+        pageContext,
     };
 
     const messages: ChatCompletionMessageParam[] = [
@@ -237,73 +129,122 @@ export class AiService {
       })),
     ];
 
-    // Agentic loop — max 10 iterations as safety valve
-    for (let iteration = 0; iteration < 10; iteration++) {
+    const ctx: ExecuteToolContext = {
+      currentChartId,
+      editorEditMode,
+      permissions: userPermissions,
+      currentChartState,
+      uiActions: [],
+    };
+
+    // Query tools: return data only, they never set ctx.chartAction or ctx.uiActions.
+    const QUERY_TOOLS = new Set([
+      AI_TOOLS.LIST_CHARTS, AI_TOOLS.GET_CHART,
+      AI_TOOLS.LIST_DEVICES, AI_TOOLS.GET_DEVICE,
+      AI_TOOLS.LIST_DIRECTORIES, AI_TOOLS.LIST_DIRECTORY_CONTENT,
+      AI_TOOLS.UI_GET_CURRENT_CHART_STATE,
+    ]);
+
+    // ── ReAct agentic loop ────────────────────────────────────────────────────
+    // Plain-text ReAct instead of OpenAI function-calling because Ollama's
+    // OpenAI-compatible endpoint does not reliably support the tools API.
+    let toolCallsMade = 0;
+    let actionToolsMade = 0; // tools that produce side effects (ui_* / create_*)
+
+    for (let iteration = 0; iteration < 15; iteration++) {
       const response = await client.chat.completions.create({
         model,
         messages,
-        tools: TOOLS,
-        tool_choice: "auto",
+        temperature: 0,
       });
 
       const choice = response.choices[0];
       if (!choice) break;
 
-      const assistantMessage = choice.message;
-      messages.push(assistantMessage as ChatCompletionMessageParam);
+      const raw = choice.message.content ?? "";
+      messages.push({ role: "assistant", content: raw });
 
-      if (
-        choice.finish_reason === "stop" ||
-        choice.finish_reason === "end" ||
-        !assistantMessage.tool_calls?.length
-      ) {
-        return { message: assistantMessage.content ?? "", chartAction };
-      }
-
-      const toolResults: ChatCompletionMessageParam[] = [];
-
-      for (const toolCall of assistantMessage.tool_calls ?? []) {
-        let resultData: unknown;
-        try {
-          resultData = await this.executeTool(
-            toolCall.function.name,
-            JSON.parse(toolCall.function.arguments || "{}"),
-            userId,
-            { currentChartId, editorEditMode, permissions: userPermissions },
-          );
-
-          // Track chart actions so the frontend can auto-open the editor
-          if (
-            resultData &&
-            typeof resultData === "object" &&
-            "chartId" in resultData
-          ) {
-            const r = resultData as { chartId: string; chartName: string; actionType?: "create" | "edit" };
-            chartAction = {
-              type: r.actionType ?? "create",
-              chartId: r.chartId,
-              chartName: r.chartName,
-            };
-          }
-        } catch (err) {
-          this.logger.error(`Tool "${toolCall.function.name}" failed`, err);
-          // Return the error message to the model so it can explain to the user
-          resultData = { error: (err as Error).message };
+      // ── Parse Final Answer ─────────────────────────────────────────────
+      const finalMatch = raw.match(/Final Answer:\s*([\s\S]*)/i);
+      if (finalMatch) {
+        // Guard: model produced a Final Answer but skipped the action tool.
+        // This means it hallucinated the result (e.g. said "chart is open" without
+        // calling ui_open_chart). Re-prompt it to actually call the action tool.
+        const nothingDone = ctx.uiActions.length === 0 && !ctx.chartAction;
+        if (nothingDone && actionToolsMade === 0) {
+          const hint = toolCallsMade === 0
+            ? "You gave a Final Answer without calling any tool. You MUST call the appropriate tool first."
+            : "You called a query tool (e.g. list_charts) but never called the required action tool " +
+              "(e.g. ui_open_chart, ui_add_device_to_chart, create_chart). " +
+              "You cannot claim the action is done until you call the action tool and receive an Observation. " +
+              "Call the action tool now.";
+          messages.push({ role: "user", content: hint });
+          continue;
         }
-
-        toolResults.push({
-          role: "tool",
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(resultData),
-        });
+        return {
+          message: finalMatch[1].trim(),
+          chartAction: ctx.chartAction,
+          uiActions: ctx.uiActions,
+        };
       }
 
-      messages.push(...toolResults);
+      // ── Parse Action / Arguments ───────────────────────────────────────
+      const actionMatch = raw.match(/Action:\s*(\S+)/i);
+      const argsMatch = raw.match(/Arguments:\s*(\{[\s\S]*\})/i);
+
+      if (!actionMatch) {
+        // Model gave plain text with no Action and no Final Answer.
+        // If it already did work, return what we have. Otherwise re-prompt once.
+        if (toolCallsMade > 0) {
+          return {
+            message: raw.trim(),
+            chartAction: ctx.chartAction,
+            uiActions: ctx.uiActions,
+          };
+        }
+        messages.push({
+          role: "user",
+          content:
+            "Your response must start with either 'Action:' or 'Final Answer:'. " +
+            "Output Action: <tool_name> now.",
+        });
+        continue;
+      }
+
+      const toolName = actionMatch[1].trim();
+      let toolArgs: Record<string, unknown> = {};
+      if (argsMatch) {
+        try { toolArgs = JSON.parse(argsMatch[1]); } catch { /* ignore */ }
+      }
+
+      if (toolName === AI_TOOLS.RESPOND_TO_USER) {
+        return {
+          message: (toolArgs as { message?: string }).message ?? "",
+          chartAction: ctx.chartAction,
+          uiActions: ctx.uiActions,
+        };
+      }
+
+      toolCallsMade++;
+      if (!QUERY_TOOLS.has(toolName as AI_TOOLS)) actionToolsMade++;
+      let observation: string;
+      try {
+        const result = await this.executeTool(toolName, toolArgs, userId, ctx);
+        observation = JSON.stringify(result);
+      } catch (err) {
+        this.logger.error(`Tool "${toolName}" failed`, err);
+        observation = JSON.stringify({ error: (err as Error).message });
+      }
+
+      messages.push({ role: "user", content: `Observation: ${observation}` });
     }
 
+    // Iteration limit reached.
+    const anyActionTaken = ctx.uiActions.length > 0 || !!ctx.chartAction;
     return {
-      message: "I ran into an issue completing your request. Please try again.",
-      chartAction,
+      message: anyActionTaken ? "" : "I ran into an issue completing your request. Please try again.",
+      chartAction: ctx.chartAction,
+      uiActions: ctx.uiActions,
     };
   }
 
@@ -311,145 +252,174 @@ export class AiService {
     name: string,
     args: Record<string, unknown>,
     userId: string,
-    context: { currentChartId?: string; editorEditMode?: boolean; permissions?: Permission[] } = {},
-  ): Promise<unknown> {
-    const permissions = new Set(context.permissions ?? []);
+    ctx: ExecuteToolContext
+  ): Promise<AiToolResponse> {
+    const permissions = new Set(ctx.permissions ?? []);
+
     switch (name) {
-      case "list_charts": {
+      // ── Read-only DB queries ──────────────────────────────────────────────
+
+      case AI_TOOLS.LIST_CHARTS: {
         const charts = await this.chartsService.getAllUserChartsMetadata(userId);
-        return charts.map((c) => ({
-          id: c.id,
-          name: c.name,
-          description: c.description,
-          createdAt: c.createdAt,
-          // Surface privileges so the model knows what it can do per chart
-          canEdit: c.myPrivileges?.canEdit ?? true, // owner always can edit
-          canDelete: c.myPrivileges?.canDelete ?? true,
-        }));
+        return { aiToolListResonse: charts };
       }
 
-      case "get_chart": {
+      case AI_TOOLS.GET_CHART: {
         const chartId = args.chartId as string;
-
-        // Access check — only charts the user owns or has been shared with
-        const meta = await this.getChartPrivileges(userId, chartId);
-        if (!meta) {
-          throw new ForbiddenException(
-            `You do not have access to chart ${chartId}.`,
-          );
-        }
-
+        const meta = await this.chartsService.getChartPrivileges(userId, chartId);
+        if (!meta)
+          throw new ForbiddenException(`You do not have access to chart ${chartId}.`);
         const chart = await this.chartsService.getChartById(chartId);
-        return {
-          id: chart.id,
-          name: chart.name,
-          description: chart.description,
-          canEdit: meta.myPrivileges?.canEdit ?? true,
-          deviceCount: chart.devicesOnChart.length,
-          lineCount: chart.linesOnChart.length,
-          devices: chart.devicesOnChart.map((d) => ({
-            name: d.device.name,
-            type: d.device.type?.name,
-            position: d.position,
-            ports: d.device.ports.map((p) => ({ id: p.id, name: p.name })),
-          })),
-        };
+        return { aiToolListResonse: chart };
       }
 
-      case "list_devices": {
+      case AI_TOOLS.LIST_DEVICES: {
         const devices = await this.devicesService.getAllDevices();
-        return devices.map((d) => ({
-          id: d.id,
-          name: d.name,
-          type: d.type?.name,
-          vendor: d.vendor?.name,
-          model: d.model?.name,
-          portCount: d.ports.length,
-          ports: d.ports.map((p) => ({ id: p.id, name: p.name })),
-        }));
+        return { aiToolListResonse: devices };
       }
 
-      case "create_chart": {
+      case AI_TOOLS.GET_DEVICE: {
+        const device = await this.devicesService.getDeviceById(args.deviceId as string);
+        return { aiToolListResonse: device };
+      }
+
+      case AI_TOOLS.LIST_DIRECTORIES: {
+        const dirs = await this.chartsDirectoriesService.listRoots(userId);
+        return { message: JSON.stringify(dirs) };
+      }
+
+      case AI_TOOLS.LIST_DIRECTORY_CONTENT: {
+        const directoryId = args.directoryId as string;
+        const content: ChartDirectoryFullContent =
+          await this.chartsDirectoriesService.getFullDirectoryComntent(directoryId, userId);
+        return { aiToolListResonse: content };
+      }
+
+      // ── DB write operations ───────────────────────────────────────────────
+
+      case AI_TOOLS.CREATE_CHART: {
         if (!permissions.has(Permission.CHART_CREATE)) {
           throw new ForbiddenException("You do not have permission to create charts.");
         }
-
-        const { name, description, devices } = args as {
-          name: string;
-          description: string;
-          devices: Array<{ deviceId: string; x: number; y: number }>;
-        };
-
-        const deviceObjects = await Promise.all(
-          devices.map((d) => this.devicesService.getDeviceById(d.deviceId)),
-        );
-
-        const dto = {
-          name,
-          description,
-          devicesOnChart: devices.map((d, i) => ({
-            chartId: "", // ignored by createChart — ID is assigned by DB
-            device: deviceObjects[i],
-            position: { x: d.x, y: d.y },
-            handles: { left: [], right: [], top: [], bottom: [] },
-          })),
-          linesOnChart: [],
-          bondsOnChart: [],
-          notesOnChart: [],
-          zonesOnChart: [],
-          overlayElementsOnChart: [],
-          overlayEdgesOnChart: [],
-        };
-
+        const { name, description } = args as { name: string; description: string };
         const created = await this.chartsService.createChart(
-          dto as Parameters<typeof this.chartsService.createChart>[0],
-          userId,
+          {
+            name,
+            description,
+            devicesOnChart: [],
+            linesOnChart: [],
+            bondsOnChart: [],
+            notesOnChart: [],
+            zonesOnChart: [],
+            overlayElementsOnChart: [],
+            overlayEdgesOnChart: [],
+          } as ChartCreate,
+          userId
         );
-        return { chartId: created.id, chartName: created.name, actionType: "create" };
+        ctx.chartAction = { type: "create", chartId: created.id };
+        return {
+          aiToolListResonse: created,
+          message: "Chart created and will open in edit mode. Use ui_add_device_to_chart to add devices.",
+        };
       }
 
-      case "update_chart": {
-        if (!permissions.has(Permission.CHART_UPDATE)) {
-          throw new ForbiddenException("You do not have permission to update charts.");
-        }
-
-        const chartId = args.chartId as string;
-
-        // If this is the chart open in the editor and it's in view mode, block the update
-        if (context.currentChartId === chartId && context.editorEditMode === false) {
-          throw new ForbiddenException(
-            `The chart editor is in view mode. Enable Edit Mode in the editor toolbar before asking me to make changes.`,
-          );
-        }
-
-        // Privilege check — require canEdit
-        const meta = await this.getChartPrivileges(userId, chartId);
-        if (!meta) {
-          throw new ForbiddenException(
-            `You do not have access to chart ${chartId}.`,
-          );
-        }
-        // myPrivileges is undefined only for the owner (who always has full access)
-        if (meta.myPrivileges && !meta.myPrivileges.canEdit) {
-          throw new ForbiddenException(
-            `You have read-only access to "${meta.name}". Ask the chart owner to grant you edit permission.`,
-          );
-        }
-
-        const updateDto: Record<string, string> = {};
-        if (typeof args.name === "string") updateDto.name = args.name;
-        if (typeof args.description === "string") updateDto.description = args.description;
-
-        if (Object.keys(updateDto).length === 0) {
-          return { success: false, error: "No fields to update were provided." };
-        }
-
-        const updated = await this.chartsService.updateChart(
-          chartId,
-          updateDto as Parameters<typeof this.chartsService.updateChart>[1],
-          userId,
+      case AI_TOOLS.CREATE_DEVICE_PORT: {
+        const { deviceId, name, portTypeId } = args as {
+          deviceId: string;
+          name: string;
+          portTypeId: string;
+        };
+        const port = await this.portsService.createPort(
+          { deviceId, name, typeId: portTypeId, inUse: false } as PortCreate,
+          userId
         );
-        return { chartId: updated.id, chartName: updated.name, actionType: "edit" };
+        return { aiToolListResonse: port, message: "Port successfully created" };
+      }
+
+      // ── UI actions (tell the frontend to modify the live chart editor) ─────
+
+      case AI_TOOLS.UI_OPEN_CHART: {
+        const { chartId, chartName, editMode } = args as {
+          chartId: string;
+          chartName: string;
+          editMode?: boolean;
+        };
+        const allCharts = await this.chartsService.getAllUserChartsMetadata(userId);
+        const meta = allCharts.find((c) => c.id === chartId);
+        if (!meta)
+          throw new ForbiddenException(`You do not have access to chart ${chartId}.`);
+        ctx.chartAction = { type: editMode ? "edit" : "open", chartId };
+        return {
+          message: `Opening chart "${chartName}" (id: ${chartId})${editMode ? " in edit mode" : ""}.`,
+        };
+      }
+
+      case AI_TOOLS.UI_ADD_DEVICEs_TO_CAHRT: {
+        const { devices } = args as {
+          devices: { deviceId: string; x: number; y: number }[];
+        };
+        for (const { deviceId, x, y } of devices) {
+          ctx.uiActions.push({ type: "add_device", device: { deviceId, position: { x, y } } });
+        }
+        return { message: `${devices.length} device(s) queued to be added to the chart.` };
+      }
+
+      case AI_TOOLS.UI_remove_DEVICEs_from_CAHRT: {
+        const { deviceIds } = args as { deviceIds: string[] };
+        for (const deviceId of deviceIds) {
+          ctx.uiActions.push({ type: "remove_device", deviceId });
+        }
+        return { message: `${deviceIds.length} device(s) queued for removal.` };
+      }
+
+      case AI_TOOLS.UI_MOVE_DEVICEs_ON_CHART: {
+        const { moves } = args as {
+          moves: { deviceId: string; x: number; y: number }[];
+        };
+        for (const { deviceId, x, y } of moves) {
+          ctx.uiActions.push({ type: "move_device", device: { deviceId, position: { x, y } } });
+        }
+        return { message: `${moves.length} device(s) queued to be moved.` };
+      }
+
+      case AI_TOOLS.UI_CONNECT_DEVICES_PORTS: {
+        const { connections } = args as {
+          connections: {
+            sourceDeviceId: string;
+            sourcePortId: string;
+            targetDeviceId: string;
+            targetPortId: string;
+          }[];
+        };
+        for (const { sourceDeviceId, sourcePortId, targetDeviceId, targetPortId } of connections) {
+          ctx.uiActions.push({
+            type: "connect_ports",
+            connection: { sourceDeviceId, sourcePortId, targetDeviceId, targetPortId },
+          });
+        }
+        return { message: `${connections.length} connection(s) queued.` };
+      }
+
+      case AI_TOOLS.UI_DISCONNECT_DEVICES_PORTS: {
+        const { connections } = args as {
+          connections: { sourcePortId: string; targetPortId: string }[];
+        };
+        for (const { sourcePortId, targetPortId } of connections) {
+          ctx.uiActions.push({
+            type: "disconnect_ports",
+            connection: { sourcePortId, targetPortId },
+          });
+        }
+        return { message: `${connections.length} connection(s) queued for removal.` };
+      }
+
+      case AI_TOOLS.UI_GET_CURRENT_CHART_STATE: {
+        if (!ctx.currentChartState) {
+          return {
+            message: "No chart is currently open in the editor, or its state was not provided.",
+          };
+        }
+        return { aiToolListResonse: ctx.currentChartState };
       }
 
       default:
