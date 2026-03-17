@@ -85,6 +85,10 @@ import type { DeleteSets } from "./interfaces/deleteSets.interfaces";
 import type { EditLineDialogFormResponse } from "./interfaces/editLineDialogForm.interfaces";
 import type { CtxState } from "./interfaces/ctsMenu.interfaces";
 
+type LineEdgeData = { strokeType?: string; cableType?: string; lineId?: never };
+type SplitBondEdgeData = { lineId: string; strokeType?: never; cableType?: never };
+type EdgeData = LineEdgeData | SplitBondEdgeData;
+
 /** Returns true if the given node ID is an overlay element (cloud or custom element). */
 function isFreeNode(
   nodeId: string | null | undefined,
@@ -615,12 +619,16 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
 
     const onEditLine = useCallback(
       (edge: Edge) => {
+        // For split edges (part of a bond), the real line ID is in data.lineId
+        const realLineId = (edge.data as EdgeData)?.lineId ?? edge.id;
         // Find the actual data record for this line
-        const lineData = chart.linesOnChart.find((l) => l.line.id === edge.id);
+        const lineData = chart.linesOnChart.find((l) => l.line.id === realLineId);
 
-        // Merge the edge with the saved data so 'type' is correct
+        // Merge the edge with the saved data so 'type' is correct.
+        // Use realLineId as id so the submit handler can match linesOnChart correctly.
         setSelectedEditLine({
           ...edge,
+          id: realLineId,
           type: lineData?.type || edge.type || "straight",
           label: lineData?.label || edge.label || "",
         });
@@ -1598,6 +1606,20 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
               ? `${nodeId}-R-${idx}`
               : `${nodeId}-B-${idx}`;
 
+          const cableColor = loc.line.cableType
+            ? allCableTypes.find((ct) => ct.name === loc.line.cableType)?.defaultColor
+            : undefined;
+          const splitEdgeColor = loc.color ?? cableColor;
+          const splitStrokeDasharray =
+            loc.strokeType === "dashed" ? "8 4" :
+            loc.strokeType === "dotted" ? "2 4" :
+            loc.strokeType === "long-dashed" ? "16 4" :
+            undefined;
+          const splitStyle = (splitEdgeColor || splitStrokeDasharray)
+            ? { stroke: splitEdgeColor, strokeWidth: 2, color: loc.color, strokeDasharray: splitStrokeDasharray }
+            : undefined;
+          const splitData: SplitBondEdgeData = { lineId: loc.line.id };
+
           const edgeA: Edge = sourceFirst
             ? {
                 id: `${loc.line.id}-a`,
@@ -1605,8 +1627,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 sourceHandle: loc.line.sourcePort.id,
                 target: nodeId,
                 targetHandle: leftOrTopHandle,
-                type: "step",
-                data: { lineId: loc.line.id },
+                type: loc.type ?? "step",
+                data: splitData,
+                style: splitStyle,
                 // avoid editing reconnection on split view
                 updatable: false,
               } as Edge
@@ -1616,8 +1639,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 sourceHandle: loc.line.targetPort.id,
                 target: nodeId,
                 targetHandle: leftOrTopHandle,
-                type: "step",
-                data: { lineId: loc.line.id },
+                type: loc.type ?? "step",
+                data: splitData,
+                style: splitStyle,
                 updatable: false,
               } as Edge;
 
@@ -1628,8 +1652,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 sourceHandle: rightOrBottomHandle,
                 target: loc.line.targetPort.deviceId,
                 targetHandle: loc.line.targetPort.id,
-                type: "step",
-                data: { lineId: loc.line.id },
+                type: loc.type ?? "step",
+                data: splitData,
+                style: splitStyle,
                 updatable: false,
               } as Edge
             : {
@@ -1638,8 +1663,9 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                 sourceHandle: rightOrBottomHandle,
                 target: loc.line.sourcePort.deviceId,
                 targetHandle: loc.line.sourcePort.id,
-                type: "step",
-                data: { lineId: loc.line.id },
+                type: loc.type ?? "step",
+                data: splitData,
+                style: splitStyle,
                 updatable: false,
               } as Edge;
 
@@ -1653,7 +1679,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
         .map(convertLineToEdge);
 
       return { bridgeNodes, displayEdges: [...plainEdges, ...splitEdges] };
-    }, [devicePos, getBondCenterPos, pickOrientation, convertLineToEdge]);
+    }, [devicePos, getBondCenterPos, pickOrientation, convertLineToEdge, allCableTypes]);
 
     useEffect(() => {
       setNodes((prev) => {
@@ -2330,13 +2356,14 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
             break;
 
           case EditorMenuListKeys.SET_LINE_COLOR: {
-            const loc = chart.linesOnChart.find((l) => l.line.id === payload.edge.id);
+            const realLineId = (payload.edge.data as EdgeData)?.lineId ?? payload.edge.id;
+            const loc = chart.linesOnChart.find((l) => l.line.id === realLineId);
             const cableDefaultColor = loc?.line.cableType
               ? allCableTypes.find((ct) => ct.name === loc.line.cableType)?.defaultColor
               : undefined;
             const current = loc?.color ?? cableDefaultColor ?? "#ffffff";
             setColorPickerLineValue(current);
-            setColorPickerLineId(payload.edge.id);
+            setColorPickerLineId(realLineId);
             break;
           }
 
@@ -2677,7 +2704,7 @@ export const ChartEditor = forwardRef<ChartEditorHandle, ChardEditorProps>(
                         ),
                       } as Chart));
                       setEdges((eds) => eds.map((e) =>
-                        e.id === lineId
+                        ((e.data as EdgeData)?.lineId ?? e.id) === lineId
                           ? { ...e, style: { stroke: color, strokeWidth: 2 } }
                           : e
                       ));
