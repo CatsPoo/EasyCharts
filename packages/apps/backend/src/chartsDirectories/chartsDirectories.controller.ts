@@ -4,6 +4,8 @@ import {
   Permission,
   ShareDirectoryRequestSchema,
   type ShareDirectoryRequest,
+  ShareDirectoryWithGroupRequestSchema,
+  type ShareDirectoryWithGroupRequest,
   type UpadateChartDirectory,
   UpdateChartsDirectorySchema,
 } from "@easy-charts/easycharts-types";
@@ -129,5 +131,50 @@ export class ChartsDirectoriesController {
     @Param("userId", new ParseUUIDPipe()) userId: string,
   ) {
     return this.chartsDirectoriesService.unshareDirectoryContent(id, userId);
+  }
+
+  // ─── Group Sharing ──────────────────────────────────────────────────────────
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @Get(":id/group-shares")
+  getGroupShares(@Param("id", new ParseUUIDPipe()) id: string) {
+    return this.chartsDirectoriesService.getDirectoryGroupShares(id);
+  }
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @Post(":id/group-share")
+  @HttpCode(HttpStatus.CREATED)
+  shareWithGroup(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(ShareDirectoryWithGroupRequestSchema)) body: ShareDirectoryWithGroupRequest,
+    @Req() req: { user: string },
+  ) {
+    return this.chartsDirectoriesService.shareDirectoryWithGroup(
+      id,
+      body.sharedWithGroupId,
+      req.user,
+      { canEdit: body.canEdit, canDelete: body.canDelete, canShare: body.canShare },
+      body.includeContent,
+    );
+  }
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @Delete(":id/group-share/:groupId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  unshareGroup(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("groupId", new ParseUUIDPipe()) groupId: string,
+  ) {
+    return this.chartsDirectoriesService.unshareDirectoryFromGroup(id, groupId);
+  }
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @Delete(":id/group-share/:groupId/content")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  unshareGroupContent(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("groupId", new ParseUUIDPipe()) groupId: string,
+  ) {
+    return this.chartsDirectoriesService.unshareDirectoryContentFromGroup(id, groupId);
   }
 }
