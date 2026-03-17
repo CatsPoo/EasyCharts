@@ -25,6 +25,9 @@ import { NoteOnChartEntity } from './entities/noteOnChart.entity';
 import { PortOnChartEntity } from './entities/portOnChart.entity';
 import { ZoneOnChartEntity } from './entities/zoneOnChart.entity';
 import { ChartLockSchedulerService } from './chartLockScheduler.service';
+import { GroupChartShareEntity } from './entities/groupChartShare.entity';
+import { GroupDirectoryShareEntity } from '../chartsDirectories/entities/groupDirectoryShare.entity';
+import { GroupMembershipEntity } from '../groups/entities/groupMembership.entity';
 import { ChartShareGuard } from './guards/chartShare.guard';
 import { LinesOnChartService } from './lineOnChart.service';
 import { NotesOnChartService } from './noteOnChart.service';
@@ -50,6 +53,9 @@ import { OverlayElementOnChartEntity, OverlayEdgeOnChartEntity } from './entitie
            ChartShareEntity,
            ChartInDirectoryEntity,
            DirectoryShareEntity,
+           GroupChartShareEntity,
+           GroupDirectoryShareEntity,
+           GroupMembershipEntity,
            ChartVersionEntity,
            OverlayElementOnChartEntity,
            OverlayEdgeOnChartEntity,
