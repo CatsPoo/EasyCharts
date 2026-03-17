@@ -9,7 +9,8 @@ import {
   type ChartUpdate,
   type OverlayElementOnChart,
   type DeviceOnChart,
-  type ZoneOnChart
+  type ZoneOnChart,
+  type GroupChartShare,
 } from "@easy-charts/easycharts-types";
 import {
   ForbiddenException,
@@ -21,6 +22,9 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, EntityManager, In, Repository } from "typeorm";
 import { ChartInDirectoryEntity } from "../chartsDirectories/entities/chartsInDirectory.entity";
 import { DirectoryShareEntity } from "../chartsDirectories/entities/directoryShare.entity";
+import { GroupDirectoryShareEntity } from "../chartsDirectories/entities/groupDirectoryShare.entity";
+import { GroupChartShareEntity } from "./entities/groupChartShare.entity";
+import { GroupMembershipEntity } from "../groups/entities/groupMembership.entity";
 import { DeviceEntity } from "../devices/entities/device.entity";
 import { PortEntity } from "../devices/entities/port.entity";
 import { PortsService } from "../devices/ports.service";
@@ -57,6 +61,15 @@ export class ChartsService {
 
     @InjectRepository(DirectoryShareEntity)
     private readonly shareDirRepo: Repository<DirectoryShareEntity>,
+
+    @InjectRepository(GroupChartShareEntity)
+    private readonly groupChartShareRepo: Repository<GroupChartShareEntity>,
+
+    @InjectRepository(GroupMembershipEntity)
+    private readonly membershipRepo: Repository<GroupMembershipEntity>,
+
+    @InjectRepository(GroupDirectoryShareEntity)
+    private readonly groupDirShareRepo: Repository<GroupDirectoryShareEntity>,
 
     // Global services (no knowledge of *OnChart)
     private readonly linesService: LinessService,
@@ -222,57 +235,104 @@ export class ChartsService {
   private computePrivileges(
     chart: ChartEntity,
     userId: string,
-    shareMap: Map<string, ChartShareEntity>,
+    userShareMap: Map<string, ChartShareEntity>,
+    groupShareMap: Map<string, GroupChartShareEntity[]>,
   ): { canEdit: boolean; canDelete: boolean; canShare: boolean } {
     if (chart.createdByUserId === userId) {
       return { canEdit: true, canDelete: true, canShare: true };
     }
-    const share = shareMap.get(chart.id);
-    return {
-      canEdit: share?.canEdit ?? false,
-      canDelete: share?.canDelete ?? false,
-      canShare: share?.canShare ?? false,
-    };
+    // User-specific share overrides group shares
+    const userShare = userShareMap.get(chart.id);
+    if (userShare) {
+      return { canEdit: userShare.canEdit, canDelete: userShare.canDelete, canShare: userShare.canShare };
+    }
+    // Union of group shares
+    const groupShares = groupShareMap.get(chart.id) ?? [];
+    if (groupShares.length > 0) {
+      return {
+        canEdit: groupShares.some(gs => gs.canEdit),
+        canDelete: groupShares.some(gs => gs.canDelete),
+        canShare: groupShares.some(gs => gs.canShare),
+      };
+    }
+    return { canEdit: false, canDelete: false, canShare: false };
   }
 
-  private async buildShareMap(
+  private async buildShareMaps(
     chartIds: string[],
     userId: string,
-  ): Promise<Map<string, ChartShareEntity>> {
-    if (chartIds.length === 0) return new Map();
-    const shares = await this.chartShareRepo.find({
+  ): Promise<{ userShareMap: Map<string, ChartShareEntity>; groupShareMap: Map<string, GroupChartShareEntity[]> }> {
+    if (chartIds.length === 0) return { userShareMap: new Map(), groupShareMap: new Map() };
+
+    const userShares = await this.chartShareRepo.find({
       where: { chartId: In(chartIds), sharedWithUserId: userId },
     });
-    return new Map(shares.map(s => [s.chartId, s]));
+    const userShareMap = new Map(userShares.map(s => [s.chartId, s]));
+
+    const groupIds = await this.membershipRepo.find({ where: { userId }, select: ['groupId'] });
+    const groupShareMap = new Map<string, GroupChartShareEntity[]>();
+    if (groupIds.length > 0) {
+      const groupShares = await this.groupChartShareRepo.find({
+        where: { chartId: In(chartIds), groupId: In(groupIds.map(g => g.groupId)) },
+      });
+      for (const gs of groupShares) {
+        const arr = groupShareMap.get(gs.chartId) ?? [];
+        arr.push(gs);
+        groupShareMap.set(gs.chartId, arr);
+      }
+    }
+
+    return { userShareMap, groupShareMap };
   }
 
   async buildChartMetadataWithPrivileges(
     charts: ChartEntity[],
     userId: string,
   ): Promise<ChartMetadata[]> {
-    const shareMap = await this.buildShareMap(charts.map(c => c.id), userId);
+    const { userShareMap, groupShareMap } = await this.buildShareMaps(charts.map(c => c.id), userId);
     return charts.map(c =>
-      this.convertChartToChartMetadata(c, this.computePrivileges(c, userId, shareMap)),
+      this.convertChartToChartMetadata(c, this.computePrivileges(c, userId, userShareMap, groupShareMap)),
     );
   }
 
   async getAllUserChartsMetadata(userId: string): Promise<ChartMetadata[]> {
-    const charts = await this.chartRepo
+    const groupIds = await this.membershipRepo.find({ where: { userId }, select: ['groupId'] });
+    const qb = this.chartRepo
       .createQueryBuilder("c")
-      .leftJoin(ChartShareEntity, "cs", "cs.chart_id::text = c.id::text AND cs.shared_with_user_id::text = :userId", { userId })
-      .where("c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL", { userId })
-      .getMany();
+      .leftJoin(ChartShareEntity, "cs", "cs.chart_id::text = c.id::text AND cs.shared_with_user_id::text = :userId", { userId });
+
+    if (groupIds.length > 0) {
+      qb.leftJoin(
+        GroupChartShareEntity, "gcs",
+        "gcs.chart_id::text = c.id::text AND gcs.group_id IN (:...groupIds)",
+        { groupIds: groupIds.map(g => g.groupId) },
+      ).where("c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL OR gcs.group_id IS NOT NULL", { userId });
+    } else {
+      qb.where("c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL", { userId });
+    }
+
+    const charts = await qb.getMany();
     return this.buildChartMetadataWithPrivileges(charts, userId);
   }
 
   async getUnassignedChartsMetadata(userId: string): Promise<ChartMetadata[]> {
-    const charts = await this.chartRepo
+    const groupIds = await this.membershipRepo.find({ where: { userId }, select: ['groupId'] });
+    const qb = this.chartRepo
       .createQueryBuilder("c")
       .leftJoin(ChartShareEntity, "cs", "cs.chart_id::text = c.id::text AND cs.shared_with_user_id::text = :userId", { userId })
-      .leftJoin("charts_in_directories", "cid", "cid.chart_id = c.id::text")
-      .where("(c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL)", { userId })
-      .andWhere("cid.chart_id IS NULL")
-      .getMany();
+      .leftJoin("charts_in_directories", "cid", "cid.chart_id = c.id::text");
+
+    if (groupIds.length > 0) {
+      qb.leftJoin(
+        GroupChartShareEntity, "gcs",
+        "gcs.chart_id::text = c.id::text AND gcs.group_id IN (:...groupIds)",
+        { groupIds: groupIds.map(g => g.groupId) },
+      ).where("(c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL OR gcs.group_id IS NOT NULL)", { userId });
+    } else {
+      qb.where("(c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL)", { userId });
+    }
+
+    const charts = await qb.andWhere("cid.chart_id IS NULL").getMany();
     return this.buildChartMetadataWithPrivileges(charts, userId);
   }
 
@@ -322,11 +382,54 @@ export class ChartsService {
     return this.chartShareRepo.find({ where: { chartId } });
   }
 
+  async getChartGroupShares(chartId: string): Promise<GroupChartShare[]> {
+    const shares = await this.groupChartShareRepo.find({ where: { chartId } });
+    return shares.map(s => ({
+      chartId: s.chartId,
+      sharedWithGroupId: s.groupId,
+      sharedByUserId: s.sharedByUserId,
+      canEdit: s.canEdit,
+      canDelete: s.canDelete,
+      canShare: s.canShare,
+    }));
+  }
+
+  async shareChartWithGroup(
+    chartId: string,
+    groupId: string,
+    sharedByUserId: string,
+    permissions: { canEdit: boolean; canDelete: boolean; canShare: boolean },
+  ): Promise<void> {
+    const chart = await this.chartRepo.findOne({ where: { id: chartId }, select: { id: true, createdByUserId: true } });
+    if (!chart) throw new NotFoundException(`Chart ${chartId} not found`);
+    await this.groupChartShareRepo.upsert(
+      { chartId, groupId, sharedByUserId, ...permissions },
+      { conflictPaths: ["chartId", "groupId"], skipUpdateIfNoValuesChanged: false },
+    );
+    // Auto-share parent directories with the group (view-only, no downgrade)
+    const parentDirs = await this.cidRepo.find({ where: { chartId }, select: ["directoryId"] });
+    for (const { directoryId } of parentDirs) {
+      await this.groupDirShareRepo
+        .createQueryBuilder()
+        .insert()
+        .into(GroupDirectoryShareEntity)
+        .values({ directoryId, groupId, sharedByUserId, canEdit: false, canDelete: false, canShare: false })
+        .orIgnore()
+        .execute();
+    }
+    this.logger.log(`Chart "${chartId}" group-shared with groupId "${groupId}" by userId "${sharedByUserId}"`);
+  }
+
+  async unshareChartFromGroup(chartId: string, groupId: string): Promise<void> {
+    await this.groupChartShareRepo.delete({ chartId, groupId });
+    this.logger.log(`Chart "${chartId}" group-unshared from groupId "${groupId}"`);
+  }
+
   async getChartMetadataById(id: string, userId: string): Promise<ChartMetadata> {
     const chart = await this.chartRepo.findOne({ where: { id } });
     if (!chart) throw new NotFoundException(`Chart with ID ${id} not found`);
-    const shareMap = await this.buildShareMap([id], userId);
-    return this.convertChartToChartMetadata(chart, this.computePrivileges(chart, userId, shareMap));
+    const { userShareMap, groupShareMap } = await this.buildShareMaps([id], userId);
+    return this.convertChartToChartMetadata(chart, this.computePrivileges(chart, userId, userShareMap, groupShareMap));
   }
 
   async updateChart(chartId: string, dto: ChartUpdate, userId: string): Promise<Chart> {
@@ -340,8 +443,16 @@ export class ChartsService {
       });
       if (!chart) throw new ChartNotFoundExeption(chartId);
       if (chart.createdByUserId !== userId) {
-        const share = await this.chartShareRepo.findOne({ where: { chartId, sharedWithUserId: userId } });
-        if (!share?.canEdit) throw new ForbiddenException("No edit permission on this chart");
+        const userShare = await this.chartShareRepo.findOne({ where: { chartId, sharedWithUserId: userId } });
+        if (userShare) {
+          if (!userShare.canEdit) throw new ForbiddenException("No edit permission on this chart");
+        } else {
+          const groupIds = await this.membershipRepo.find({ where: { userId }, select: ['groupId'] });
+          const canEdit = groupIds.length > 0 && await this.groupChartShareRepo.findOne({
+            where: { chartId, groupId: In(groupIds.map(g => g.groupId)), canEdit: true },
+          });
+          if (!canEdit) throw new ForbiddenException("No edit permission on this chart");
+        }
       }
       if (chart.lockedById && chart.lockedById !== userId)
         throw new ChartIsLockedExeption(chartId, chart.lockedById);
@@ -443,8 +554,16 @@ export class ChartsService {
     const chart = await this.chartRepo.findOne({ where: { id } });
     if (!chart) throw new ChartNotFoundExeption(id);
     if (chart.createdByUserId !== userId) {
-      const share = await this.chartShareRepo.findOne({ where: { chartId: id, sharedWithUserId: userId } });
-      if (!share?.canDelete) throw new ForbiddenException("No delete permission on this chart");
+      const userShare = await this.chartShareRepo.findOne({ where: { chartId: id, sharedWithUserId: userId } });
+      if (userShare) {
+        if (!userShare.canDelete) throw new ForbiddenException("No delete permission on this chart");
+      } else {
+        const groupIds = await this.membershipRepo.find({ where: { userId }, select: ['groupId'] });
+        const canDelete = groupIds.length > 0 && await this.groupChartShareRepo.findOne({
+          where: { chartId: id, groupId: In(groupIds.map(g => g.groupId)), canDelete: true },
+        });
+        if (!canDelete) throw new ForbiddenException("No delete permission on this chart");
+      }
     }
     if (chart.lockedById && chart.lockedById !== userId)
       throw new ChartIsLockedExeption(id, chart.lockedById);

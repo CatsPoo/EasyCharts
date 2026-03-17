@@ -6,6 +6,8 @@ import {
   Permission,
   ShareWithUserSchema,
   type ShareWithUser,
+  ShareWithGroupSchema,
+  type ShareWithGroup,
 } from "@easy-charts/easycharts-types";
 import {
   Body,
@@ -159,5 +161,41 @@ export class ChartsController {
     @Param("userId", new ParseUUIDPipe()) userId: string,
   ) {
     return this.chartService.unshareChart(id, userId);
+  }
+
+  // ─── Group Sharing ──────────────────────────────────────────────────────────
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @RequireChartPrivilege('canShare')
+  @Get(":id/group-shares")
+  getGroupShares(@Param("id", new ParseUUIDPipe()) id: string) {
+    return this.chartService.getChartGroupShares(id);
+  }
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @RequireChartPrivilege('canShare')
+  @Post(":id/group-share")
+  @HttpCode(HttpStatus.CREATED)
+  shareWithGroup(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(ShareWithGroupSchema)) body: ShareWithGroup,
+    @Req() req: { user: string },
+  ) {
+    return this.chartService.shareChartWithGroup(id, body.sharedWithGroupId, req.user, {
+      canEdit: body.canEdit,
+      canDelete: body.canDelete,
+      canShare: body.canShare,
+    });
+  }
+
+  @RequirePermissions(Permission.CHART_SHARE)
+  @RequireChartPrivilege('canShare')
+  @Delete(":id/group-share/:groupId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  unshareGroup(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("groupId", new ParseUUIDPipe()) groupId: string,
+  ) {
+    return this.chartService.unshareChartFromGroup(id, groupId);
   }
 }
