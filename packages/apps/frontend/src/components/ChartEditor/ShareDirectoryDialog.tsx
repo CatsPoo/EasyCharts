@@ -1,13 +1,11 @@
 import type { DirectoryShare, User } from "@easy-charts/easycharts-types";
-import PersonAddIcon from "@mui/icons-material/PersonAdd";
-import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import SearchIcon from "@mui/icons-material/Search";
 import {
   Alert,
   Avatar,
   Box,
   Button,
-  Checkbox,
+  Chip,
   CircularProgress,
   Collapse,
   Dialog,
@@ -15,8 +13,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  FormControlLabel,
-  IconButton,
   InputAdornment,
   TextField,
   Typography,
@@ -29,6 +25,7 @@ import {
   useUnshareDirectoryMutation,
 } from "../../hooks/chartsDirectoriesHooks";
 import { useUserByIdQuery, useUsersSearchQuery } from "../../hooks/usersHooks";
+import { type Perms, PrivilegeChips } from "./PrivilegeChips";
 
 interface Props {
   open: boolean;
@@ -70,24 +67,45 @@ function ShareRow({
   const label = user?.displayName || user?.username || share.sharedWithUserId;
   const sub = user?.displayName ? user.username : undefined;
 
+  const [perms, setPerms] = useState<Perms>({
+    canEdit: share.canEdit,
+    canDelete: share.canDelete,
+    canShare: share.canShare,
+  });
   const [includeContent, setIncludeContent] = useState(false);
   const [pendingUncheck, setPendingUncheck] = useState(false);
+
+  useEffect(() => {
+    setPerms({ canEdit: share.canEdit, canDelete: share.canDelete, canShare: share.canShare });
+  }, [share.canEdit, share.canDelete, share.canShare]);
 
   const shareMutation = useShareDirectoryMutation();
   const unshareContentMutation = useUnshareDirectoryContentMutation();
 
   const busy = shareMutation.isPending || unshareContentMutation.isPending || removing;
 
-  const handleContentToggle = (checked: boolean) => {
-    if (checked) {
+  const handleTogglePrivilege = (k: keyof Perms, v: boolean) => {
+    const updated = { ...perms, [k]: v };
+    setPerms(updated);
+    shareMutation.mutate({
+      directoryId,
+      sharedWithUserId: share.sharedWithUserId,
+      permissions: updated,
+      includeContent,
+    });
+  };
+
+  const handleContentToggle = () => {
+    if (!includeContent) {
+      setIncludeContent(true);
       shareMutation.mutate(
         {
           directoryId,
           sharedWithUserId: share.sharedWithUserId,
-          permissions: { canEdit: share.canEdit, canDelete: share.canDelete, canShare: share.canShare },
+          permissions: perms,
           includeContent: true,
         },
-        { onSuccess: () => setIncludeContent(true) },
+        { onError: () => setIncludeContent(false) },
       );
     } else {
       setPendingUncheck(true);
@@ -111,21 +129,15 @@ function ShareRow({
       <Box sx={{ display: "flex", alignItems: "center" }}>
         <UserInfo label={label} sub={sub} />
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                size="small"
-                checked={includeContent}
-                onChange={e => handleContentToggle(e.target.checked)}
-                disabled={busy}
-              />
-            }
-            label={<Typography variant="caption">Share content</Typography>}
-            sx={{ mr: 0 }}
+          <PrivilegeChips {...perms} onChange={handleTogglePrivilege} disabled={busy} onRemove={onRemove} />
+          <Chip
+            size="small" label="Content"
+            variant={includeContent ? "filled" : "outlined"}
+            color={includeContent ? "warning" : "default"}
+            onClick={handleContentToggle}
+            disabled={busy}
+            sx={{ fontSize: 11 }}
           />
-          <IconButton size="small" onClick={onRemove} disabled={busy}>
-            <PersonRemoveIcon fontSize="small" color="error" />
-          </IconButton>
         </Box>
       </Box>
       <Collapse in={pendingUncheck}>
@@ -166,32 +178,32 @@ function SearchResultRow({
   user, onAdd, adding,
 }: {
   user: User;
-  onAdd: (userId: string, includeContent: boolean) => void;
+  onAdd: (userId: string, perms: Perms, includeContent: boolean) => void;
   adding: boolean;
 }) {
   const label = user.displayName || user.username;
   const sub = user.displayName ? user.username : undefined;
+  const [perms, setPerms] = useState<Perms>({ canEdit: false, canDelete: false, canShare: false });
   const [includeContent, setIncludeContent] = useState(false);
 
   return (
     <Box sx={{ display: "flex", alignItems: "center", py: 0.75, px: 0.5 }}>
       <UserInfo label={label} sub={sub} />
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
-        <FormControlLabel
-          control={
-            <Checkbox
-              size="small"
-              checked={includeContent}
-              onChange={e => setIncludeContent(e.target.checked)}
-              disabled={adding}
-            />
-          }
-          label={<Typography variant="caption">Share content</Typography>}
-          sx={{ mr: 0 }}
+        <PrivilegeChips
+          {...perms}
+          onChange={(k, v) => setPerms(p => ({ ...p, [k]: v }))}
+          disabled={adding}
+          onAdd={() => onAdd(user.id, perms, includeContent)}
         />
-        <IconButton size="small" onClick={() => onAdd(user.id, includeContent)} disabled={adding}>
-          <PersonAddIcon fontSize="small" color="primary" />
-        </IconButton>
+        <Chip
+          size="small" label="Content"
+          variant={includeContent ? "filled" : "outlined"}
+          color={includeContent ? "warning" : "default"}
+          onClick={() => setIncludeContent(v => !v)}
+          disabled={adding}
+          sx={{ fontSize: 11 }}
+        />
       </Box>
     </Box>
   );
@@ -220,8 +232,8 @@ export function ShareDirectoryDialog({ open, onClose, directoryId }: Props) {
   const sharedIds = new Set(shares.map(s => s.sharedWithUserId));
   const filteredResults = searchResults.filter(u => !sharedIds.has(u.id));
 
-  const handleAdd = (userId: string, includeContent: boolean) => {
-    shareMutation.mutate({ directoryId, sharedWithUserId: userId, includeContent });
+  const handleAdd = (userId: string, perms: Perms, includeContent: boolean) => {
+    shareMutation.mutate({ directoryId, sharedWithUserId: userId, permissions: perms, includeContent });
   };
 
   return (
@@ -251,7 +263,7 @@ export function ShareDirectoryDialog({ open, onClose, directoryId }: Props) {
         {filteredResults.length > 0 && (
           <>
             <Typography variant="caption" color="text.secondary" sx={{ pl: 0.5 }}>
-              Add user — check "Share content" to also share all charts in this directory
+              Add user — select privileges, toggle Content to also share charts inside
             </Typography>
             {filteredResults.map(user => (
               <SearchResultRow
