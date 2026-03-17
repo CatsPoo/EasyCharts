@@ -62,8 +62,9 @@ steps:
       - "deb.debian.org:146.75.54.132"
     commands:
       - apt-get update && apt-get install -y git --no-install-recommends
+      - git fetch --depth=2
       - CURRENT_VERSION=$(node -p "require('./package.json').version")
-      - LAST_VERSION=$(git show HEAD^1:package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
+      - LAST_VERSION=$(git show HEAD^1:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version" 2>/dev/null || echo "0.0.0")
       - echo "Checking version... Current ($CURRENT_VERSION) vs Previous main ($LAST_VERSION)"
       - "npx semver $CURRENT_VERSION --range \">$LAST_VERSION\" || (echo \"❌ VERSION ERROR: You must bump the version in package.json before merging to main!\" && exit 1)"
     when:
