@@ -9,6 +9,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppConfigService } from '../appConfig/appConfig.service';
 import { AuthModule } from '../auth/auth.module';
 import { ChartsDirectoriesModule } from '../chartsDirectories/chartsDirectories.module';
+import { GroupsModule } from '../groups/groups.module';
 import { UploadModule } from '../upload/upload.module';
 import { OverlayElementsModule } from '../overlayElements/overlayElements.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
@@ -26,6 +27,7 @@ import { join } from 'path';
     LinesModule,
     ChartsModule,
     ChartsDirectoriesModule,
+    GroupsModule,
     AppConfigModule,
     AuthModule,
     TypeOrmModule.forRootAsync({

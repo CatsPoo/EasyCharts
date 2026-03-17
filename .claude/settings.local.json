@@ -8,7 +8,15 @@
       "Bash(npx jest --testPathPatterns=\"devices.service.spec\" --no-coverage)",
       "Bash(npx jest --no-coverage)",
       "Bash(npx nx run backend:build)",
-      "Bash(npx nx run frontend:build)"
+      "Bash(npx nx run frontend:build)",
+      "WebSearch",
+      "WebFetch(domain:www.cisco.com)",
+      "WebFetch(domain:pnghut.com)",
+      "WebFetch(domain:www.juniper.net)",
+      "WebFetch(domain:icons.fortinet.com)",
+      "WebFetch(domain:commons.wikimedia.org)",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:api.wikimedia.org)"
     ]
   }
 }

@@ -9,7 +9,13 @@ import {
 } from "@easy-charts/easycharts-types";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
+import ComputerIcon from "@mui/icons-material/Computer";
+import PhoneIcon from "@mui/icons-material/Phone";
+import RouterIcon from "@mui/icons-material/Router";
+import SettingsEthernetIcon from "@mui/icons-material/SettingsEthernet";
+import StorageIcon from "@mui/icons-material/Storage";
 import { IconButton } from "@mui/material";
+import type { SvgIconComponent } from "@mui/icons-material";
 import { PortFormDialog } from "../PortFormDialog";
 import { useLayoutEffect, useMemo, useState } from "react";
 import type { NodeProps } from "reactflow";
@@ -20,6 +26,14 @@ import { useThemeMode } from "../../contexts/ThemeModeContext";
 import type { SidesOffset } from "./interfaces/sidesOffset.interface";
 import { InlineEditor } from "./InlineEditor";
 import DeviceHandle from "./DeviceHandle";
+
+const DEVICE_TYPE_ICONS: Record<string, SvgIconComponent> = {
+  Router: RouterIcon,
+  Switch: SettingsEthernetIcon,
+  Computer: ComputerIcon,
+  Server: StorageIcon,
+  Phone: PhoneIcon,
+};
 
 function initials(text?: string) {
   if (!text) return "Unknow";
@@ -202,7 +216,7 @@ export default function DeviceNode({
   return (
     <div
       className={[
-        "relative w-[220px] rounded-2xl border shadow-sm",
+        "relative w-[280px] rounded-xl border shadow-md overflow-visible",
         isDark
           ? "bg-slate-900 border-slate-700 text-slate-100"
           : "bg-white border-slate-200 text-slate-900",
@@ -218,7 +232,7 @@ export default function DeviceNode({
         <IconButton
           aria-label="Remove device"
           size="small"
-          onMouseDown={(e) => e.stopPropagation()} // avoid drag/select
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onRemoveNode(deviceId);
@@ -236,52 +250,66 @@ export default function DeviceNode({
         </IconButton>
       )}
 
-      {/* Header: device name */}
+      {/* Image banner */}
       <div
         className={[
-          "px-3 pt-2 pb-1 border-b",
-          isDark ? "border-slate-700" : "border-slate-100",
+          "relative w-full h-24 rounded-t-xl overflow-hidden flex items-center justify-center",
+          isDark ? "bg-slate-800" : "bg-slate-100",
         ].join(" ")}
       >
-        <div className="text-sm font-semibold truncate">{name ?? "Device"}</div>
+        {iconUrl ? (
+          <img
+            src={iconUrl}
+            onError={() => ""}
+            alt={modelName ? `${modelName} icon` : "Model icon"}
+            className="w-full h-full object-contain select-none p-2"
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+          />
+        ) : device.type?.iconUrl ? (
+          <img
+            src={device.type.iconUrl}
+            alt={device.type.name}
+            className={["w-14 h-14 object-contain select-none", isDark ? "opacity-60" : "opacity-50"].join(" ")}
+            draggable={false}
+          />
+        ) : (() => {
+          const DeviceTypeIcon = DEVICE_TYPE_ICONS[device.type?.name];
+          return DeviceTypeIcon
+            ? <DeviceTypeIcon sx={{ fontSize: 56 }} className={isDark ? "!text-slate-500" : "!text-slate-400"} />
+            : <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-indigo-200 to-indigo-400 text-indigo-900 flex items-center justify-center text-2xl font-bold select-none">{initials(name)}</div>;
+        })()}
+
+        {/* Vendor icon badge */}
+        {vendor?.iconUrl && (
+          <img
+            src={vendor.iconUrl}
+            alt={vendorName ?? "Vendor"}
+            className="absolute bottom-1 right-2 h-5 w-auto max-w-[56px] object-contain opacity-75 select-none"
+            draggable={false}
+          />
+        )}
       </div>
 
-      {/* Body */}
-      <div className="p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          {iconUrl ? (
-            <div className="h-12 w-12 rounded-lg bg-slate-200 flex items-center justify-center text-xs font-bold">
-              <img
-                src={iconUrl}
-                onError={() => ""}
-                alt={modelName ? `${modelName} icon` : "Model icon"}
-                className="h-12 w-12 rounded-lg object-cover bg-slate-100 border border-slate-200 select-none"
-                loading="lazy"
-                decoding="async"
-                draggable={false}
-              />
-            </div>
-          ) : (
-            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-indigo-200 to-indigo-400 text-indigo-900 flex items-center justify-center text-xs font-bold">
-              {initials(name)}
-            </div>
-          )}
+      {/* Info row */}
+      <div
+        className={[
+          "px-3 py-2 border-t",
+          isDark ? "border-slate-700" : "border-slate-200",
+        ].join(" ")}
+      >
+        <div className="text-base font-semibold truncate leading-5">{name ?? "Device"}</div>
+        <div className="flex items-center justify-between gap-2 mt-0.5">
           <div className="min-w-0">
-            <div className="text-xs font-medium leading-4 truncate">
-              {modelName ?? "Model"}
-            </div>
+            <span className="text-sm font-medium truncate">{modelName ?? "Model"}</span>
             {vendorName ? (
-              <div className="text-[11px] text-slate-500 leading-4 truncate">
-                {vendorName}
-              </div>
+              <span className="text-xs text-slate-500 truncate"> · {vendorName}</span>
             ) : null}
           </div>
-        </div>
-
-        {/* IP row */}
-        <div className="text-xs">
-          <span className="text-slate-500">IP: </span>
-          <span className="font-medium">{ipAddress ?? "—"}</span>
+          <div className="text-xs text-slate-400 shrink-0 font-mono">
+            {ipAddress ?? "—"}
+          </div>
         </div>
       </div>
 

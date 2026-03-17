@@ -48,8 +48,40 @@ export const columns: Record<AssetKind, GridColDef[]> = {
     },
     { field: "ipAddress", headerName: "IP", width: 140 },
   ],
-  types: [{ field: "name", headerName: "Name", flex: 1 }],
-  vendors: [{ field: "name", headerName: "Name", flex: 1 }],
+  types: [
+    { field: "name", headerName: "Name", flex: 1 },
+    {
+      field: "iconUrl",
+      headerName: "Icon",
+      width: 80,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) =>
+        params.value ? (
+          <img
+            src={params.value}
+            alt="icon"
+            style={{ height: 36, width: 36, objectFit: "contain", borderRadius: 4 }}
+          />
+        ) : null,
+    },
+  ],
+  vendors: [
+    { field: "name", headerName: "Name", flex: 1 },
+    {
+      field: "iconUrl",
+      headerName: "Icon",
+      width: 80,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) =>
+        params.value ? (
+          <img
+            src={params.value}
+            alt="icon"
+            style={{ height: 36, width: 36, objectFit: "contain", borderRadius: 4 }}
+          />
+        ) : null,
+    },
+  ],
   models: [
     { field: "name", headerName: "Name", flex: 1 },
     {

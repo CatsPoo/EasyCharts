@@ -5,12 +5,13 @@ import { ModelEntity } from "./entities/model.entity";
 import { VendorEntity } from "../vendors/entities/vendor.entity";
 import { AssetVersionsService } from "../assetVersions/assetVersions.service";
 import { UsersService } from "../auth/user.service";
+import { VendorSeeder } from "../vendors/vendor.seeder";
 
-/** [vendorName, modelName] */
-const DEFAULT_MODELS: [string, string][] = [
+/** [vendorName, modelName, iconUrl?] */
+const DEFAULT_MODELS: [string, string, string?][] = [
   // Cisco
-  ['Cisco', 'Catalyst 9200'],
-  ['Cisco', 'Catalyst 9300'],
+  ['Cisco', 'Catalyst 9200', '/models/C9200L-48p.webp'],
+  ['Cisco', 'Catalyst 9300', '/models/C9300.webp'],
   ['Cisco', 'Catalyst 9500'],
   ['Cisco', 'Nexus 9000'],
   ['Cisco', 'ISR 4321'],
@@ -105,9 +106,12 @@ export class ModelSeeder implements OnApplicationBootstrap {
     private readonly vendorRepo: Repository<VendorEntity>,
     private readonly assetVersionsService: AssetVersionsService,
     private readonly usersService: UsersService,
+    private readonly vendorSeeder: VendorSeeder,
   ) {}
 
   async onApplicationBootstrap() {
+    await this.vendorSeeder.seed();
+
     const count = await this.modelsRepo.count();
     if (count !== 0) return;
 
@@ -116,7 +120,7 @@ export class ModelSeeder implements OnApplicationBootstrap {
 
     const vendorCache = new Map<string, VendorEntity>();
 
-    for (const [vendorName, modelName] of DEFAULT_MODELS) {
+    for (const [vendorName, modelName, iconUrl] of DEFAULT_MODELS) {
       let vendor = vendorCache.get(vendorName);
       if (!vendor) {
         const found = await this.vendorRepo.findOne({ where: { name: vendorName } });
@@ -124,7 +128,7 @@ export class ModelSeeder implements OnApplicationBootstrap {
         vendorCache.set(vendorName, found);
         vendor = found;
       }
-      const entity = this.modelsRepo.create({ name: modelName, vendor, createdByUserId: adminId });
+      const entity = this.modelsRepo.create({ name: modelName, vendor, iconUrl, createdByUserId: adminId });
       const saved = await this.modelsRepo.save(entity);
       if (adminId) {
         await this.assetVersionsService.saveVersion('models', saved.id, saved as unknown as object, adminId);

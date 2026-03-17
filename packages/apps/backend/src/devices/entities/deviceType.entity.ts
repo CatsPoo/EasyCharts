@@ -10,6 +10,9 @@ export class DeviceTypeEntity extends AuditableEntity{
   @Column({ unique: true })
   name!: string;
 
+  @Column({ name: 'icon_url', nullable: true, type: 'text' })
+  iconUrl?: string | null;
+
   @OneToMany(() => DeviceEntity, (device) => device.type)
   devices?: DeviceEntity[];
 }

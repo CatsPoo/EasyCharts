@@ -1,13 +1,16 @@
-import type { ChartMetadata, CreateChartDirectory, UpadateChartDirectory } from "@easy-charts/easycharts-types";
+import type { ChartMetadata, CreateChartDirectory, GroupDirectoryShare, UpadateChartDirectory } from "@easy-charts/easycharts-types";
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ILike, In, Repository } from "typeorm";
 import { ChartsService } from "../charts/charts.service";
 import { ChartEntity } from "../charts/entities/chart.entity";
 import { ChartShareEntity } from "../charts/entities/chartShare.entity";
+import { GroupChartShareEntity } from "../charts/entities/groupChartShare.entity";
+import { GroupMembershipEntity } from "../groups/entities/groupMembership.entity";
 import { ChartsDirectoryEntity } from "./entities/chartsDirectory.entity";
 import { ChartInDirectoryEntity } from "./entities/chartsInDirectory.entity";
 import { DirectoryShareEntity } from "./entities/directoryShare.entity";
+import { GroupDirectoryShareEntity } from "./entities/groupDirectoryShare.entity";
 
 @Injectable()
 export class ChartsDirectoriesService {
@@ -24,6 +27,12 @@ export class ChartsDirectoriesService {
     private readonly chartRepo: Repository<ChartEntity>,
     @InjectRepository(ChartShareEntity)
     private readonly chartShareRepo: Repository<ChartShareEntity>,
+    @InjectRepository(GroupDirectoryShareEntity)
+    private readonly groupDirShareRepo: Repository<GroupDirectoryShareEntity>,
+    @InjectRepository(GroupChartShareEntity)
+    private readonly groupChartShareRepo: Repository<GroupChartShareEntity>,
+    @InjectRepository(GroupMembershipEntity)
+    private readonly membershipRepo: Repository<GroupMembershipEntity>,
     private readonly chartsService: ChartsService,
   ) {}
 
@@ -37,11 +46,23 @@ export class ChartsDirectoriesService {
     const dir = await this.dirRepo.findOne({ where: { id: directoryId }, select: { createdByUserId: true } });
     if (!dir) throw new NotFoundException("Directory not found");
     if (dir.createdByUserId === userId) return; // owner has full access
-    const share = await this.shareDirRepo.findOne({ where: { directoryId, sharedWithUserId: userId } });
-    if (!share?.[permission]) {
+    // Check user-specific share first (overrides group)
+    const userShare = await this.shareDirRepo.findOne({ where: { directoryId, sharedWithUserId: userId } });
+    if (userShare) {
+      if (userShare[permission]) return;
       this.logger.warn(`userId "${userId}" lacks "${permission}" on directory "${directoryId}"`);
       throw new ForbiddenException(`No ${permission} permission on this directory`);
     }
+    // Fall back to group shares
+    const groupIds = await this.membershipRepo.find({ where: { userId }, select: ['groupId'] });
+    if (groupIds.length > 0) {
+      const groupShare = await this.groupDirShareRepo.findOne({
+        where: { directoryId, groupId: In(groupIds.map(g => g.groupId)), [permission]: true },
+      });
+      if (groupShare) return;
+    }
+    this.logger.warn(`userId "${userId}" lacks "${permission}" on directory "${directoryId}"`);
+    throw new ForbiddenException(`No ${permission} permission on this directory`);
   }
 
   // ─── CRUD ────────────────────────────────────────────────────────────────────
@@ -123,36 +144,54 @@ export class ChartsDirectoriesService {
     });
   }
 
-  /** Root directories owned by OR shared with userId */
+  /** Root directories owned by OR shared with userId (directly or via group) */
   async listRoots(userId: string): Promise<ChartsDirectoryEntity[]> {
-    return this.dirRepo
+    const groupIds = await this.membershipRepo.find({ where: { userId }, select: ['groupId'] });
+    const qb = this.dirRepo
       .createQueryBuilder("d")
       .leftJoin(
-        DirectoryShareEntity,
-        "ds",
+        DirectoryShareEntity, "ds",
         "ds.directory_id::text = d.id::text AND ds.shared_with_user_id::text = :userId",
         { userId },
       )
-      .where("d.parant_id IS NULL")
-      .andWhere("(d.created_by_user_id::text = :userId OR ds.shared_with_user_id IS NOT NULL)", { userId })
-      .orderBy("d.name", "ASC")
-      .getMany();
+      .where("d.parant_id IS NULL");
+
+    if (groupIds.length > 0) {
+      qb.leftJoin(
+        GroupDirectoryShareEntity, "gds",
+        "gds.directory_id::text = d.id::text AND gds.group_id IN (:...groupIds)",
+        { groupIds: groupIds.map(g => g.groupId) },
+      ).andWhere("(d.created_by_user_id::text = :userId OR ds.shared_with_user_id IS NOT NULL OR gds.group_id IS NOT NULL)", { userId });
+    } else {
+      qb.andWhere("(d.created_by_user_id::text = :userId OR ds.shared_with_user_id IS NOT NULL)", { userId });
+    }
+
+    return qb.orderBy("d.name", "ASC").getMany();
   }
 
-  /** Children of a directory that are owned by OR shared with userId */
+  /** Children of a directory that are owned by OR shared with userId (directly or via group) */
   async listChildren(parentId: string, userId: string): Promise<ChartsDirectoryEntity[]> {
-    return this.dirRepo
+    const groupIds = await this.membershipRepo.find({ where: { userId }, select: ['groupId'] });
+    const qb = this.dirRepo
       .createQueryBuilder("d")
       .leftJoin(
-        DirectoryShareEntity,
-        "ds",
+        DirectoryShareEntity, "ds",
         "ds.directory_id::text = d.id::text AND ds.shared_with_user_id::text = :userId",
         { userId },
       )
-      .where("d.parant_id::text = :parentId", { parentId })
-      .andWhere("(d.created_by_user_id::text = :userId OR ds.shared_with_user_id IS NOT NULL)", { userId })
-      .orderBy("d.name", "ASC")
-      .getMany();
+      .where("d.parant_id::text = :parentId", { parentId });
+
+    if (groupIds.length > 0) {
+      qb.leftJoin(
+        GroupDirectoryShareEntity, "gds",
+        "gds.directory_id::text = d.id::text AND gds.group_id IN (:...groupIds)",
+        { groupIds: groupIds.map(g => g.groupId) },
+      ).andWhere("(d.created_by_user_id::text = :userId OR ds.shared_with_user_id IS NOT NULL OR gds.group_id IS NOT NULL)", { userId });
+    } else {
+      qb.andWhere("(d.created_by_user_id::text = :userId OR ds.shared_with_user_id IS NOT NULL)", { userId });
+    }
+
+    return qb.orderBy("d.name", "ASC").getMany();
   }
 
   async move(directoryId: string, newParentId: string | null, currentUserId: string) {
@@ -173,10 +212,11 @@ export class ChartsDirectoriesService {
     return this.cidRepo.find({ where: { directoryId } });
   }
 
-  /** Charts in a directory that the user has access to (owned or shared) */
+  /** Charts in a directory that the user has access to (owned or shared, directly or via group) */
   async listChartsMetadata(directoryId: string, userId: string): Promise<ChartMetadata[]> {
     await this.getChartsDirectoryById(directoryId);
-    const charts = await this.chartRepo
+    const groupIds = await this.membershipRepo.find({ where: { userId }, select: ['groupId'] });
+    const qb = this.chartRepo
       .createQueryBuilder("c")
       .innerJoin(
         "charts_in_directories", "cid",
@@ -187,10 +227,19 @@ export class ChartsDirectoriesService {
         ChartShareEntity, "cs",
         "cs.chart_id::text = c.id::text AND cs.shared_with_user_id::text = :userId",
         { userId },
-      )
-      .where("(c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL)", { userId })
-      .leftJoinAndSelect("c.lockedBy", "lb")
-      .getMany();
+      );
+
+    if (groupIds.length > 0) {
+      qb.leftJoin(
+        GroupChartShareEntity, "gcs",
+        "gcs.chart_id::text = c.id::text AND gcs.group_id IN (:...groupIds)",
+        { groupIds: groupIds.map(g => g.groupId) },
+      ).where("(c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL OR gcs.group_id IS NOT NULL)", { userId });
+    } else {
+      qb.where("(c.created_by_user_id::text = :userId OR cs.shared_with_user_id IS NOT NULL)", { userId });
+    }
+
+    const charts = await qb.leftJoinAndSelect("c.lockedBy", "lb").getMany();
     return this.chartsService.buildChartMetadataWithPrivileges(charts, userId);
   }
 
@@ -254,6 +303,56 @@ export class ChartsDirectoriesService {
 
   async getDirectoryShares(directoryId: string): Promise<DirectoryShareEntity[]> {
     return this.shareDirRepo.find({ where: { directoryId } });
+  }
+
+  async getDirectoryGroupShares(directoryId: string): Promise<GroupDirectoryShare[]> {
+    const shares = await this.groupDirShareRepo.find({ where: { directoryId } });
+    return shares.map(s => ({
+      directoryId: s.directoryId,
+      sharedWithGroupId: s.groupId,
+      sharedByUserId: s.sharedByUserId,
+      canEdit: s.canEdit,
+      canDelete: s.canDelete,
+      canShare: s.canShare,
+    }));
+  }
+
+  async shareDirectoryWithGroup(
+    directoryId: string,
+    groupId: string,
+    sharedByUserId: string,
+    permissions: { canEdit: boolean; canDelete: boolean; canShare: boolean },
+    includeContent = false,
+  ): Promise<void> {
+    await this.assertDirectoryPermission(directoryId, sharedByUserId, "canShare");
+    await this.groupDirShareRepo.upsert(
+      { directoryId, groupId, sharedByUserId, ...permissions },
+      { conflictPaths: ["directoryId", "groupId"], skipUpdateIfNoValuesChanged: false },
+    );
+    if (includeContent) {
+      const charts = await this.cidRepo.find({ where: { directoryId }, select: ["chartId"] });
+      for (const { chartId } of charts) {
+        await this.groupChartShareRepo.upsert(
+          { chartId, groupId, sharedByUserId, ...permissions },
+          { conflictPaths: ["chartId", "groupId"], skipUpdateIfNoValuesChanged: false },
+        );
+      }
+    }
+    this.logger.log(`Directory "${directoryId}" group-shared with groupId "${groupId}" by userId "${sharedByUserId}"`);
+  }
+
+  async unshareDirectoryFromGroup(directoryId: string, groupId: string): Promise<void> {
+    await this.groupDirShareRepo.delete({ directoryId, groupId });
+    this.logger.log(`Directory "${directoryId}" group-unshared from groupId "${groupId}"`);
+  }
+
+  async unshareDirectoryContentFromGroup(directoryId: string, groupId: string): Promise<void> {
+    const charts = await this.cidRepo.find({ where: { directoryId }, select: ["chartId"] });
+    const chartIds = charts.map(c => c.chartId);
+    if (chartIds.length > 0) {
+      await this.groupChartShareRepo.delete({ chartId: In(chartIds), groupId });
+      this.logger.log(`Group "${groupId}" content access removed from directory "${directoryId}"`);
+    }
   }
 
   // ─── Private helpers ────────────────────────────────────────────────────────
