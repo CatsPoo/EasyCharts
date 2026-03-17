@@ -4,6 +4,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { ChartInDirectoryEntity } from '../chartsDirectories/entities/chartsInDirectory.entity';
 import { DirectoryShareEntity } from '../chartsDirectories/entities/directoryShare.entity';
+import { GroupDirectoryShareEntity } from '../chartsDirectories/entities/groupDirectoryShare.entity';
+import { GroupChartShareEntity } from './entities/groupChartShare.entity';
+import { GroupMembershipEntity } from '../groups/entities/groupMembership.entity';
 import { PortsService } from '../devices/ports.service';
 import { LinessService } from '../lines/lines.service';
 import { BondsOnChartService } from './bondOnChart.service';
@@ -67,6 +70,7 @@ describe('ChartsService', () => {
   let chartRepo: ReturnType<typeof makeRepoMock>;
   let chartShareRepo: ReturnType<typeof makeRepoMock>;
   let cidRepo: ReturnType<typeof makeRepoMock>;
+  let membershipRepo: ReturnType<typeof makeRepoMock>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -74,6 +78,9 @@ describe('ChartsService', () => {
     const chartRepoMock = makeRepoMock();
     const chartShareRepoMock = makeRepoMock();
     const cidRepoMock = makeRepoMock();
+    const membershipRepoMock = makeRepoMock();
+    // Default: user has no group memberships
+    membershipRepoMock.find.mockResolvedValue([]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -83,6 +90,9 @@ describe('ChartsService', () => {
         { provide: getRepositoryToken(ChartShareEntity), useValue: chartShareRepoMock },
         { provide: getRepositoryToken(ChartInDirectoryEntity), useValue: cidRepoMock },
         { provide: getRepositoryToken(DirectoryShareEntity), useValue: makeRepoMock() },
+        { provide: getRepositoryToken(GroupChartShareEntity), useValue: makeRepoMock() },
+        { provide: getRepositoryToken(GroupMembershipEntity), useValue: membershipRepoMock },
+        { provide: getRepositoryToken(GroupDirectoryShareEntity), useValue: makeRepoMock() },
         {
           provide: LinessService,
           useValue: {
@@ -144,6 +154,7 @@ describe('ChartsService', () => {
     chartRepo = module.get(getRepositoryToken(ChartEntity));
     chartShareRepo = module.get(getRepositoryToken(ChartShareEntity));
     cidRepo = module.get(getRepositoryToken(ChartInDirectoryEntity));
+    membershipRepo = module.get(getRepositoryToken(GroupMembershipEntity));
   });
 
   // ── getLockFromChartEntity ──────────────────────────────────────────────────
@@ -325,7 +336,7 @@ describe('ChartsService', () => {
   describe('computePrivileges', () => {
     it('grants all privileges to chart owner', () => {
       const chart = baseChart({ createdByUserId: 'user-1' });
-      const result = (service as any).computePrivileges(chart, 'user-1', new Map());
+      const result = (service as any).computePrivileges(chart, 'user-1', new Map(), new Map());
       expect(result).toEqual({ canEdit: true, canDelete: true, canShare: true });
     });
 
@@ -334,13 +345,13 @@ describe('ChartsService', () => {
       const shareMap = new Map([
         ['chart-1', { canEdit: true, canDelete: false, canShare: false }],
       ]);
-      const result = (service as any).computePrivileges(chart, 'user-1', shareMap);
+      const result = (service as any).computePrivileges(chart, 'user-1', shareMap, new Map());
       expect(result).toEqual({ canEdit: true, canDelete: false, canShare: false });
     });
 
     it('grants no privileges when not owner and no share exists', () => {
       const chart = baseChart({ createdByUserId: 'user-2' });
-      const result = (service as any).computePrivileges(chart, 'user-1', new Map());
+      const result = (service as any).computePrivileges(chart, 'user-1', new Map(), new Map());
       expect(result).toEqual({ canEdit: false, canDelete: false, canShare: false });
     });
   });
