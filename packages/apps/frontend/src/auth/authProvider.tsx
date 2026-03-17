@@ -1,5 +1,5 @@
 // AuthProvider.tsx
-import type { AuthResponse, User } from "@easy-charts/easycharts-types";
+import type { AuthRefreshResponse, AuthResponse, User } from "@easy-charts/easycharts-types";
 import axios from "axios";
 import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { createHttp, setupHttpAuth } from "../api/http";
@@ -41,7 +41,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       getAccessToken: () => accessToken,
       getRefreshToken: () => refreshToken,
       performRefresh: async (rt) => {
-        const res = await authHttp.post<AuthResponse>("/auth/refresh", rt);
+        const res = await authHttp.post<AuthRefreshResponse>("/auth/refresh", null, {
+          headers: { Authorization: `Bearer ${rt}` },
+        });
         if (res.status !== 200 || !res.data?.token)
           throw new Error("Refresh failed");
         return res.data;
