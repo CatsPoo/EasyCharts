@@ -1,5 +1,5 @@
 // http.ts
-import type { AuthResponse } from "@easy-charts/easycharts-types";
+import type { AuthRefreshResponse } from "@easy-charts/easycharts-types";
 import axios, { AxiosError, type AxiosInstance } from "axios";
 
 let http: AxiosInstance;
@@ -7,7 +7,7 @@ let http: AxiosInstance;
 // callbacks provided by AuthProvider
 let getAccessToken: () => string | null;
 let getRefreshToken: () => string | null;
-let performRefresh: (refreshToken: string) => Promise<AuthResponse>;
+let performRefresh: (refreshToken: string) => Promise<AuthRefreshResponse>;
 let setTokens: (at: string, rt?: string | null) => void;
 let handleLogout: () => void;
 
@@ -51,7 +51,7 @@ export function createHttp(baseURL = "/api") {
           isRefreshing = true;
           refreshPromise = (async () => {
             const data = await performRefresh(rt);
-            setTokens?.(data.token, data.refreshToken ?? null);
+            setTokens?.(data.token);
           })().finally(() => {
             isRefreshing = false;
             refreshPromise = null;
@@ -60,6 +60,7 @@ export function createHttp(baseURL = "/api") {
         await refreshPromise;
         return http!(original); // retry with new token
       } catch (e) {
+        handleLogout?.();
         return Promise.reject(e);
       }
     }
@@ -71,7 +72,7 @@ export function createHttp(baseURL = "/api") {
 export function setupHttpAuth(opts: {
   getAccessToken: () => string | null;
   getRefreshToken: () => string | null;
-  performRefresh: (refreshToken: string) => Promise<AuthResponse>;
+  performRefresh: (refreshToken: string) => Promise<AuthRefreshResponse>;
   setTokens: (at: string, rt?: string | null) => void;
   handleLogout: () => void;
 }) {
