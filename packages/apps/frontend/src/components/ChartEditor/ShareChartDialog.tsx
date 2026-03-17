@@ -1,19 +1,15 @@
 import type { ChartShare, User } from "@easy-charts/easycharts-types";
-import PersonAddIcon from "@mui/icons-material/PersonAdd";
-import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import SearchIcon from "@mui/icons-material/Search";
 import {
   Avatar,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
-  IconButton,
   InputAdornment,
   TextField,
   Typography,
@@ -25,6 +21,7 @@ import {
   useUnshareChartMutation,
 } from "../../hooks/chartsDirectoriesHooks";
 import { useUserByIdQuery, useUsersSearchQuery } from "../../hooks/usersHooks";
+import { type Perms, PrivilegeChips } from "./PrivilegeChips";
 
 interface Props {
   open: boolean;
@@ -34,48 +31,6 @@ interface Props {
   myPrivileges?: { canEdit: boolean; canDelete: boolean; canShare: boolean };
   /** Creator of the chart — excluded from search results */
   creatorId?: string;
-}
-
-type Perms = { canEdit: boolean; canDelete: boolean; canShare: boolean };
-
-// ── Privilege chips ───────────────────────────────────────────────────────────
-
-function PrivilegeChips({
-  canEdit, canDelete, canShare, onChange, disabled, ceiling,
-}: Perms & {
-  onChange: (k: keyof Perms, v: boolean) => void;
-  disabled?: boolean;
-  /** Caller's own privileges — chips they don't hold are always disabled */
-  ceiling?: Perms;
-}) {
-  return (
-    <Box sx={{ display: "flex", gap: 0.5 }}>
-      <Chip
-        size="small" label="Edit"
-        variant={canEdit ? "filled" : "outlined"}
-        color={canEdit ? "primary" : "default"}
-        onClick={() => onChange("canEdit", !canEdit)}
-        disabled={disabled || ceiling?.canEdit === false}
-        sx={{ fontSize: 11 }}
-      />
-      <Chip
-        size="small" label="Delete"
-        variant={canDelete ? "filled" : "outlined"}
-        color={canDelete ? "error" : "default"}
-        onClick={() => onChange("canDelete", !canDelete)}
-        disabled={disabled || ceiling?.canDelete === false}
-        sx={{ fontSize: 11 }}
-      />
-      <Chip
-        size="small" label="Share"
-        variant={canShare ? "filled" : "outlined"}
-        color={canShare ? "success" : "default"}
-        onClick={() => onChange("canShare", !canShare)}
-        disabled={disabled || ceiling?.canShare === false}
-        sx={{ fontSize: 11 }}
-      />
-    </Box>
-  );
 }
 
 // ── Shared layout for a user row ──────────────────────────────────────────────
@@ -138,10 +93,7 @@ function ShareRow({
     <Box sx={{ display: "flex", alignItems: "center", py: 0.75, px: 0.5 }}>
       <UserInfo label={label} sub={sub} />
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
-        <PrivilegeChips {...perms} onChange={handleToggle} disabled={busy} ceiling={ceiling} />
-        <IconButton size="small" onClick={onRemove} disabled={busy}>
-          <PersonRemoveIcon fontSize="small" color="error" />
-        </IconButton>
+        <PrivilegeChips {...perms} onChange={handleToggle} disabled={busy} ceiling={ceiling} onRemove={onRemove} />
       </Box>
     </Box>
   );
@@ -170,10 +122,8 @@ function SearchResultRow({
           onChange={(k, v) => setPerms(p => ({ ...p, [k]: v }))}
           disabled={adding}
           ceiling={ceiling}
+          onAdd={() => onAdd(user.id, perms)}
         />
-        <IconButton size="small" onClick={() => onAdd(user.id, perms)} disabled={adding}>
-          <PersonAddIcon fontSize="small" color="primary" />
-        </IconButton>
       </Box>
     </Box>
   );
