@@ -5,6 +5,8 @@ import { ChartShareGuard } from './chartShare.guard';
 const mockReflector = { getAllAndOverride: jest.fn() };
 const mockChartRepo = { findOne: jest.fn() };
 const mockChartShareRepo = { findOne: jest.fn() };
+const mockGroupChartShareRepo = { find: jest.fn() };
+const mockMembershipRepo = { find: jest.fn() };
 
 function makeCtx(params: Record<string, string>, userId: string | undefined) {
   return {
@@ -21,10 +23,14 @@ describe('ChartShareGuard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default: user has no group memberships
+    mockMembershipRepo.find.mockResolvedValue([]);
     guard = new ChartShareGuard(
       mockReflector as unknown as Reflector,
       mockChartRepo as any,
       mockChartShareRepo as any,
+      mockGroupChartShareRepo as any,
+      mockMembershipRepo as any,
     );
   });
 

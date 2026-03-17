@@ -5,8 +5,11 @@ import { ChartsDirectoriesService } from './chartsDirectories.service';
 import { ChartsDirectoryEntity } from './entities/chartsDirectory.entity';
 import { ChartInDirectoryEntity } from './entities/chartsInDirectory.entity';
 import { DirectoryShareEntity } from './entities/directoryShare.entity';
+import { GroupDirectoryShareEntity } from './entities/groupDirectoryShare.entity';
 import { ChartEntity } from '../charts/entities/chart.entity';
 import { ChartShareEntity } from '../charts/entities/chartShare.entity';
+import { GroupChartShareEntity } from '../charts/entities/groupChartShare.entity';
+import { GroupMembershipEntity } from '../groups/entities/groupMembership.entity';
 import { ChartsService } from '../charts/charts.service';
 
 const makeDir = (overrides: Partial<ChartsDirectoryEntity> = {}): ChartsDirectoryEntity =>
@@ -71,12 +74,30 @@ describe('ChartsDirectoriesService', () => {
     delete: jest.fn(),
   };
 
+  const mockGroupDirShareRepo = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+    upsert: jest.fn(),
+    delete: jest.fn(),
+  };
+
+  const mockGroupChartShareRepo = {
+    upsert: jest.fn(),
+    delete: jest.fn(),
+  };
+
+  const mockMembershipRepo = {
+    find: jest.fn(),
+  };
+
   const mockChartsService = {
     buildChartMetadataWithPrivileges: jest.fn(),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // Default: user has no group memberships (most tests don't care about groups)
+    mockMembershipRepo.find.mockResolvedValue([]);
     qbInstance = makeQb();
     mockDirRepo.createQueryBuilder.mockReturnValue(qbInstance);
 
@@ -88,6 +109,9 @@ describe('ChartsDirectoriesService', () => {
         { provide: getRepositoryToken(DirectoryShareEntity), useValue: mockShareDirRepo },
         { provide: getRepositoryToken(ChartEntity), useValue: mockChartRepo },
         { provide: getRepositoryToken(ChartShareEntity), useValue: mockChartShareRepo },
+        { provide: getRepositoryToken(GroupDirectoryShareEntity), useValue: mockGroupDirShareRepo },
+        { provide: getRepositoryToken(GroupChartShareEntity), useValue: mockGroupChartShareRepo },
+        { provide: getRepositoryToken(GroupMembershipEntity), useValue: mockMembershipRepo },
         { provide: ChartsService, useValue: mockChartsService },
       ],
     }).compile();
