@@ -1,5 +1,6 @@
 const { NxAppWebpackPlugin } = require('@nx/webpack/app-plugin');
 const { join } = require('path');
+const webpack = require('webpack');
 
 module.exports = {
   output: {
@@ -18,6 +19,11 @@ module.exports = {
       // the local workspace package @easy-charts/easycharts-types) gets
       // bundled into main.js so Docker doesn't need to install it.
       externalDependencies: ['bcrypt', 'argon2'],
+    }),
+    // Suppress optional NestJS peer deps that are not installed.
+    // NestJS loads these lazily and handles their absence gracefully.
+    new webpack.IgnorePlugin({
+      resourceRegExp: /^(@nestjs\/(websockets|microservices)|@fastify\/static)/,
     }),
   ],
 };
