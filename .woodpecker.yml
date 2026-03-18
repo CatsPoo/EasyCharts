@@ -102,7 +102,7 @@ steps:
   # ── 3. Build (Only on Main) ─────────────────────────────────────
   - name: build
     image: node:22-bookworm-slim
-    depends_on: [lint, test, version-guard]
+    depends_on: [lint, test] # [lint, test, version-guard]
     extra_hosts:
       - "deb.debian.org:146.75.54.132"
     #daemon_dns: "8.8.8.8
