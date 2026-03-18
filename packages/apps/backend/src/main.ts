@@ -27,6 +27,12 @@ async function bootstrap() {
     logger: logLevels,
   });
 
+  const corsOrigin = process.env.CORS_ALLOWED_DOMAIN;
+  app.enableCors({
+    origin: corsOrigin ? new RegExp(`^https?://(.*\\.)?${corsOrigin.replace('.', '\\.')}$`) : false,
+    credentials: true,
+  });
+
   app.use((req: { method: any; originalUrl: any; }, res: { on: (arg0: string, arg1: () => void) => void; statusCode: any; }, next: () => void) => {
     const start = Date.now();
     res.on('finish', () => {
