@@ -18,12 +18,12 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Backend (NestJS) ────────────────────────────────────────────
-  backend:
-    image: rongorlik/easy-charts:backend-latest
+  # ── App (NestJS + React static via ServeStaticModule) ───────────
+  app:
+    image: rongorlik/easy-charts:latest
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     volumes:
       - uploads_data:/app/public/uploads
     environment:
@@ -43,14 +43,16 @@ services:
       postgres:
         condition: service_healthy
 
-  # ── Frontend (React + nginx) ────────────────────────────────────
-  frontend:
-    image: rongorlik/easy-charts:frontend-latest
+  # ── Nginx (reverse proxy) ────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
     restart: unless-stopped
     ports:
       - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - backend
+      - app
 
 volumes:
   postgres_data:
