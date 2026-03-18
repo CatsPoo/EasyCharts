@@ -14,6 +14,10 @@ module.exports = {
       optimization: false,
       outputHashing: 'none',
       generatePackageJson: true,
+      // Only keep native addons external; everything else (including
+      // the local workspace package @easy-charts/easycharts-types) gets
+      // bundled into main.js so Docker doesn't need to install it.
+      externalDependencies: ['bcrypt', 'argon2'],
     }),
   ],
 };
