@@ -27,6 +27,20 @@ async function bootstrap() {
     logger: logLevels,
   });
 
+  const corsOrigins = process.env.CORS_ALLOWED_DOMAINS?.split(',').map(d => d.trim()).filter(Boolean) ?? [];
+  app.enableCors({
+    origin: corsOrigins.length
+      ? (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+          if (!origin || corsOrigins.some(domain => new RegExp(`^https?://(.*\\.)?${domain.replace(/\./g, '\\.')}$`).test(origin))) {
+            callback(null, true);
+          } else {
+            callback(new Error(`CORS: origin "${origin}" not allowed`));
+          }
+        }
+      : false,
+    credentials: true,
+  });
+
   app.use((req: { method: any; originalUrl: any; }, res: { on: (arg0: string, arg1: () => void) => void; statusCode: any; }, next: () => void) => {
     const start = Date.now();
     res.on('finish', () => {

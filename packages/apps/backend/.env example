@@ -19,3 +19,7 @@ REFRESH_JWT_EXPIRE_IN=1d
 #          LOG_LEVEL=log   → shows log, warn, error, fatal  (default)
 #          LOG_LEVEL=debug → shows debug, log, warn, error, fatal
 LOG_LEVEL=log
+
+# ── CORS (frontend origin allowed to call the backend) ───────────
+# Set to your company domain to allow all subdomains (e.g. mycompany.com)
+CORS_ALLOWED_DOMAINS=mycompany.com,otherwork.local
