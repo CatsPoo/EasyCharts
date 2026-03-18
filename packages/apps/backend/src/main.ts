@@ -27,9 +27,17 @@ async function bootstrap() {
     logger: logLevels,
   });
 
-  const corsOrigin = process.env.CORS_ALLOWED_DOMAIN;
+  const corsOrigins = process.env.CORS_ALLOWED_DOMAINS?.split(',').map(d => d.trim()).filter(Boolean) ?? [];
   app.enableCors({
-    origin: corsOrigin ? new RegExp(`^https?://(.*\\.)?${corsOrigin.replace('.', '\\.')}$`) : false,
+    origin: corsOrigins.length
+      ? (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+          if (!origin || corsOrigins.some(domain => new RegExp(`^https?://(.*\\.)?${domain.replace(/\./g, '\\.')}$`).test(origin))) {
+            callback(null, true);
+          } else {
+            callback(new Error(`CORS: origin "${origin}" not allowed`));
+          }
+        }
+      : false,
     credentials: true,
   });
 
